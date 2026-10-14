@@ -1,0 +1,64 @@
+# Checkpoints and model weights
+checkpoints/
+runs/
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+*.bin
+
+# Datasets and TFDS builds
+data/
+datasets/
+tensorflow_datasets/
+tfds/
+*.tfrecord
+*.tfrecord-*
+*.parquet
+
+# Videos and rendered output
+videos/
+*.mp4
+*.avi
+*.gif
+*.webm
+
+# Profiles and traces
+traces/
+*.nsys-rep
+*.sqlite
+*.qdrep
+*.ncu-rep
+*.json.gz
+*.pt.trace.json
+
+# Logs
+logs/
+*.log
+
+# Arrays. gitignore has no size predicate, so .npz/.npy are excluded by
+# default; add a small one deliberately with `git add -f <path>`.
+*.npz
+*.npy
+
+# Conda / virtual envs
+envs/
+env/
+venv/
+.venv/
+conda-env/
+miniconda3/
+anaconda3/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Experiment tracking
+wandb/
