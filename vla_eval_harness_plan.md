@@ -487,3 +487,38 @@ the first prompt goes out. Slots this plan leaves open for that:
 - Coding standards (Python version, formatter, test framework), if he has a preference.
 - Anything from his own build experience (Adobe backend, the IC-memo RAG service) he wants
   reflected in the service design.
+
+---
+
+## 14. Decisions (Varun, 14 Oct 2026)
+
+These close the open slots in section 13. Where a decision is deferred, the trigger for making it
+is named; nothing in this section is to be decided by the agent.
+
+**Scope of v1.** OpenVLA-OFT only. Pi0.5 is a stretch item to be picked up after M3 is finished
+and measured, not before; `fastvla/client/` should keep a policy-agnostic interface so that
+adding it later is not a rewrite, but no Pi0.5-specific work happens in v1.
+
+**Code style.** Python as in the `libero-vla` conda env (3.10.20); target `>=3.10`.
+`ruff` for both lint and format. `pytest` for tests. These live in a `pyproject.toml` at the repo
+root, added now. A `Makefile` at the repo root carries `lint`, `test` and `bench` targets; each
+target is added as the thing it runs comes to exist, and until then says so rather than
+silently passing.
+
+**Deferred until the audit (section 4) is done and written up.**
+- Triton Inference Server in v1, or a plain PyTorch gRPC server first with Triton kept as the
+  packaged option (section 5, and the risk in section 10).
+- Which of M6 (batched CUDA GJK kernel) and 7a (real motion planner for the demo generator) to
+  keep, if time allows only one.
+
+Both decisions are Varun's, to be made on the audit's evidence. The audit does not pre-empt them;
+it supplies the per-step breakdown and the M3-vs-M4 ordering that inform them.
+
+**Deadline.** Not set. Until one exists, the stopping-point rule in 7b is advisory: finish and
+measure each milestone before starting the next, and keep the repo in a state where stopping
+after any milestone leaves something coherent.
+
+**Repo.** `/data_new/vchandr2/fastvla-eval`, its own git repository, beside the research repo and
+not inside it. Remote `origin` is the private GitHub repo `alpha9centauri/fastvla-eval`, reached
+over the `github-personal` SSH host alias. Push at the end of each milestone only, never
+mid-change.
