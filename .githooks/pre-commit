@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Reject any staged blob larger than MAX_BLOB_BYTES (10 MB).
+# .gitignore cannot express a size limit, so the limit is enforced here.
+# Installed by tools/install-hooks.sh (sets core.hooksPath=.githooks).
+# Override for one deliberate commit: ALLOW_BIG_BLOBS=1 git commit ...
+set -uo pipefail
+
+MAX_BLOB_BYTES=$((10 * 1024 * 1024))
+
+if [ "${ALLOW_BIG_BLOBS:-0}" = "1" ]; then
+  echo "pre-commit: blob size check skipped (ALLOW_BIG_BLOBS=1)" >&2
+  exit 0
+fi
+
+if git rev-parse --verify -q HEAD >/dev/null; then
+  against=HEAD
+else
+  against=$(git hash-object -t tree /dev/null)
+fi
+
+oversize=""
+while IFS= read -r -d '' path; do
+  # Staged mode and object id for this path; skip deletions and submodules.
+  read -r mode oid _ < <(git ls-files --stage -- "$path" | head -n 1)
+  [ -n "${oid:-}" ] || continue
+  [ "$mode" = "160000" ] && continue
+  size=$(git cat-file -s "$oid" 2>/dev/null) || continue
+  if [ "$size" -gt "$MAX_BLOB_BYTES" ]; then
+    oversize+="$(printf '  %10.2f MB  %s' "$(echo "scale=4; $size/1048576" | bc)" "$path")"$'\n'
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACMR -z "$against")
+
+if [ -n "$oversize" ]; then
+  echo "pre-commit: rejected. Staged blob(s) over 10 MB:" >&2
+  printf '%s' "$oversize" >&2
+  cat >&2 <<'MSG'
+Large artefacts (checkpoints, datasets, videos, traces, arrays) belong on disk
+and in .gitignore, not in git history. If this file genuinely must be tracked,
+re-run with: ALLOW_BIG_BLOBS=1 git commit ...
+MSG
+  exit 1
+fi
+exit 0
