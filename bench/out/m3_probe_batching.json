@@ -1,0 +1,39 @@
+{
+  "ckpt": "/data_new/vchandr2/runs/openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt",
+  "torch": "2.2.0+cu121",
+  "prompt_last_token_id": 29901,
+  "ends_with_29871": false,
+  "input_ids_len": 19,
+  "single_action_shape": [
+    8,
+    7
+  ],
+  "batch": {
+    "2": {
+      "ok": false,
+      "error": "RuntimeError: shape '[8, 7]' is invalid for input of size 112"
+    },
+    "4": {
+      "ok": false,
+      "error": "RuntimeError: shape '[8, 7]' is invalid for input of size 224"
+    }
+  },
+  "latency_ms": {
+    "1": {
+      "total_ms": 164.4966684281826,
+      "per_request_ms": 164.4966684281826
+    },
+    "2": {
+      "error": "RuntimeError: shape '[8, 7]' is invalid for input of size 112"
+    },
+    "4": {
+      "error": "RuntimeError: shape '[8, 7]' is invalid for input of size 224"
+    },
+    "8": {
+      "error": "RuntimeError: shape '[8, 7]' is invalid for input of size 448"
+    },
+    "16": {
+      "error": "OutOfMemoryError: CUDA out of memory. Tried to allocate 200.00 MiB. GPU 0 has a total capacity of 23.68 GiB of which 118.38 MiB is free. Including non-PyTorch memory, this process has 23.56 GiB memory in use. Of the allocated memory 20.24 GiB is allocated by PyTorch, and 1.97 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)"
+    }
+  }
+}
