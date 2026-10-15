@@ -1,0 +1,16 @@
+{
+  "mode": "split",
+  "contacts_restructured": true,
+  "n_substeps": 10000,
+  "n_control_steps": 400.0,
+  "ms_per_substep": {
+    "clearance": 0.043566882237792016,
+    "total": 0.20532252229750156
+  },
+  "ms_per_control_step": {
+    "on_substep_total": 5.133063057437539,
+    "carried_now": 0.0,
+    "clearance": 1.0891720559448004,
+    "contact_loop_and_actor_of_residual": 4.043891001492739
+  }
+}

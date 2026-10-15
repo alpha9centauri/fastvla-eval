@@ -40,8 +40,14 @@ ignore = [
 # the bootstrap shim must be imported first or TensorFlow is pulled into inference.
 "audit/t2_breakdown.py" = ["E402", "I001"]
 "audit/t4_labeler.py" = ["E402"]
+# Same bootstrap-first requirement: these all import rollout_bootstrap before anything
+# that pulls in openvla_utils, and sorting the block would break it.
+"fastvla/labeler/bench_stages.py" = ["E402", "I001"]
+"fastvla/labeler/bench_parity.py" = ["E402", "I001"]
+"fastvla/labeler/bench_call.py" = ["E402", "I001"]
+"fastvla/labeler/bench_contacts.py" = ["E402", "I001"]
+"fastvla/run_with_labeler.py" = ["E402", "I001"]
 "bench/*.py" = ["E402"]
-"fastvla/labeler/bench_stages.py" = ["E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["fastvla"]

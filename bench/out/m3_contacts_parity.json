@@ -1,0 +1,21 @@
+{
+  "mode": "parity",
+  "n_records_compared": 700,
+  "n_mismatches": 0,
+  "mismatches": [],
+  "keys": [
+    "oa2__i00__base",
+    "oa3__i00__base",
+    "oa5__i00__base",
+    "oa2__i01__base",
+    "oa5__i01__base",
+    "oa1__i00__base",
+    "oa6_L1__i00__base"
+  ],
+  "coverage": {
+    "records_with_contact": 80,
+    "total_pairs_recorded": 2507,
+    "records_with_carried_object": 94
+  },
+  "BIT_EXACT": true
+}

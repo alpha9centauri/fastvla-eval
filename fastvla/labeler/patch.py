@@ -5,6 +5,7 @@
     LABELER_LEVEL=gjk    swap only the GJK core at both call sites (step 4a)
                   =batch  also run the whole branch-and-bound in C++ (step 4b)
     LABELER_THREADS=N    threads for the piece scan (step 4c)
+    CONTACTS=1       also install the restructured contact scan (M3 step 0, bit-exact)
 
 The Python path is never modified, only shadowed: `install()` rebinds module globals and
 `uninstall()` puts the originals back, so the fallback is the untouched reference and a
@@ -109,12 +110,18 @@ def _make_update_clearance(n_threads):
     return _update_clearance
 
 
-def install(which=None, level=None, n_threads=None):
+def install(which=None, level=None, n_threads=None, contacts=None):
     """Patch according to the flags. Returns the level actually installed, or None."""
     which = (which or os.environ.get("LABELER", "python")).lower()
     level = (level or os.environ.get("LABELER_LEVEL", "batch")).lower()
     if n_threads is None:
         n_threads = int(os.environ.get("LABELER_THREADS", "1"))
+    if contacts is None:
+        contacts = os.environ.get("CONTACTS", "0") == "1"
+    if contacts:
+        from fastvla.labeler import contacts as contacts_mod
+
+        contacts_mod.install()
     if which == "python":
         return None
     if which != "cpp":
@@ -146,6 +153,9 @@ def install(which=None, level=None, n_threads=None):
 
 
 def uninstall():
+    from fastvla.labeler import contacts as contacts_mod
+
+    contacts_mod.uninstall()
     if _STATE["installed"] is None:
         return
     import convex_distance as cd
