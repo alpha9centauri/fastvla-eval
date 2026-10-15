@@ -224,6 +224,25 @@ def main():
         requests=cli.n_requests,
         mean_server_batch=(float(np.mean(cli.batch_sizes)) if cli.batch_sizes else None),
         mean_queue_wait_ms=(float(np.mean(cli.queue_waits)) if cli.queue_waits else None),
+        # Per-request overhead decomposition, worker side. round_trip is what the rollout
+        # actually waits; queue_wait and forward are what the server reported for the same
+        # request, so the remainder is transport plus the server's CPU preprocessing.
+        mean_round_trip_ms=(float(np.mean(cli.round_trips)) if cli.round_trips else None),
+        p95_round_trip_ms=(float(np.percentile(cli.round_trips, 95)) if cli.round_trips else None),
+        mean_server_forward_ms=(
+            float(np.mean(cli.server_forwards)) if cli.server_forwards else None
+        ),
+        mean_overhead_ms=(
+            float(
+                np.mean(
+                    np.asarray(cli.round_trips)
+                    - np.asarray(cli.queue_waits)
+                    - np.asarray(cli.server_forwards)
+                )
+            )
+            if cli.round_trips
+            else None
+        ),
     )
     with open(os.path.join(RUN_DIR, "logs", f"worker{WORKER_ID}_summary.json"), "w") as fh:
         json.dump(summary, fh, indent=2)

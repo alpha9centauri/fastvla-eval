@@ -1,0 +1,18 @@
+# displacement test, started 2026-10-14 21:49:04
+# cmd: bash /data_new/vchandr2/fastvla-eval/bench/sweep.sh ctrl60 8 4 1 delay2_n8b4_d1
+[RUN] delay2_n8b4_d1: 60 rollouts, N=8, B=4, D=1.0 ms, parity=False
+[RUN] server ready in 15.0 s
+[RUN] spawned 8 workers
+[PROGRESS] done=1 total=60
+[PROGRESS] done=3 total=60
+[PROGRESS] done=4 total=60
+[PROGRESS] done=7 total=60
+[PROGRESS] done=8 total=60
+[PROGRESS] done=9 total=60
+[PROGRESS] done=11 total=60
+[PROGRESS] done=12 total=60
+[PROGRESS] done=13 total=60
+[PROGRESS] done=14 total=60
+[PROGRESS] done=15 total=60
+[PROGRESS] done=16 total=60
+[PROGRESS] done=17 total=60

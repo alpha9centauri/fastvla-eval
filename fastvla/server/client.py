@@ -1,5 +1,7 @@
 """Worker-side stub: one blocking request/reply per re-plan."""
 
+import time
+
 import zmq
 
 from fastvla.server import protocol as P
@@ -17,6 +19,8 @@ class PolicyClient:
         self.n_requests = 0
         self.batch_sizes = []
         self.queue_waits = []
+        self.round_trips = []  # wall time of get_chunk, worker side
+        self.server_forwards = []  # the forward the server reported for this request
 
     def hello(self, n_rollouts):
         self.sock.send_multipart(P.pack_hello(self.worker_id, self.run_id, n_rollouts))
@@ -36,6 +40,7 @@ class PolicyClient:
             wrist_image,
             state,
         )
+        t0 = time.perf_counter()
         self.sock.send_multipart(frames)
         if not self.sock.poll(self.timeout_ms, zmq.POLLIN):
             raise TimeoutError(
@@ -48,8 +53,10 @@ class PolicyClient:
             # benchmark would be misread as the documented oa6_L1 coin flip.
             raise RuntimeError(f"reply mismatch: asked {want}, got {header.get('request_id')}")
         self.n_requests += 1
+        self.round_trips.append(1000.0 * (time.perf_counter() - t0))
         self.batch_sizes.append(header.get("server_batch_size", 0))
         self.queue_waits.append(header.get("queue_wait_ms", 0.0))
+        self.server_forwards.append(header.get("forward_ms", 0.0))
         return actions
 
     def close(self):

@@ -1,0 +1,42 @@
+{
+  "token_lengths": [
+    32,
+    30,
+    24,
+    29,
+    28,
+    32
+  ],
+  "unique_token_lengths": [
+    24,
+    28,
+    29,
+    30,
+    32
+  ],
+  "batches": {
+    "2": {
+      "refused": true,
+      "error": "batch mixes prompt lengths [30, 32]; the server must group by prompt length (see assert_uniform_prompt_length.__doc__ for why padding is not the answer)"
+    },
+    "3": {
+      "refused": true,
+      "error": "batch mixes prompt lengths [24, 30, 32]; the server must group by prompt length (see assert_uniform_prompt_length.__doc__ for why padding is not the answer)"
+    },
+    "6": {
+      "refused": true,
+      "error": "batch mixes prompt lengths [24, 28, 29, 30, 32]; the server must group by prompt length (see assert_uniform_prompt_length.__doc__ for why padding is not the ans"
+    }
+  },
+  "same_instruction": {
+    "2": {
+      "worst": 0.04296875
+    },
+    "4": {
+      "worst": 0.0703125
+    },
+    "6": {
+      "worst": 0.04296875
+    }
+  }
+}

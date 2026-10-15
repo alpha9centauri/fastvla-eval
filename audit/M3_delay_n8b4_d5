@@ -1,0 +1,11 @@
+# displacement test, started 2026-10-14 21:38:22
+# cmd: bash /data_new/vchandr2/fastvla-eval/bench/sweep.sh ctrl60 8 4 5 delay_n8b4_d5
+[RUN] delay_n8b4_d5: 60 rollouts, N=8, B=4, D=5.0 ms, parity=False
+[RUN] server ready in 14.5 s
+[RUN] spawned 8 workers
+[PROGRESS] done=2 total=60
+[PROGRESS] done=5 total=60
+[PROGRESS] done=7 total=60
+[RUN] merged 7/60 rollouts in 355.5 s = 70.9 rollouts/hour; collisions 0, completions 7
+[RUN] -> /data_new/vchandr2/fastvla-eval/bench/runs/delay_n8b4_d5/merged.json
+[RUN] INCOMPLETE: 7/60 rows, worker rcs {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1}

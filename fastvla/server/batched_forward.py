@@ -38,6 +38,39 @@ EMPTY_TOKEN_ID = 29871
 _PATCHED = {"done": False}
 
 
+def assert_uniform_prompt_length(prepared):
+    """Refuse a batch whose prompts differ in length, and say why.
+
+    The prompt is "In: What action should the robot take to {instruction}?", so its token
+    count varies with the task: the six LIBERO-Safety instructions tokenise to 24, 28, 29,
+    30, 32 and 32 tokens. torch.cat along the batch dimension needs equal lengths, so a
+    mixed batch raises "Sizes of tensors must match except in dimension 0".
+
+    Left-padding to the longest prompt makes it RUN, and was tried and rejected: it is
+    numerically wrong here. predict_action calls the language model with
+    position_ids=None, so Llama derives positions as 0..L-1 for every row; left-padding a
+    shorter prompt therefore shifts all of its real tokens' rotary positions. Measured
+    cost of doing it anyway (bench/out/m3_mixed_batch.json): worst |batched - single|
+    action difference 3.1e-02 at B=2 and 3.2e-01 at B=3 and B=6, against 4.8e-03 to
+    6.6e-03 for a same-length batch. 0.32 on an action in roughly [-1, 1] is not rounding.
+
+    Doing it properly would mean deriving position_ids from the attention mask and passing
+    them through predict_action, which that function does not accept -- a deeper fork of
+    the reference than M3 should carry for a mechanism worth 1.27x.
+
+    So the server batches only requests that share a prompt length (it groups by it), and
+    this assertion is the guarantee that it did. It cannot fire in production; if it does,
+    it is loud instead of silently wrong.
+    """
+    lens = sorted({int(p["input_ids"].shape[1]) for p in prepared})
+    if len(lens) > 1:
+        raise ValueError(
+            f"batch mixes prompt lengths {lens}; the server must group by prompt length "
+            "(see assert_uniform_prompt_length.__doc__ for why padding is not the answer)"
+        )
+    return lens[0]
+
+
 def append_empty_token(input_ids, attention_mask):
     """Append id 29871 to every row, so predict_action's batch-1 branch never fires."""
     b = input_ids.shape[0]
@@ -177,6 +210,7 @@ class BatchedPolicy:
     @torch.inference_mode()
     def forward(self, prepared):
         """One GPU forward for a list of prepared requests -> list of (8, 7) float64."""
+        assert_uniform_prompt_length(prepared)
         input_ids = torch.cat([p["input_ids"] for p in prepared], dim=0).to(self.device)
         attn = torch.cat([p["attention_mask"] for p in prepared], dim=0).to(self.device)
         pix = torch.cat([p["pixel_values"] for p in prepared], dim=0).to(

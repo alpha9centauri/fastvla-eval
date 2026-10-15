@@ -1,0 +1,57 @@
+# displacement test, started 2026-10-14 21:46:35
+# cmd: bash /data_new/vchandr2/fastvla-eval/bench/mixed_batch_run.sh
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/scripts/setup_macros.py (__init__.py:9)
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+/data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/wandb/util.py:118: SentryHubDeprecationWarning: `sentry_sdk.Hub` is deprecated and will be removed in a future major release. Please consult our 1.x to 2.x migration guide for details on how to migrate `Hub` usage to the new API: https://docs.sentry.io/platforms/python/migration/1.x-to-2.x
+  sentry_hub = sentry_sdk.Hub(sentry_client)
+/data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/wandb/sdk/internal/internal_api.py:30: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/pkg_resources/__init__.py:3148: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('mpl_toolkits')`.
+Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+  declare_namespace(pkg)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1792039597.688618  199418 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+/data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/matplotlib/_mathtext.py:30: PyparsingDeprecationWarning: 'enablePackrat' deprecated - use 'enable_packrat'
+  ParserElement.enablePackrat()
+In /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'parseString' deprecated - use 'parse_string'
+In /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'resetCache' deprecated - use 'reset_cache'
+Using LIBERO constants:
+  NUM_ACTIONS_CHUNK = 8
+  ACTION_DIM = 7
+  PROPRIO_DIM = 8
+  ACTION_PROPRIO_NORMALIZATION_TYPE = bounds_q99
+If needed, manually set the correct constants in `prismatic/vla/constants.py`!
+Instantiating pretrained VLA policy...
+Created backup of original config at: /data_new/vchandr2/runs/openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt/config.json.back.20261014_214642
+Updated config.json at: /data_new/vchandr2/runs/openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt/config.json
+Changes made:
+  - Set AutoConfig to "configuration_prismatic.OpenVLAConfig"
+  - Set AutoModelForVision2Seq to "modeling_prismatic.OpenVLAForActionPrediction"
+WARNING: `modeling_prismatic.py` is not found anywhere in the current directory.
+WARNING: `configuration_prismatic.py` is not found anywhere in the current directory.
+<frozen importlib._bootstrap>:283: DeprecationWarning: the load_module() method is deprecated and slated for removal in Python 3.12; use exec_module() instead
+
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:00,  3.47it/s]
+Loading checkpoint shards:  50%|█████     | 2/4 [00:00<00:00,  3.82it/s]
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:00<00:00,  3.98it/s]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:01<00:00,  4.12it/s]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:01<00:00,  4.00it/s]
+Loaded model: <class 'transformers_modules.openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt.modeling_prismatic.OpenVLAForActionPrediction'>
+[MIX] instruction token lengths: [32, 30, 24, 29, 28, 32]
+    32  pick up the akita black bowl on the stove and place it on the plate
+    30  pick up the book and place it in the back compartment of the caddy
+    24  put both moka pots on the stove
+    29  put both the alphabet soup and the cream cheese box in the basket
+    28  put the white yellow mug in the microwave and close it
+    32  pick up the akita black bowl on the stove and place it on the plate
+[MIX] B=2 mixed-instruction batch ok, worst |batched - single| = 3.125e-02
+[MIX] B=3 mixed-instruction batch ok, worst |batched - single| = 3.203e-01
+[MIX] B=6 mixed-instruction batch ok, worst |batched - single| = 3.203e-01
+[MIX] -> /data_new/vchandr2/fastvla-eval/bench/out/m3_mixed_batch.json
+MIXED BATCH PROBE DONE

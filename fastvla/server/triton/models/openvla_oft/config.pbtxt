@@ -1,0 +1,68 @@
+# Triton model repository entry for the OpenVLA-OFT policy (M3b).
+#
+# The Python backend wraps exactly the same BatchedPolicy that M3a's server uses, so a
+# Triton-vs-M3a comparison is a comparison of the serving layer and not of the model.
+#
+# Dynamic batching: max_batch_size and max_queue_delay_microseconds are the B and D that
+# M3a takes as MAX_BATCH and BATCH_DELAY_MS, so the same sweep applies.
+#
+# NOTE on the values. M3 measured that batching this model buys only 1.27x (6.0 -> 7.6
+# requests/s from B=1 to B=4, flat after) because a single request already saturates the
+# card, and that B=8 alongside 8 workers' EGL contexts exhausts the 24 GB card. It also
+# measured that any batching perturbs bf16 reduction order enough to flip marginal starts.
+# So max_batch_size is 4, not 8, and the parity configuration is max_batch_size 1 with
+# dynamic_batching removed -- see fastvla/server/DESIGN.md.
+
+name: "openvla_oft"
+backend: "python"
+max_batch_size: 4
+
+input [
+  {
+    name: "full_image"
+    data_type: TYPE_UINT8
+    dims: [ 256, 256, 3 ]
+  },
+  {
+    name: "wrist_image"
+    data_type: TYPE_UINT8
+    dims: [ 256, 256, 3 ]
+  },
+  {
+    name: "state"
+    data_type: TYPE_FP64
+    dims: [ 8 ]
+  },
+  {
+    name: "instruction"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+  }
+]
+
+output [
+  {
+    name: "actions"
+    data_type: TYPE_FP64
+    dims: [ 8, 7 ]
+  }
+]
+
+dynamic_batching {
+  preferred_batch_size: [ 2, 4 ]
+  max_queue_delay_microseconds: 10000
+}
+
+instance_group [
+  {
+    count: 1
+    kind: KIND_GPU
+    gpus: [ 1 ]
+  }
+]
+
+# The weights are ~20 GB of a 23.68 GB card, so exactly one instance fits and the
+# simulator workers' EGL contexts share what is left.
+model_transaction_policy {
+  decoupled: false
+}

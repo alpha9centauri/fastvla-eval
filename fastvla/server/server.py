@@ -163,6 +163,14 @@ def main():
             except queue.Empty:
                 continue
             batch = [first]
+            # Only requests with the SAME prompt length may share a forward: the six task
+            # instructions tokenise to different lengths, and padding to match them shifts
+            # rotary positions and corrupts the actions (see
+            # batched_forward.assert_uniform_prompt_length). Non-matching arrivals are set
+            # aside and re-queued, so they are not dropped or reordered relative to each
+            # other -- they just wait for a batch of their own shape.
+            want_len = int(first[2]["input_ids"].shape[1])
+            deferred = []
             if MAX_BATCH > 1 and delay > 0:
                 deadline = time.perf_counter() + delay
                 while len(batch) < MAX_BATCH:
@@ -170,15 +178,26 @@ def main():
                     if remaining <= 0:
                         break
                     try:
-                        batch.append(work.get(timeout=remaining))
+                        item = work.get(timeout=remaining)
                     except queue.Empty:
                         break
+                    if int(item[2]["input_ids"].shape[1]) == want_len:
+                        batch.append(item)
+                    else:
+                        deferred.append(item)
             elif MAX_BATCH > 1:
                 while len(batch) < MAX_BATCH:
                     try:
-                        batch.append(work.get_nowait())
+                        item = work.get_nowait()
                     except queue.Empty:
                         break
+                    if int(item[2]["input_ids"].shape[1]) == want_len:
+                        batch.append(item)
+                    else:
+                        deferred.append(item)
+            for item in deferred:
+                work.put(item)
+            STATS["deferred_for_length"] = STATS.get("deferred_for_length", 0) + len(deferred)
             now = time.perf_counter()
             waits = [1000 * (now - b[3]) for b in batch]
             t0 = time.perf_counter()
