@@ -32,7 +32,18 @@ COPY --chown=fastvla:fastvla . /opt/fastvla
 USER fastvla
 
 # Build the labeler and prove it imports, in the image.
-RUN bash fastvla/labeler/build.sh \
+#
+# PY=python is required: fastvla/labeler/build.sh defaults PY to the conda interpreter on
+# the measurement host, which does not exist here. Without it the build fails with
+# "/data_new/vchandr2/.../python: No such file or directory" (exit 127). The default is
+# left alone on purpose -- it is what the host benchmarks use.
+#
+# The Python.h check is here so that a missing-headers base image says so, instead of
+# surfacing as a compiler error fifty lines down.
+RUN test -f "$(python -c 'import sysconfig;print(sysconfig.get_paths()["include"])')/Python.h" \
+      || (echo "base image has no Python headers; build.sh cannot compile the extension" \
+          && exit 1) \
+ && PY=python bash fastvla/labeler/build.sh \
  && PYTHONPATH=/opt/fastvla:/opt/fastvla/fastvla/labeler \
     python -c "import fastgjk; print('fastgjk ok')"
 

@@ -1,0 +1,27 @@
+# Keep the build context to what the image needs. On a CI runner the context is just the
+# git checkout, but a local build would otherwise ship benchmark runs and profiler traces
+# -- audit/traces alone holds a 424 MB sqlite and a 118 MB nsys report.
+#
+# .git is deliberately NOT excluded: tests/test_no_empty_sources.py enumerates tracked
+# files with `git ls-files`, so the suite needs the repository inside the image.
+bench/runs/
+bench/triton_libs/
+bench/out/*.npz
+audit/traces/
+audit/t1_out/
+audit/t2_out/
+audit/t2b_out/
+audit/t3_out/
+audit/logs/
+audit/arrays/*.npz
+audit/M0_AUDIT_*
+audit/M2_*
+audit/M3_*
+audit/M4_*
+audit/M5_*
+audit/DONE
+audit/FAILED
+audit/SUMMARY.txt
+**/__pycache__/
+**/*.so
+**/*.pyc

@@ -7,7 +7,11 @@
 # Base: NVIDIA's CUDA 12.1.1 runtime on Ubuntu 22.04. 12.1 because gpu5's driver is
 # 530.30.02 and CUDA 12.2 needs >= 535 (fastvla/server/CONTAINERS.md section 4); the same
 # constraint that pins Triton to 23.07.
-FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04@sha256:0e25ca6cb0e9b0bd6b2f0f5b4f0f1e9c4a0b2d5e6f7a8b9c0d1e2f3a4b5c6d7e AS base
+# Pinned by tag, not by digest. An earlier version of this file carried a sha256 digest
+# that was invented rather than looked up -- it was never pulled or verified. Pin the real
+# digest here once the image has actually been pulled on a host that can:
+#   docker buildx imagetools inspect nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04 AS base
 
 # Pinned so a rebuild is reproducible. Versions are the ones measured in M0-M4 on gpu5.
 ARG PY_VERSION=3.10
@@ -55,7 +59,8 @@ COPY --chown=fastvla:fastvla . /opt/fastvla
 # rather than the host's. -O3 -fopenmp, and deliberately no -march=native: M2 measured
 # 4.7% for it and rejected it because a native build changes results on another host.
 USER fastvla
-RUN bash fastvla/labeler/build.sh && \
+# PY=python3: build.sh's default is the measurement host's conda interpreter, absent here.
+RUN PY=python3 bash fastvla/labeler/build.sh && \
     python3 -c "import sys; sys.path.insert(0, 'fastvla/labeler'); import fastgjk; print('fastgjk ok')"
 
 ENV PYTHONPATH=/opt/fastvla:/opt/fastvla/fastvla/labeler
