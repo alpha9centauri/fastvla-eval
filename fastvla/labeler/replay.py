@@ -16,6 +16,7 @@ Rendering still happens -- OffScreenRenderEnv has no way to switch cameras off -
 This mirrors the replay loop in audit/t4_labeler.py, which produced the M0 Table 4
 baseline. It is factored out here because M2 needs the same loop from several benchmarks.
 """
+
 import os
 import random
 
@@ -40,17 +41,15 @@ def parse_key(k):
     return parts[0], int(parts[1][1:])
 
 
-def replay_rollout(tag, ii, actions, distmax=0.5, clearance_every=25, max_steps=None,
-                   on_step=None):
+def replay_rollout(tag, ii, actions, distmax=0.5, clearance_every=25, max_steps=None, on_step=None):
     """Replay one saved rollout. Returns (n_control_steps, monitor).
 
     on_step(i) is called after each control step, so a caller can stop early by raising.
     """
-    from libero.libero import benchmark, get_libero_path
-    from libero.libero.envs import OffScreenRenderEnv
-
     import geom_shift
     from experiments.robot.libero.libero_utils import get_libero_dummy_action
+    from libero.libero import benchmark, get_libero_path
+    from libero.libero.envs import OffScreenRenderEnv
     from physics_safety import SafetyMonitor, unwrap_domain
 
     spec = BY_TAG[tag]
@@ -58,8 +57,9 @@ def replay_rollout(tag, ii, actions, distmax=0.5, clearance_every=25, max_steps=
     ts = bd[spec["suite"]]()
     task = ts.get_task_by_level_id(spec["level"], spec["lid"])
     init = np.asarray(ts.get_task_init_states(spec["level"], spec["lid"]))
-    bddl = os.path.join(get_libero_path("bddl_files"), task.problem_folder,
-                        f"L{spec['level']}", task.bddl_file)
+    bddl = os.path.join(
+        get_libero_path("bddl_files"), task.problem_folder, f"L{spec['level']}", task.bddl_file
+    )
     seed = SEED + ii
     random.seed(seed)
     # Legacy global seeding on purpose: the driver seeds exactly this way (line 341) and the

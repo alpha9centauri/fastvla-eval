@@ -76,3 +76,7 @@ audit/DONE
 audit/FAILED
 audit/SUMMARY.txt
 audit/M0_AUDIT_*
+
+# Compiled extensions and benchmark outputs
+*.so
+bench/out/

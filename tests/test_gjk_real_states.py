@@ -5,6 +5,7 @@ The measurement itself needs MuJoCo, EGL and GPU 1, so it runs under
 writes `bench/out/m2_parity_real.json`. This test is the gate on that artefact, so the
 acceptance criterion lives in the test suite rather than only in a log.
 """
+
 import json
 import os
 
@@ -31,7 +32,8 @@ def test_enough_states_measured(parity):
 @pytest.mark.slow
 def test_max_abs_diff_under_tolerance(parity):
     assert parity["max_abs_diff_m_overall"] < TOL, (
-        f"max |python - c++| = {parity['max_abs_diff_m_overall']:.3e} m")
+        f"max |python - c++| = {parity['max_abs_diff_m_overall']:.3e} m"
+    )
 
 
 @pytest.mark.slow

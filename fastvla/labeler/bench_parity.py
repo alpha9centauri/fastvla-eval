@@ -14,21 +14,25 @@ which matters more than the magnitude -- 0.0 is the signal that a pair is touchi
 
 Env: ACTIONS_NPZ, OUT, [N_CALLS=1000, DISTMAX=0.5, CLEARANCE_EVERY=25]
 """
+
 import json
 import os
 import sys
 
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
-for p in ("/data_new/vchandr2", "/data_new/vchandr2/openvla-oft", DISP,
-          os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")):
+for p in (
+    "/data_new/vchandr2",
+    "/data_new/vchandr2/openvla-oft",
+    DISP,
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."),
+):
     sys.path.insert(0, p)
 
+import convex_distance as cd  # noqa: E402
+import numpy as np  # noqa: E402
+import physics_safety as ps  # noqa: E402
 import rollout_bootstrap  # noqa: F401, E402
 
-import numpy as np  # noqa: E402
-
-import convex_distance as cd  # noqa: E402
-import physics_safety as ps  # noqa: E402
 from fastvla.labeler import load_fastgjk  # noqa: E402
 from fastvla.labeler.replay import parse_key, replay_rollout  # noqa: E402
 
@@ -40,8 +44,8 @@ N_CALLS = int(os.environ.get("N_CALLS", "1000"))
 DISTMAX = float(os.environ.get("DISTMAX", "0.5"))
 CLEARANCE_EVERY = int(os.environ.get("CLEARANCE_EVERY", "25"))
 
-REC = {"s3": [], "s5": []}       # (python, cpp) per call
-_py_gjk = cd.gjk_distance        # the single reference implementation
+REC = {"s3": [], "s5": []}  # (python, cpp) per call
+_py_gjk = cd.gjk_distance  # the single reference implementation
 
 
 def _both(site):
@@ -49,8 +53,9 @@ def _both(site):
         p = _py_gjk(A, B, max_iter, tol)
         c = fastgjk.gjk_distance(A, B, max_iter, tol)
         REC[site].append((p, c))
-        return p                  # the Python value is what the run uses, so the
-                                  # replay itself is unchanged by measuring it
+        return p  # the Python value is what the run uses, so the
+        # replay itself is unchanged by measuring it
+
     return w
 
 
@@ -78,14 +83,27 @@ for k in sorted(acts_all):
         continue
     tag, ii = parse_key(k)
     before = n_clear["n"]
-    n, _mon = replay_rollout(tag, ii, a, distmax=DISTMAX, clearance_every=CLEARANCE_EVERY,
-                             on_step=lambda i: n_clear["n"] < N_CALLS)
+    n, _mon = replay_rollout(
+        tag,
+        ii,
+        a,
+        distmax=DISTMAX,
+        clearance_every=CLEARANCE_EVERY,
+        on_step=lambda i: n_clear["n"] < N_CALLS,
+    )
     used.append(dict(key=k, control_steps=int(n), clearance_calls=n_clear["n"] - before))
-    print(f"[PARITY] {k}: {n_clear['n'] - before} clearance calls "
-          f"({n_clear['n']}/{N_CALLS})", flush=True)
+    print(
+        f"[PARITY] {k}: {n_clear['n'] - before} clearance calls ({n_clear['n']}/{N_CALLS})",
+        flush=True,
+    )
 
-res = dict(distmax=DISTMAX, clearance_every=CLEARANCE_EVERY,
-           n_clearance_calls=n_clear["n"], rollouts_used=used, sites={})
+res = dict(
+    distmax=DISTMAX,
+    clearance_every=CLEARANCE_EVERY,
+    n_clearance_calls=n_clear["n"],
+    rollouts_used=used,
+    sites={},
+)
 worst_overall = 0.0
 for site, label in (("s3", "S3 union-hull GJK"), ("s5", "S5a exact-pair GJK core")):
     A = np.array(REC[site], dtype=np.float64)
@@ -99,14 +117,18 @@ for site, label in (("s3", "S3 union-hull GJK"), ("s5", "S5a exact-pair GJK core
     nz = p != 0.0
     rel[nz] = d[nz] / np.abs(p[nz])
     res["sites"][site] = dict(
-        label=label, n_calls=int(len(A)),
-        max_abs_diff_m=float(d.max()), mean_abs_diff_m=float(d.mean()),
+        label=label,
+        n_calls=int(len(A)),
+        max_abs_diff_m=float(d.max()),
+        mean_abs_diff_m=float(d.mean()),
         p95_abs_diff_m=float(np.percentile(d, 95)),
         max_rel_diff=float(rel.max()),
         n_exact_equal=int((d == 0.0).sum()),
-        n_zero_python=int(zp.sum()), n_zero_cpp=int(zc.sum()),
+        n_zero_python=int(zp.sum()),
+        n_zero_cpp=int(zc.sum()),
         n_intersection_disagreements=int((zp != zc).sum()),
-        python_min=float(p.min()), python_max=float(p.max()),
+        python_min=float(p.min()),
+        python_max=float(p.max()),
     )
     worst_overall = max(worst_overall, float(d.max()))
     np.savez_compressed(f"{OUT}_{site}.npz", pairs=A)
@@ -122,11 +144,15 @@ for site, label in (("s3", "S3 union-hull GJK"), ("s5", "S5a exact-pair GJK core
 
 res["max_abs_diff_m_overall"] = worst_overall
 res["tolerance_m"] = 1e-6
-res["PASS"] = bool(worst_overall < 1e-6 and all(
-    s["n_intersection_disagreements"] == 0 for s in res["sites"].values()))
+res["PASS"] = bool(
+    worst_overall < 1e-6
+    and all(s["n_intersection_disagreements"] == 0 for s in res["sites"].values())
+)
 with open(OUT + ".json", "w") as fh:
     json.dump(res, fh, indent=2)
-print(f"\n[PARITY] overall max |py - c++| = {worst_overall:.3e} m "
-      f"(tolerance 1e-6) -> {'PASS' if res['PASS'] else 'FAIL'}")
+print(
+    f"\n[PARITY] overall max |py - c++| = {worst_overall:.3e} m "
+    f"(tolerance 1e-6) -> {'PASS' if res['PASS'] else 'FAIL'}"
+)
 print(f"[PARITY] -> {OUT}.json")
 print("PARITY DONE", flush=True)

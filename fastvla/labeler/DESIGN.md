@@ -124,6 +124,89 @@ parity. `-march=native` is revisited as a measured option in step 4, with parity
 
 Each step below records before/after on the same benchmark. Filled in as the steps land.
 
+All rows: 1000 clearance calls, `distmax=0.5`, `clearance_every=25`, the same saved
+states, `bench/call_run.sh` -> `bench/out/m2_call_*.json`. "ms/control step" is ms/call x2
+for the reason in "Why twice" above.
+
 | step | change | ms/call | ms/control step | vs Python | kept |
 |---|---|---|---|---|---|
 | 0 | Python reference (M0 Table 4) | 64.12 | 128.25 | 1.00x | — |
+| 0' | Python reference, re-measured in this harness | 63.638 | 127.28 | — | control |
+| 4a | C++ GJK core swapped at both call sites | 3.302 | 6.60 | **19.3x** | yes |
+| 4b | hull cache, bounds, union hull and branch-and-bound all in C++ | 0.588 | 1.18 | **108x** | yes |
+| 4b' | same, built with `-fopenmp`, one thread | 0.578 | 1.16 | 110x | yes (default) |
+| 4c | 4 threads over the piece scan | 0.505 | 1.01 | 126x | available, not default |
+| 4c | 8 threads over the piece scan | 0.493 | 0.99 | 129x | available, not default |
+| 4d | `-march=native`, one thread | 0.551 | 1.10 | 115x | **no** |
+
+Row 0' is the control: 63.638 ms against Table 4's 64.12 ms, so this harness and the M0
+harness measure the same thing and the speedups below are not an artefact of the rig.
+
+### 4a, swapping only the GJK core: 19.3x
+
+Replacing both `gjk_distance` references and nothing else. This is the row the Amdahl
+bound above predicts: GJK was 61.06 of 65.36 ms, so with GJK near-free the floor is the
+2.67 ms of non-GJK work, and 3.302 ms is that floor plus the remaining C++ GJK. The bound
+held.
+
+### 4b, porting the rest of the stage: 108x
+
+The 24.5x Amdahl ceiling applies to 4a, not to the milestone, because it assumes S1, S2,
+S4 and R stay in Python. Moving the whole branch-and-bound into C++ removes them too, and
+with them ~168 Python->C++ crossings per clearance call (67 union-hull + 101 exact pairs).
+What is left in Python per call is two numpy fancy-index gathers of `geom_xmat`/`geom_xpos`
+and one call. Local hull vertices live on the C++ side, keyed by geom id, registered once
+per scene -- so S5b, the world-space transform, happens in C++ against cached vertices
+instead of allocating numpy arrays per pair.
+
+This is the one place M2 went beyond a transliteration, and it is why the result beats the
+plan's 20-100x guess rather than landing inside it.
+
+### 4c, threading the piece scan: kept, but not the default
+
+OpenMP over the surviving pieces of one actor, with an atomic `best`. Both prunes are
+exact and `best` only falls, so a stale read evaluates pairs a sequential scan would have
+skipped but never skips one it would have taken -- the minimum is unaffected. Verified:
+the threaded results are **bit-identical** to the sequential C++ on all 1000 calls.
+
+It wins 14.7% at 8 threads (0.578 -> 0.493 ms). It is not the default anyway, for a
+reason that is about M3 rather than about this benchmark: M3 runs N simulator workers
+against one batched server, and the parallelism belongs there, where it covers the whole
+control step, not inside a stage that is now ~1% of one. N workers each spawning 8 OpenMP
+threads on a 128-core box would oversubscribe long before the labeler mattered. The code
+is kept and measured; `LABELER_THREADS` defaults to 1. There is also a measured cutoff
+(`kThreadCutoff = 32` live pieces) below which the parallel region costs more than it
+saves.
+
+### 4d, `-march=native`: measured and rejected
+
+4.7% faster (0.578 -> 0.551 ms) with parity intact (max |diff| vs Python 1.94e-16 m).
+Rejected: M5 ships this in a Docker image, and a `-march=native` binary either faults or
+silently changes results on a different host. 4.7% of a stage that is now ~1% of a control
+step does not buy a non-portable artefact. `EXTRA_CXXFLAGS` overrides it for local work.
+
+## Parity, end to end
+
+Three levels, all on the same 1000 saved states:
+
+| what | result | artefact |
+|---|---|---|
+| per GJK call, both call sites (168,212 calls) | max \|py - c++\| **2.22e-16 m** vs 1e-6 tolerance; 0 intersection disagreements | `bench/out/m2_parity_real.json` |
+| monitor-level `min_clearance` per call, C++ GJK swap | max \|diff\| 2.78e-17 m, 841/1000 bit-identical | `bench/out/m2_monitor_level_parity.json` |
+| monitor-level `min_clearance` per call, full C++ stage | max \|diff\| **2.08e-16 m**, 782/1000 bit-identical | same |
+| threaded (4 and 8) vs sequential C++ | **bit-identical**, 1000/1000 | same |
+
+The monitor-level check matters more than the per-pair one for 4b: the ported stage
+reproduces not just each GJK distance but the branch-and-bound's answer, which depends on
+visiting order and early termination. `numpy.argsort` is introsort and not stable, so the
+Python reference has no defined order among exactly-tied bounds; the port uses
+`stable_sort` on (bound, index), which is deterministic and, because both prunes are
+exact, cannot change the minimum.
+
+## Remaining cost after M2
+
+At 0.578 ms/call the labeler is 1.16 ms per control step, down from 127.28. Against M0's
+199.7 ms control step that removes 126.1 ms, so a control step should fall to roughly
+73.6 ms if nothing else changes -- which makes the policy forward (25.4 ms, 12.7% before)
+about 34% of the step, and the OSC controller plus `sim.forward()` (30.3 ms together,
+AUDIT.md addendum) the new largest block. The 60-start run in step 6 is what settles it.

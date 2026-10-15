@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 # Build the fastgjk extension in place.
 #
-# No -ffast-math and no -march=native: both change floating-point results, and M2's
-# acceptance is 1e-6 m parity against the Python reference. -march=native is revisited
-# as a measured optimisation in step 4, with parity re-run.
+# Flags: -O3 -fopenmp. Threading is available but defaults to one thread (see DESIGN.md
+# step 4c); -fopenmp at one thread measured no slower than a build without it.
+#
+# No -ffast-math. No -march=native either: it was measured in step 4d at 4.7% faster with
+# parity intact, and rejected anyway, because M5 ships this in a Docker image and a
+# native build would fault or silently change results on a different host. 4.7% of a
+# stage that is now ~1% of a control step is not worth a non-portable binary. Pass
+# EXTRA_CXXFLAGS to override for a local experiment.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PY="${PY:-/data_new/vchandr2/miniconda3/envs/libero-vla/bin/python}"
 INC="$($PY -c 'import pybind11;print(pybind11.get_include())')"
 PYINC="$($PY -c 'import sysconfig;print(sysconfig.get_paths()["include"])')"
 EXT="$($PY -c 'import sysconfig;print(sysconfig.get_config_var("EXT_SUFFIX"))')"
-FLAGS="${EXTRA_CXXFLAGS:--O3}"
+FLAGS="${EXTRA_CXXFLAGS:--O3 -fopenmp}"
 set -x
 g++ -std=c++17 -shared -fPIC $FLAGS -fvisibility=hidden \
     -I"$INC" -I"$PYINC" -I"$HERE/src" \

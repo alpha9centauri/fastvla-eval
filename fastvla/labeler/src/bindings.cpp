@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "gjk.hpp"
+#include "labeler.hpp"
 
 namespace py = pybind11;
 
@@ -64,6 +65,61 @@ py::tuple closest_on_simplex_py(const Arr& W) {
   return py::make_tuple(out, keep);
 }
 
+// ---------------------------------------------------------------- Labeler ----------
+using IArr = py::array_t<int, py::array::c_style | py::array::forcecast>;
+
+void add_geom_py(fastgjk::Labeler& L, int gid, const Arr& verts, double pad) {
+  int n = 0;
+  const double* v = vdata(verts, n, "verts");
+  L.add_geom(gid, v, n, pad);
+}
+
+void set_union_hull_py(fastgjk::Labeler& L, int key, const Arr& verts) {
+  int n = 0;
+  const double* v = vdata(verts, n, "verts");
+  L.set_union_hull(key, v, n);
+}
+
+py::dict min_clearance_py(fastgjk::Labeler& L,
+                          const IArr& actor_ids, const Arr& actor_xmat, const Arr& actor_xpos,
+                          const IArr& piece_ids, const Arr& piece_xmat, const Arr& piece_xpos,
+                          int union_key, const Arr& union_xmat, const Arr& union_xpos,
+                          double best_init, int n_threads) {
+  const auto ab = actor_ids.request();
+  const auto pb = piece_ids.request();
+  const int na = static_cast<int>(ab.size);
+  const int np_ = static_cast<int>(pb.size);
+  const auto axm = actor_xmat.request(), axp = actor_xpos.request();
+  const auto pxm = piece_xmat.request(), pxp = piece_xpos.request();
+  if (axm.size != static_cast<ssize_t>(na) * 9 || axp.size != static_cast<ssize_t>(na) * 3) {
+    throw std::invalid_argument("actor_xmat must be (n,9) and actor_xpos (n,3)");
+  }
+  if (pxm.size != static_cast<ssize_t>(np_) * 9 || pxp.size != static_cast<ssize_t>(np_) * 3) {
+    throw std::invalid_argument("piece_xmat must be (n,9) and piece_xpos (n,3)");
+  }
+  fastgjk::Result r;
+  {
+    py::gil_scoped_release release;
+    r = L.min_clearance(static_cast<const int*>(ab.ptr), na,
+                        static_cast<const double*>(axm.ptr),
+                        static_cast<const double*>(axp.ptr),
+                        static_cast<const int*>(pb.ptr), np_,
+                        static_cast<const double*>(pxm.ptr),
+                        static_cast<const double*>(pxp.ptr),
+                        union_key,
+                        static_cast<const double*>(union_xmat.request().ptr),
+                        static_cast<const double*>(union_xpos.request().ptr),
+                        best_init, n_threads);
+  }
+  py::dict out;
+  out["best"] = r.best;
+  out["actor_idx"] = r.actor_idx;
+  out["piece_idx"] = r.piece_idx;
+  out["exact_pairs"] = r.exact_pairs;
+  out["union_hull_calls"] = r.union_hull_calls;
+  return out;
+}
+
 }  // namespace
 
 PYBIND11_MODULE(fastgjk, m) {
@@ -76,4 +132,21 @@ PYBIND11_MODULE(fastgjk, m) {
         "gjk_distance(A, B) - pad_a - pad_b, clamped at 0.");
   m.def("closest_on_simplex", &closest_on_simplex_py, py::arg("W"),
         "Closest point to the origin on conv(W) and the surviving subset indices.");
+
+  py::class_<fastgjk::Labeler>(m, "Labeler",
+      "Branch-and-bound clearance with the local hulls cached on the C++ side.")
+      .def(py::init<>())
+      .def("add_geom", &add_geom_py, py::arg("gid"), py::arg("verts"), py::arg("pad"),
+           "Register a geom's local-frame hull and swept-radius pad.")
+      .def("has_geom", &fastgjk::Labeler::has_geom, py::arg("gid"))
+      .def("n_geoms", &fastgjk::Labeler::n_geoms)
+      .def("set_union_hull", &set_union_hull_py, py::arg("key"), py::arg("verts"),
+           "Register an obstacle's union convex hull, in its body frame.")
+      .def("has_union", &fastgjk::Labeler::has_union, py::arg("key"))
+      .def("min_clearance", &min_clearance_py,
+           py::arg("actor_ids"), py::arg("actor_xmat"), py::arg("actor_xpos"),
+           py::arg("piece_ids"), py::arg("piece_xmat"), py::arg("piece_xpos"),
+           py::arg("union_key"), py::arg("union_xmat"), py::arg("union_xpos"),
+           py::arg("best_init"), py::arg("n_threads") = 1,
+           "One clearance query for one obstacle; returns best/actor_idx/piece_idx.");
 }

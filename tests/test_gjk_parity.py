@@ -7,13 +7,15 @@ original validation pass.
 These tests need no GPU and no MuJoCo. The companion check on 1000 real saved states is
 in test_gjk_real_states.py, which asserts on an artefact produced on GPU 1.
 """
+
 import numpy as np
 import pytest
 
 TOL = 1e-6
 
 fastgjk = pytest.importorskip(
-    "fastgjk", reason="run fastvla/labeler/build.sh to build the extension")
+    "fastgjk", reason="run fastvla/labeler/build.sh to build the extension"
+)
 from convex_distance import _closest_on_simplex as py_closest  # noqa: E402
 from convex_distance import gjk_distance as py_gjk  # noqa: E402
 
@@ -21,22 +23,30 @@ from convex_distance import gjk_distance as py_gjk  # noqa: E402
 def unit_cube(centre=(0.0, 0.0, 0.0)):
     """Axis-aligned cube of side 1, i.e. half-extents 0.5, as GeomHulls builds a box."""
     c = np.asarray(centre, dtype=np.float64)
-    return np.array([[sx, sy, sz] for sx in (-0.5, 0.5) for sy in (-0.5, 0.5)
-                     for sz in (-0.5, 0.5)], dtype=np.float64) + c
+    return (
+        np.array(
+            [[sx, sy, sz] for sx in (-0.5, 0.5) for sy in (-0.5, 0.5) for sz in (-0.5, 0.5)],
+            dtype=np.float64,
+        )
+        + c
+    )
 
 
 # ---------------------------------------------------------------- analytic cases ----
-@pytest.mark.parametrize("name,offset,expected", [
-    ("separated 1 m along x", (2.0, 0.0, 0.0), 1.0),
-    ("separated 0.25 m along x", (1.25, 0.0, 0.0), 0.25),
-    ("separated 1 mm along x", (1.001, 0.0, 0.0), 0.001),
-    ("face touching", (1.0, 0.0, 0.0), 0.0),
-    ("edge touching", (1.0, 1.0, 0.0), 0.0),
-    ("corner touching", (1.0, 1.0, 1.0), 0.0),
-    ("overlapping halfway", (0.5, 0.0, 0.0), 0.0),
-    ("fully coincident", (0.0, 0.0, 0.0), 0.0),
-    ("separated along the diagonal", (2.0, 2.0, 2.0), np.sqrt(3.0)),
-])
+@pytest.mark.parametrize(
+    "name,offset,expected",
+    [
+        ("separated 1 m along x", (2.0, 0.0, 0.0), 1.0),
+        ("separated 0.25 m along x", (1.25, 0.0, 0.0), 0.25),
+        ("separated 1 mm along x", (1.001, 0.0, 0.0), 0.001),
+        ("face touching", (1.0, 0.0, 0.0), 0.0),
+        ("edge touching", (1.0, 1.0, 0.0), 0.0),
+        ("corner touching", (1.0, 1.0, 1.0), 0.0),
+        ("overlapping halfway", (0.5, 0.0, 0.0), 0.0),
+        ("fully coincident", (0.0, 0.0, 0.0), 0.0),
+        ("separated along the diagonal", (2.0, 2.0, 2.0), np.sqrt(3.0)),
+    ],
+)
 def test_two_unit_cubes_analytic(name, offset, expected):
     """The C++ port must match the closed-form separation, not merely match Python."""
     A, B = unit_cube(), unit_cube(offset)

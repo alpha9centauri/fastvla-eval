@@ -22,6 +22,7 @@ Stages (see DESIGN.md for what each computes):
 
 Env: ACTIONS_NPZ, OUT, [N_CALLS=1000, DISTMAX=0.5, CLEARANCE_EVERY=25]
 """
+
 import json
 import os
 import sys
@@ -29,16 +30,19 @@ import time
 from collections import Counter, defaultdict
 
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
-for p in ("/data_new/vchandr2", "/data_new/vchandr2/openvla-oft", DISP,
-          os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")):
+for p in (
+    "/data_new/vchandr2",
+    "/data_new/vchandr2/openvla-oft",
+    DISP,
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."),
+):
     sys.path.insert(0, p)
 
+import convex_distance as cd  # noqa: E402
+import numpy as np  # noqa: E402
+import physics_safety as ps  # noqa: E402
 import rollout_bootstrap  # noqa: F401, E402
 
-import numpy as np  # noqa: E402
-
-import convex_distance as cd  # noqa: E402
-import physics_safety as ps  # noqa: E402
 from fastvla.labeler.replay import parse_key, replay_rollout  # noqa: E402
 
 ACTIONS_NPZ = os.environ["ACTIONS_NPZ"]
@@ -71,6 +75,7 @@ def _t(name, fn):
             b[name] += dt
             T[name] += dt
             C[name] += 1
+
     return w
 
 
@@ -87,6 +92,7 @@ def _t_flag(name, fn, flag):
             b[name] += dt
             T[name] += dt
             C[name] += 1
+
     return w
 
 
@@ -102,15 +108,18 @@ def _t_split(base, fn, flag):
             b[name] += dt
             T[name] += dt
             C[name] += 1
+
     return w
 
 
 # S4 sets the flag; world_bound is then attributed to pieces vs actors.
 ps.SafetyMonitor._obstacle_bounds = _t_flag(
-    "s4_piece_bounds_outer", ps.SafetyMonitor._obstacle_bounds, _in_piece_bounds)
+    "s4_piece_bounds_outer", ps.SafetyMonitor._obstacle_bounds, _in_piece_bounds
+)
 cd.GeomHulls.world_bound = _t_split("world_bound", cd.GeomHulls.world_bound, _in_piece_bounds)
-ps.SafetyMonitor._obstacle_hull_world = _t("s2_union_hull_xf",
-                                           ps.SafetyMonitor._obstacle_hull_world)
+ps.SafetyMonitor._obstacle_hull_world = _t(
+    "s2_union_hull_xf", ps.SafetyMonitor._obstacle_hull_world
+)
 # S3: physics_safety's own module-global reference -> the union-hull calls only.
 ps.gjk_distance = _t("s3_union_hull_gjk", ps.gjk_distance)
 # S5: convex_distance's reference -> the per-pair core only.
@@ -146,8 +155,14 @@ for k in sorted(acts_all):
         continue
     tag, ii = parse_key(k)
     before = len(PER_CALL)
-    n, mon = replay_rollout(tag, ii, a, distmax=DISTMAX, clearance_every=CLEARANCE_EVERY,
-                            on_step=lambda i: len(PER_CALL) - before < N_CALLS - got)
+    n, mon = replay_rollout(
+        tag,
+        ii,
+        a,
+        distmax=DISTMAX,
+        clearance_every=CLEARANCE_EVERY,
+        on_step=lambda i, _b=before, _g=got: len(PER_CALL) - _b < N_CALLS - _g,
+    )
     got = len(PER_CALL)
     pieces[tag] = sum(len(v) for v in mon.obstacle_geoms.values())
     used.append(dict(key=k, control_steps=int(n), calls=len(PER_CALL) - before))
@@ -165,8 +180,13 @@ def col(k):
 
 total = col("total")
 # exclusive stages: s5_exact_pairs already contains s5a and s5b
-exclusive = ["world_bound_actor", "s2_union_hull_xf", "s3_union_hull_gjk",
-             "world_bound_piece", "s5_exact_pairs"]
+exclusive = [
+    "world_bound_actor",
+    "s2_union_hull_xf",
+    "s3_union_hull_gjk",
+    "world_bound_piece",
+    "s5_exact_pairs",
+]
 resid = total - sum(col(k) for k in exclusive)
 
 STAGES = [
@@ -178,27 +198,42 @@ STAGES = [
     ("S5a   of which GJK core", "s5a_gjk_core", True),
     ("S5b   of which world transform (_w)", "s5b_world_xf", True),
 ]
-res = dict(distmax=DISTMAX, clearance_every=CLEARANCE_EVERY, n_calls=len(PER_CALL),
-           obstacle_hull_pieces=pieces, rollouts_used=used,
-           ms_per_call_total=float(1000 * total.mean()),
-           ms_per_call_total_p95=float(1000 * np.percentile(total, 95)),
-           calls=dict(C), stages={}, residual_ms=float(1000 * resid.mean()))
+res = dict(
+    distmax=DISTMAX,
+    clearance_every=CLEARANCE_EVERY,
+    n_calls=len(PER_CALL),
+    obstacle_hull_pieces=pieces,
+    rollouts_used=used,
+    ms_per_call_total=float(1000 * total.mean()),
+    ms_per_call_total_p95=float(1000 * np.percentile(total, 95)),
+    calls=dict(C),
+    stages={},
+    residual_ms=float(1000 * resid.mean()),
+)
 print(f"\n[STAGE] {len(PER_CALL)} clearance calls, distmax={DISTMAX}")
 print(f"{'stage':44s} {'ms/call':>9s} {'p95':>9s} {'share':>7s} {'calls/call':>11s}")
 for label, k, nested in STAGES:
     v = col(k)
     share = "" if nested else f"{100 * v.mean() / total.mean():6.1f}%"
-    res["stages"][k] = dict(ms_mean=float(1000 * v.mean()),
-                            ms_p95=float(1000 * np.percentile(v, 95)),
-                            share_pct=(None if nested else 100 * v.mean() / total.mean()),
-                            calls_per_clearance_call=C[k] / max(1, len(PER_CALL)),
-                            nested=nested)
-    print(f"{label:44s} {1000 * v.mean():9.3f} {1000 * np.percentile(v, 95):9.3f} "
-          f"{share:>7s} {C[k] / max(1, len(PER_CALL)):11.1f}")
-print(f"{'R   residual (numpy bounds, argsort, glue)':44s} {1000 * resid.mean():9.3f} "
-      f"{1000 * np.percentile(resid, 95):9.3f} {100 * resid.mean() / total.mean():6.1f}%")
-print(f"{'    TOTAL per clearance call':44s} {1000 * total.mean():9.3f} "
-      f"{1000 * np.percentile(total, 95):9.3f}")
+    res["stages"][k] = dict(
+        ms_mean=float(1000 * v.mean()),
+        ms_p95=float(1000 * np.percentile(v, 95)),
+        share_pct=(None if nested else 100 * v.mean() / total.mean()),
+        calls_per_clearance_call=C[k] / max(1, len(PER_CALL)),
+        nested=nested,
+    )
+    print(
+        f"{label:44s} {1000 * v.mean():9.3f} {1000 * np.percentile(v, 95):9.3f} "
+        f"{share:>7s} {C[k] / max(1, len(PER_CALL)):11.1f}"
+    )
+print(
+    f"{'R   residual (numpy bounds, argsort, glue)':44s} {1000 * resid.mean():9.3f} "
+    f"{1000 * np.percentile(resid, 95):9.3f} {100 * resid.mean() / total.mean():6.1f}%"
+)
+print(
+    f"{'    TOTAL per clearance call':44s} {1000 * total.mean():9.3f} "
+    f"{1000 * np.percentile(total, 95):9.3f}"
+)
 print(f"\n[STAGE] x2 for a control step: {2000 * total.mean():.1f} ms/control step")
 np.savez_compressed(OUT + ".npz", stages=np.array(keys), per_call=arr)
 with open(OUT + ".json", "w") as fh:
