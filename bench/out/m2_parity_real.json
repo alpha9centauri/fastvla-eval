@@ -1,0 +1,55 @@
+{
+  "distmax": 0.5,
+  "clearance_every": 25,
+  "n_clearance_calls": 1000,
+  "rollouts_used": [
+    {
+      "key": "oa1__i00__base",
+      "control_steps": 226,
+      "clearance_calls": 452
+    },
+    {
+      "key": "oa1__i01__base",
+      "control_steps": 215,
+      "clearance_calls": 430
+    },
+    {
+      "key": "oa1__i02__base",
+      "control_steps": 59,
+      "clearance_calls": 118
+    }
+  ],
+  "sites": {
+    "s3": {
+      "label": "S3 union-hull GJK",
+      "n_calls": 67120,
+      "max_abs_diff_m": 2.220446049250313e-16,
+      "mean_abs_diff_m": 3.2511075013419924e-18,
+      "p95_abs_diff_m": 2.7755575615628914e-17,
+      "max_rel_diff": 4.678144151185096e-16,
+      "n_exact_equal": 61209,
+      "n_zero_python": 0,
+      "n_zero_cpp": 0,
+      "n_intersection_disagreements": 0,
+      "python_min": 0.05837973666932429,
+      "python_max": 0.653475492283369
+    },
+    "s5": {
+      "label": "S5a exact-pair GJK core",
+      "n_calls": 101092,
+      "max_abs_diff_m": 1.1102230246251565e-16,
+      "mean_abs_diff_m": 3.896795836590642e-18,
+      "p95_abs_diff_m": 2.7755575615628914e-17,
+      "max_rel_diff": 5.604676894915359e-16,
+      "n_exact_equal": 82696,
+      "n_zero_python": 0,
+      "n_zero_cpp": 0,
+      "n_intersection_disagreements": 0,
+      "python_min": 0.05837973666932429,
+      "python_max": 0.26291968932303383
+    }
+  },
+  "max_abs_diff_m_overall": 2.220446049250313e-16,
+  "tolerance_m": 1e-06,
+  "PASS": true
+}
