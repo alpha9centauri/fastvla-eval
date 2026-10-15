@@ -1,0 +1,89 @@
+{
+  "distmax": 0.5,
+  "clearance_every": 25,
+  "n_calls": 1000,
+  "obstacle_hull_pieces": {
+    "oa1": 248
+  },
+  "rollouts_used": [
+    {
+      "key": "oa1__i00__base",
+      "control_steps": 226,
+      "calls": 452
+    },
+    {
+      "key": "oa1__i01__base",
+      "control_steps": 215,
+      "calls": 430
+    },
+    {
+      "key": "oa1__i02__base",
+      "control_steps": 59,
+      "calls": 118
+    }
+  ],
+  "ms_per_call_total": 65.3623151788488,
+  "ms_per_call_total_p95": 163.34283854812378,
+  "calls": {
+    "world_bound_actor": 33560,
+    "s2_union_hull_xf": 2000,
+    "s5b_world_xf": 269304,
+    "s3_union_hull_gjk": 67120,
+    "world_bound_piece": 248000,
+    "s4_piece_bounds_outer": 2000,
+    "s5a_gjk_core": 101092,
+    "s5_exact_pairs": 101092
+  },
+  "stages": {
+    "world_bound_actor": {
+      "ms_mean": 0.1861751340329647,
+      "ms_p95": 0.22926600649952888,
+      "share_pct": 0.2848355868722515,
+      "calls_per_clearance_call": 33.56,
+      "nested": false
+    },
+    "s2_union_hull_xf": {
+      "ms_mean": 0.032778545282781124,
+      "ms_p95": 0.0364712905138731,
+      "share_pct": 0.05014899670106581,
+      "calls_per_clearance_call": 2.0,
+      "nested": false
+    },
+    "s3_union_hull_gjk": {
+      "ms_mean": 22.53090358991176,
+      "ms_p95": 40.278549119830124,
+      "share_pct": 34.47078569396016,
+      "calls_per_clearance_call": 67.12,
+      "nested": false
+    },
+    "world_bound_piece": {
+      "ms_mean": 1.1006753211840987,
+      "ms_p95": 1.1010633315891027,
+      "share_pct": 1.6839601200972705,
+      "calls_per_clearance_call": 248.0,
+      "nested": false
+    },
+    "s5_exact_pairs": {
+      "ms_mean": 40.16064577084035,
+      "ms_p95": 146.002362575382,
+      "share_pct": 61.44312003170338,
+      "calls_per_clearance_call": 101.092,
+      "nested": false
+    },
+    "s5a_gjk_core": {
+      "ms_mean": 38.52370865736157,
+      "ms_p95": 141.94366629235446,
+      "share_pct": null,
+      "calls_per_clearance_call": 101.092,
+      "nested": true
+    },
+    "s5b_world_xf": {
+      "ms_mean": 1.578344326466322,
+      "ms_p95": 3.039570990949869,
+      "share_pct": null,
+      "calls_per_clearance_call": 269.304,
+      "nested": true
+    }
+  },
+  "residual_ms": 1.3511368175968528
+}

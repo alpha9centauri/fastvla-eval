@@ -570,7 +570,7 @@ if t2b:
     W("   a control step, so the worker-scaling knee will be set by the labeler and the")
     W("   controller, not by rendering. Worth re-checking at N=8 and N=16, but it is not the")
     W("   thing to design around.")
-    W(f"2. **`sim.forward()` costs more than `sim.step()`.** It is called twice per substep —")
+    W("2. **`sim.forward()` costs more than `sim.step()`.** It is called twice per substep —")
     W(
         f"   once by robosuite's loop ({m.get('sim_forward_loop', 0):.2f} ms/step) and once inside the OSC"
     )

@@ -31,9 +31,8 @@ DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
 for p in ("/data_new/vchandr2", "/data_new/vchandr2/openvla-oft", DISP):
     sys.path.insert(0, p)
 
-import rollout_bootstrap  # noqa: F401, E402
-
 import numpy as np  # noqa: E402
+import rollout_bootstrap  # noqa: F401, E402
 
 OUT = os.environ["OUT"]
 N_STEPS = int(os.environ.get("N_STEPS", "100"))
@@ -108,9 +107,9 @@ def _wrap(name, fn, new_bucket=False):
 
 def install():
     import robosuite.utils.binding_utils as bu
+    from experiments.robot.libero import run_libero_eval as rle
     from libero.libero.envs import OffScreenRenderEnv
     from robosuite.environments.base import MujocoEnv
-    from experiments.robot.libero import run_libero_eval as rle
 
     # new bucket at the top of each control-step iteration in the driver's loop
     rle.prepare_observation = _wrap("prep", rle.prepare_observation, new_bucket=True)
