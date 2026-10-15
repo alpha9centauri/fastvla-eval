@@ -181,76 +181,86 @@ remove `$APPTAINER_CACHEDIR/tmp` if a pull was interrupted.
 
 ---
 
-## 8. The `--nv` GPU check: RUN, and it FAILS the safety condition
+## 8. The `--nv` GPU check: PASSES, with the right check
 
-Added 2026-10-15. Section 5 above left one thing unverified and predicted
-"Expected: exactly one card listed". That prediction is **wrong**, and the
-check is a blocker for running anything GPU-bound in a container on this box.
+Added 2026-10-15, corrected the same day.
 
-GPU 1 was idle (3 MiB, 0%) and GPU 0 held another user's job, so the check ran
-under the right conditions.
+### The check that matters
 
-    $ nvidia-smi --query-gpu=index,uuid --format=csv,noheader     # host, for reference
-    0, GPU-2c6273fb-12cf-6171-8708-36c7225f4ba3                   # chunyiy's card
-    1, GPU-040542a1-6ad7-1ddd-f7ca-595acfd703a7                   # ours
+An earlier version of this section reported the GPU path as FAILING because
 
-    $ CUDA_VISIBLE_DEVICES=1 apptainer exec --nv \
-        ~/images/tritonserver_23.07-py3.sif nvidia-smi --query-gpu=index,name,uuid --format=csv
-    index, name, uuid
-    0, NVIDIA RTX A5000, GPU-2c6273fb-12cf-6171-8708-36c7225f4ba3   <-- NOT OURS
-    1, NVIDIA RTX A5000, GPU-040542a1-6ad7-1ddd-f7ca-595acfd703a7
+    CUDA_VISIBLE_DEVICES=1 apptainer exec --nv <sif> nvidia-smi
 
-**Two cards, including the one that belongs to another user.**
+lists **both** cards. That was the wrong test, and the conclusion drawn from it was
+wrong. `nvidia-smi` ignores `CUDA_VISIBLE_DEVICES` **on the host as well**:
 
-### Why
+    $ CUDA_VISIBLE_DEVICES=1 nvidia-smi --query-gpu=index,uuid --format=csv,noheader
+    0, GPU-2c6273fb-12cf-6171-8708-36c7225f4ba3
+    1, GPU-040542a1-6ad7-1ddd-f7ca-595acfd703a7
 
-`CUDA_VISIBLE_DEVICES` is honoured inside the container (it reads back as `1`),
-but it only filters what the **CUDA runtime** enumerates. `nvidia-smi` talks to
-the driver through NVML and `/dev/nvidiactl`, and `--nv` binds **every** GPU
-device node in:
+and the device nodes are world read/write on the host too:
 
-    $ CUDA_VISIBLE_DEVICES=1 apptainer exec --nv <sif> ls -la /dev/nvidia*
-    crw-rw-rw- 1 nobody nogroup 195,   0 /dev/nvidia0      <-- other user's card
-    crw-rw-rw- 1 nobody nogroup 195,   1 /dev/nvidia1
-    crw-rw-rw- 1 nobody nogroup 195, 255 /dev/nvidiactl
-    crw-rw-rw- 1 nobody nogroup 510,   0 /dev/nvidia-uvm
+    $ ls -l /dev/nvidia0 /dev/nvidia1
+    crw-rw-rw- 1 root root 195, 0 /dev/nvidia0
+    crw-rw-rw- 1 root root 195, 1 /dev/nvidia1
 
-Both nodes are world read/write, so a process in the container can open GPU 0
-directly. Confinement rests entirely on every process inside honouring
-`CUDA_VISIBLE_DEVICES`. The CUDA runtime does; NVML tools do not; and anything
-that sets the variable itself, or uses the driver API directly, is unconstrained.
-Against this project's hard rule -- GPU 0 belongs to someone else, never touch
-it -- that is not good enough.
+So the container grants no access the host user did not already have. Confinement has
+always rested on the **CUDA runtime** honouring the mask, inside a container or outside
+one. The check therefore has to be the CUDA runtime's view plus proof of where an
+allocation lands.
 
-### Attempted fixes, none of which work
+### Result: PASS
 
-| attempt | result |
-|---|---|
-| `CUDA_VISIBLE_DEVICES=1 --nv` | both cards |
-| `CUDA_VISIBLE_DEVICES=1 --nv --contain` | both cards |
-| `--nv --nvccli` with `NVIDIA_VISIBLE_DEVICES=1` (`nvidia-container-cli` **is** present at `/usr/bin/nvidia-container-cli`) | both cards |
-| `--nv --contain` + explicit `--bind /dev/nvidia1` | **one card, and it was GPU 0 -- the wrong one.** Apptainer reported `Skipping /dev/nvidia1 bind mount: already mounted`, so the explicit binds were ignored and the selection came from somewhere else |
+`fastvla/server/preflight_gpu.py`, run inside the container:
 
-The last row is the reason this is a hard stop rather than a cosmetic
-complaint: the device set the container ends up with is not reliably the one
-asked for, and in one configuration it was exactly the card that must not be
-touched.
+    [PREFLIGHT] device_count=1 (want 1) -> ok
+    [PREFLIGHT] cuda:0 pci bus id=0000:C1:00.0 (want 00000000:C1:00.0) -> ok
+    [PREFLIGHT] 256 MB allocated on cuda:0; our pid appears on 1 expected-card row(s),
+                0 forbidden-card row(s) -> ok
+    [PREFLIGHT]   ours: GPU-040542a1-6ad7-1ddd-f7ca-595acfd703a7, 482968, 982 MiB
+    [PREFLIGHT] PASS
 
-### What would fix it
+The same script passes on the host, which is the point: the container behaves exactly as
+the host does.
 
-- `nvidia-container-cli` exists but `--nvccli` did not restrict the device set
-  here; it may need a host-side configuration change (`/etc/nvidia-container-runtime/config.toml`)
-  that requires root.
-- Apptainer 1.5 has no unprivileged way to drop a `/dev` node that `--nv`
-  has already bound; `--contain` does not remove them.
-- The dependable route is a host change: either a cgroup device rule, or
-  running the container under a wrapper that sets up `/dev` before `--nv`.
-  Both need the box's administrator.
+Two details worth keeping:
 
-### Consequence for M3b and M5
+- torch 2.2 exposes neither a UUID nor a PCI bus id on `get_device_properties`, so the
+  bus id is read through `cudaDeviceGetPCIBusId` in libcudart, which is mask-aware.
+- `cudaDeviceGetPCIBusId` pads the PCI domain to 4 digits (`0000:C1:00.0`) and
+  `nvidia-smi` to 8 (`00000000:C1:00.0`). The same device, compared after normalising.
 
-Container-hosted GPU work on gpu5 is **not cleared**. The CPU-only container
-path is fine and is still verified (section 3), so the parts of M5 that do not
-need a GPU inside a container -- image build, CI, CPU tests, manifests -- can
-proceed. Anything that runs the policy inside a container on this box waits on
-the administrator.
+### The required invocation
+
+    export PATH=$HOME/apptainer/bin:$PATH
+    CUDA_VISIBLE_DEVICES=1 apptainer exec --nv \
+      --bind /data_new/vchandr2/miniconda3:/data_new/vchandr2/miniconda3 \
+      --bind /data_new/vchandr2/fastvla-eval:/data_new/vchandr2/fastvla-eval \
+      ~/images/tritonserver_23.07-py3.sif \
+      /data_new/vchandr2/miniconda3/envs/libero-vla/bin/python <script>
+
+Plain `--nv`, `CUDA_VISIBLE_DEVICES=1`, and the pre-flight above as the first thing every
+in-container GPU job runs -- the same standing as `nvidia-smi` and `who` on the host.
+
+### NEVER use `--contain` with `--nv` on this host
+
+    $ CUDA_VISIBLE_DEVICES=0 apptainer exec --nv --contain \
+        --bind /dev/nvidia1 --bind /dev/nvidiactl ... <sif> nvidia-smi --query-gpu=uuid
+    WARNING: Skipping /dev/nvidia1 bind mount: already mounted
+    GPU-2c6273fb-12cf-6171-8708-36c7225f4ba3        <-- the OTHER user's card, alone
+
+`--contain` made the container present exactly one card and it was the wrong one, while
+reporting that the explicit device binds had been skipped as already mounted. The device
+set a `--contain` invocation ends up with is not the one asked for. `--nvccli` with
+`NVIDIA_VISIBLE_DEVICES=1` (`nvidia-container-cli` is present at `/usr/bin/nvidia-container-cli`)
+also failed to restrict the set. Neither is needed: plain `--nv` plus the mask plus the
+pre-flight is correct and verified.
+
+### Python compatibility for binding the host env
+
+The container is CPython 3.10.6, the `libero-vla` env is CPython 3.10.20 -- the same cp310
+ABI, so the env's extension modules load inside the container. Binding
+`/data_new/vchandr2/miniconda3` and running the env's own interpreter gives the container
+the identical stack to the host harness, which is what makes a Triton-vs-ZeroMQ comparison
+a comparison of serving layers rather than of dependency stacks. The Triton image's own
+`python3` has no torch (its PyTorch backend uses libtorch, not the Python package).
