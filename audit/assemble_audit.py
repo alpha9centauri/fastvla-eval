@@ -32,6 +32,7 @@ t2tot = load("arrays/t2_torch_torchprof_totals.json")
 t3 = load("arrays/t3_gaps.json")
 t4 = load("arrays/t4_labeler.json")
 t5 = load("arrays/t5_finetune.json")
+t2b = load("arrays/t2b_render_split_clean.json")
 
 L = []
 W = L.append
@@ -501,6 +502,91 @@ W('  instead. Before M3 leans on "rendering is free", that row should be split p
 W("  Flagged rather than claimed.")
 W("- **Training GPU utilisation**, for the reason in Table 5.")
 W("")
+
+# ------------------------------------------------------ addendum: render split ----
+if t2b:
+    W("---")
+    W("")
+    W("## Addendum, 2026-10-14 — the rendering figure, split (MEASURED)")
+    W("")
+    W("Table 2 reported `MjSim.render` at 1.21 ms per control step for two 256x256 cameras and")
+    W("flagged it as suspiciously cheap, on the suspicion that robosuite did part of the render")
+    W("work elsewhere and it was hiding in the derived controller/obs row. M3 depends on knowing")
+    W("which, so it was measured: `t2b_render_split.py` / `t2b_run.sh`, 100 control steps on")
+    W("oa1 init 0, artefacts `arrays/t2b_render_split{,_clean}.json`.")
+    W("")
+    W("**The flag is resolved: rendering really is that cheap, and nothing was hiding.** What was")
+    W("actually in the derived row is forward kinematics and the OSC controller.")
+    W("")
+    W("robosuite's `MujocoEnv.step` runs, per control step:")
+    W("")
+    W("```")
+    W("for i in range(control_timestep / model_timestep):   # 25 substeps")
+    W("    sim.forward()            # extra forward kinematics")
+    W("    _pre_action(action)      # OSC controller (calls sim.forward() again itself)")
+    W("    sim.step()               # physics; SafetyMonitor is hooked onto this")
+    W("    _update_observables()    # sensors, including both cameras")
+    W("_post_action(action); _get_observations()")
+    W("```")
+    W("")
+    m = t2b["ms_per_step"]
+    E = t2b["env_step_ms"]
+
+    def row(label, key, indent=False):
+        v = m.get(key, 0.0)
+        sh = "" if indent else f"{100.0 * v / E:.1f}%"
+        return f"| {'&nbsp;&nbsp;' if indent else ''}{label} | {v:.3f} | {t2b['ms_per_step_p95'].get(key, 0.0):.3f} | {sh} |"
+
+    W("| component of `env.step` | ms/step | p95 | share |")
+    W("|---|---|---|---|")
+    W(row("SafetyMonitor (contacts + GJK)", "monitor"))
+    W(row("OSC controller `_pre_action` x25", "osc_pre_action"))
+    W(row("its nested `sim.forward()`", "sim_forward_in_osc", True))
+    W(row("`sim.forward()` x25, robosuite's own loop", "sim_forward_loop"))
+    W(row("MuJoCo physics `sim.step()` x25", "sim_step"))
+    W(row("`_update_observables` x25 (sensor update)", "update_observables"))
+    W(row("of which `MjSim.render` x2 (the cameras)", "render", True))
+    W(row("`_get_observations` x1 (assemble the dict)", "get_observations"))
+    W(row("`_post_action` x1", "post_action"))
+    W(
+        f"| unaccounted residual (timer overhead, loop glue) | {t2b['env_step_unaccounted_residual_ms']:.3f} | | {100.0 * t2b['env_step_unaccounted_residual_ms'] / E:.1f}% |"
+    )
+    W(f"| **`env.step` total** | **{E:.3f}** | | 100% |")
+    W("")
+    W(
+        f"**Real render cost: {t2b['ms_per_camera_render']:.3f} ms per 256x256 EGL camera render**, "
+        f"{m.get('render', 0):.3f} ms/step for both."
+    )
+    W(
+        f"The whole observation path — sensor update plus dict assembly — is "
+        f"{t2b['observation_total_ms']:.3f} ms/step, "
+        f"{100.0 * t2b['observation_total_ms'] / E:.1f}% of `env.step`."
+    )
+    W("")
+    W("Two corrections this forces, both relevant to M3:")
+    W("")
+    W("1. **Rendering is not a scaling risk on this box.** The plan's risk list expects EGL")
+    W("   rendering in many processes to fight over the GPU. At 0.7 ms per camera it is 1.4% of")
+    W("   a control step, so the worker-scaling knee will be set by the labeler and the")
+    W("   controller, not by rendering. Worth re-checking at N=8 and N=16, but it is not the")
+    W("   thing to design around.")
+    W(f"2. **`sim.forward()` costs more than `sim.step()`.** It is called twice per substep —")
+    W(
+        f"   once by robosuite's loop ({m.get('sim_forward_loop', 0):.2f} ms/step) and once inside the OSC"
+    )
+    W(
+        f"   controller ({m.get('sim_forward_in_osc', 0):.2f} ms/step) — for "
+        f"{m.get('sim_forward_loop', 0) + m.get('sim_forward_in_osc', 0):.2f} ms/step against"
+    )
+    W(f"   {m.get('sim_step', 0):.2f} ms/step for the physics itself. Simulator cost is forward")
+    W("   kinematics, not integration. Nothing in M2 touches it; M3 should know it is there.")
+    W("")
+    W("The measurement needed two corrections of its own, both recorded in the artefact's")
+    W("`note`: the first timing bucket was dropped because it holds the driver's 10 `WAIT` dummy")
+    W("steps, and `_pre_action` had to be patched on `RobotEnv` rather than `MujocoEnv`, whose")
+    W("definition is shadowed. `sim.forward` is attributed by caller with a re-entrancy flag;")
+    W("without that it is charged twice and the residual goes negative.")
+    W("")
 
 # ---------------------------------------------------------------- assumptions -----
 asm = os.path.join(A, "single_env_assumptions.md")

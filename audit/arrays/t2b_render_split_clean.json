@@ -1,0 +1,43 @@
+{
+  "n_control_steps": 99,
+  "env_step_ms": 166.16058542459,
+  "ms_per_step": {
+    "env_step": 166.16058542459,
+    "get_observations": 0.1465627791905644,
+    "monitor": 127.99034017429808,
+    "osc_pre_action": 13.923192396759987,
+    "post_action": 0.6523159793531053,
+    "prep": 9.084962524774701,
+    "render": 1.39267212062171,
+    "sim_forward_in_osc": 7.809818995119345,
+    "sim_forward_loop": 8.516859347847376,
+    "sim_step": 8.239727241523338,
+    "update_observables": 2.1573018395539485
+  },
+  "ms_per_step_p95": {
+    "env_step": 244.36717312783003,
+    "get_observations": 0.1811317168176174,
+    "monitor": 206.08231471851468,
+    "osc_pre_action": 14.560341462492943,
+    "post_action": 0.7080025970935822,
+    "prep": 11.130975373089312,
+    "render": 1.5135547146201134,
+    "sim_forward_in_osc": 8.343329932540655,
+    "sim_forward_loop": 9.53344805166125,
+    "sim_step": 8.976461552083492,
+    "update_observables": 2.320885006338358
+  },
+  "env_step_unaccounted_residual_ms": 4.534285666063578,
+  "ms_per_camera_render": 0.696336060310855,
+  "observation_total_ms": 2.303864618744513,
+  "exclusive_components": [
+    "monitor",
+    "sim_forward_loop",
+    "osc_pre_action",
+    "sim_step",
+    "update_observables",
+    "get_observations",
+    "post_action"
+  ],
+  "note": "first bucket dropped (10 WAIT dummy steps); _pre_action patched on RobotEnv; sim.forward split by caller because the OSC controller calls it too"
+}

@@ -1,0 +1,47 @@
+{
+  "n_control_steps": 100,
+  "calls": {
+    "sim_forward_loop": 2760,
+    "render": 230,
+    "update_observables": 2752,
+    "get_observations": 112,
+    "osc_pre_action": 2750,
+    "sim_step": 2750,
+    "monitor": 2750,
+    "sim_forward_in_osc": 2749,
+    "post_action": 110,
+    "env_step": 110,
+    "prep": 100
+  },
+  "ms_per_step": {
+    "env_step": 168.43839859589934,
+    "get_observations": 0.2526901476085186,
+    "monitor": 126.71163433231413,
+    "osc_pre_action": 15.372266471385956,
+    "post_action": 0.70801074616611,
+    "prep": 8.994112899526954,
+    "render": 1.7114271968603134,
+    "sim_forward_in_osc": 8.483773646876216,
+    "sim_forward_loop": 10.576271265745163,
+    "sim_step": 8.958595544099808,
+    "update_observables": 2.4416385125368834
+  },
+  "ms_per_step_p95": {
+    "env_step": 246.23179910704494,
+    "get_observations": 0.18205726519227025,
+    "monitor": 206.0398638714105,
+    "osc_pre_action": 14.573219744488595,
+    "post_action": 0.7125189527869225,
+    "prep": 11.128815729171038,
+    "render": 1.521901227533817,
+    "sim_forward_in_osc": 8.36598533205688,
+    "sim_forward_loop": 9.92944622412324,
+    "sim_step": 9.040536172688007,
+    "update_observables": 2.332404302433133
+  },
+  "env_step_ms": 168.43839859589934,
+  "nested_sum_ms": 27.733201421797276,
+  "env_step_unaccounted_ms": 140.70519717410207,
+  "render_calls_per_step": 2.3,
+  "update_observables_calls_per_step": 27.52
+}

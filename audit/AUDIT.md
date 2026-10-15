@@ -249,6 +249,66 @@ Two the audit does **not** settle, and why:
 
 ---
 
+## Addendum, 2026-10-14 — the rendering figure, split (MEASURED)
+
+Table 2 reported `MjSim.render` at 1.21 ms per control step for two 256x256 cameras and
+flagged it as suspiciously cheap, on the suspicion that robosuite did part of the render
+work elsewhere and it was hiding in the derived controller/obs row. M3 depends on knowing
+which, so it was measured: `t2b_render_split.py` / `t2b_run.sh`, 100 control steps on
+oa1 init 0, artefacts `arrays/t2b_render_split{,_clean}.json`.
+
+**The flag is resolved: rendering really is that cheap, and nothing was hiding.** What was
+actually in the derived row is forward kinematics and the OSC controller.
+
+robosuite's `MujocoEnv.step` runs, per control step:
+
+```
+for i in range(control_timestep / model_timestep):   # 25 substeps
+    sim.forward()            # extra forward kinematics
+    _pre_action(action)      # OSC controller (calls sim.forward() again itself)
+    sim.step()               # physics; SafetyMonitor is hooked onto this
+    _update_observables()    # sensors, including both cameras
+_post_action(action); _get_observations()
+```
+
+| component of `env.step` | ms/step | p95 | share |
+|---|---|---|---|
+| SafetyMonitor (contacts + GJK) | 127.990 | 206.082 | 77.0% |
+| OSC controller `_pre_action` x25 | 13.923 | 14.560 | 8.4% |
+| &nbsp;&nbsp;its nested `sim.forward()` | 7.810 | 8.343 |  |
+| `sim.forward()` x25, robosuite's own loop | 8.517 | 9.533 | 5.1% |
+| MuJoCo physics `sim.step()` x25 | 8.240 | 8.976 | 5.0% |
+| `_update_observables` x25 (sensor update) | 2.157 | 2.321 | 1.3% |
+| &nbsp;&nbsp;of which `MjSim.render` x2 (the cameras) | 1.393 | 1.514 |  |
+| `_get_observations` x1 (assemble the dict) | 0.147 | 0.181 | 0.1% |
+| `_post_action` x1 | 0.652 | 0.708 | 0.4% |
+| unaccounted residual (timer overhead, loop glue) | 4.534 | | 2.7% |
+| **`env.step` total** | **166.161** | | 100% |
+
+**Real render cost: 0.696 ms per 256x256 EGL camera render**, 1.393 ms/step for both.
+The whole observation path — sensor update plus dict assembly — is 2.304 ms/step, 1.4% of `env.step`.
+
+Two corrections this forces, both relevant to M3:
+
+1. **Rendering is not a scaling risk on this box.** The plan's risk list expects EGL
+   rendering in many processes to fight over the GPU. At 0.7 ms per camera it is 1.4% of
+   a control step, so the worker-scaling knee will be set by the labeler and the
+   controller, not by rendering. Worth re-checking at N=8 and N=16, but it is not the
+   thing to design around.
+2. **`sim.forward()` costs more than `sim.step()`.** It is called twice per substep —
+   once by robosuite's loop (8.52 ms/step) and once inside the OSC
+   controller (7.81 ms/step) — for 16.33 ms/step against
+   8.24 ms/step for the physics itself. Simulator cost is forward
+   kinematics, not integration. Nothing in M2 touches it; M3 should know it is there.
+
+The measurement needed two corrections of its own, both recorded in the artefact's
+`note`: the first timing bucket was dropped because it holds the driver's 10 `WAIT` dummy
+steps, and `_pre_action` had to be patched on `RobotEnv` rather than `MujocoEnv`, whose
+definition is shadowed. `sim.forward` is attributed by caller with a re-entrancy flag;
+without that it is charged twice and the residual goes negative.
+
+---
+
 ## Single-environment assumptions in `rollout_openvla_disp.py`
 
 Line numbers are against the driver at md5 `a3bd13daa60d30474eec023827560e03`
