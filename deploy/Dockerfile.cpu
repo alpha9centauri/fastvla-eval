@@ -1,0 +1,40 @@
+# CPU-testable image: the C++ labeler, the protocol, the metrics endpoint and the CPU test
+# suite. No CUDA, no torch, no 7B checkpoint.
+#
+# This exists because the GPU image does not fit a GitHub-hosted runner. deploy/Dockerfile
+# starts from nvidia/cuda:12.1.1-cudnn8-runtime (~3 GB uncompressed) and pip-installs
+# torch cu121 (~2.5 GB of wheels, ~5 GB installed), which lands around 10 GB -- against
+# roughly 14 GB of free disk on a standard ubuntu-latest runner before anything else is
+# written. CI therefore builds and pushes THIS image, and the GPU image is built on a host
+# with a GPU (see README). What CI can verify, it verifies; what it cannot, it says so.
+FROM python:3.10-slim-bookworm
+
+ARG NUMPY_VERSION=1.26.4
+ARG PYBIND11_VERSION=3.1.0
+ARG PYTEST_VERSION=8.3.3
+ARG RUFF_VERSION=0.17.0
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      g++ make git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir \
+      numpy==${NUMPY_VERSION} \
+      pybind11==${PYBIND11_VERSION} \
+      pytest==${PYTEST_VERSION} \
+      ruff==${RUFF_VERSION}
+
+RUN groupadd -g 1000 fastvla && useradd -m -u 1000 -g 1000 fastvla
+WORKDIR /opt/fastvla
+COPY --chown=fastvla:fastvla . /opt/fastvla
+USER fastvla
+
+# Build the labeler and prove it imports, in the image.
+RUN bash fastvla/labeler/build.sh \
+ && PYTHONPATH=/opt/fastvla:/opt/fastvla/fastvla/labeler \
+    python -c "import fastgjk; print('fastgjk ok')"
+
+ENV PYTHONPATH=/opt/fastvla:/opt/fastvla/fastvla/labeler
+CMD ["python", "-m", "pytest", "tests/", "-q"]

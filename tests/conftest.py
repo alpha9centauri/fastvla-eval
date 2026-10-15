@@ -12,6 +12,13 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REFERENCE = "/data_new/vchandr2"
 
-for p in (ROOT, os.path.join(ROOT, "fastvla", "labeler"), REFERENCE):
+# FASTVLA_NO_REFERENCE=1 simulates a CI runner, which has the repository but not the
+# research tree. Used to verify that the suite's skip paths actually work before relying
+# on them in CI, rather than discovering there that a test errors instead of skipping.
+_paths = [ROOT, os.path.join(ROOT, "fastvla", "labeler")]
+if os.environ.get("FASTVLA_NO_REFERENCE", "0") != "1":
+    _paths.append(REFERENCE)
+
+for p in _paths:
     if p not in sys.path:
         sys.path.insert(0, p)

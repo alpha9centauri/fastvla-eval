@@ -16,8 +16,21 @@ TOL = 1e-6
 fastgjk = pytest.importorskip(
     "fastgjk", reason="run fastvla/labeler/build.sh to build the extension"
 )
-from convex_distance import _closest_on_simplex as py_closest  # noqa: E402
-from convex_distance import gjk_distance as py_gjk  # noqa: E402
+# The Python reference lives in the research tree, which a CI runner does not have. The
+# ANALYTIC cases need no reference -- they check the port against closed-form answers --
+# so they still run there; only the reference comparisons skip.
+try:
+    from convex_distance import _closest_on_simplex as py_closest
+    from convex_distance import gjk_distance as py_gjk
+
+    HAVE_REFERENCE = True
+except ImportError:  # pragma: no cover - CI runner without the research tree
+    py_closest = py_gjk = None
+    HAVE_REFERENCE = False
+
+needs_reference = pytest.mark.skipif(
+    not HAVE_REFERENCE, reason="convex_distance (research tree) not available"
+)
 
 
 def unit_cube(centre=(0.0, 0.0, 0.0)):
@@ -52,14 +65,16 @@ def test_two_unit_cubes_analytic(name, offset, expected):
     A, B = unit_cube(), unit_cube(offset)
     got = fastgjk.gjk_distance(A, B)
     assert got == pytest.approx(expected, abs=TOL), name
-    assert got == pytest.approx(py_gjk(A, B), abs=TOL), f"{name}: disagrees with Python"
+    if HAVE_REFERENCE:
+        assert got == pytest.approx(py_gjk(A, B), abs=TOL), f"{name}: disagrees with Python"
 
 
 def test_touching_returns_exactly_zero():
     """0.0 is the contact signal; it must be exact, not merely small."""
     A, B = unit_cube(), unit_cube((1.0, 0.0, 0.0))
     assert fastgjk.gjk_distance(A, B) == 0.0
-    assert py_gjk(A, B) == 0.0
+    if HAVE_REFERENCE:
+        assert py_gjk(A, B) == 0.0
 
 
 def test_sphere_pads_subtracted():
@@ -90,6 +105,7 @@ def test_rejects_bad_shapes():
 
 
 # ---------------------------------------------------------------- randomised --------
+@needs_reference
 def test_random_hulls_match_python():
     """4000 random pairs, mixed separated and overlapping, across hull sizes."""
     rng = np.random.default_rng(0)
@@ -102,6 +118,7 @@ def test_random_hulls_match_python():
     assert worst < TOL, f"worst |python - c++| = {worst:.3e}"
 
 
+@needs_reference
 def test_random_hulls_agree_on_intersection():
     """Disagreeing about 0.0 would change a collision verdict, so check it separately."""
     rng = np.random.default_rng(1)
@@ -111,6 +128,7 @@ def test_random_hulls_agree_on_intersection():
         assert (py_gjk(A, B) == 0.0) == (fastgjk.gjk_distance(A, B) == 0.0)
 
 
+@needs_reference
 def test_closest_on_simplex_matches_including_subset():
     """The surviving subset drives the next iteration, so its identity must match too."""
     rng = np.random.default_rng(2)
