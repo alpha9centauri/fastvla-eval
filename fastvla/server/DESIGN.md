@@ -82,7 +82,12 @@ response = { request_id, policy_step, actions (8, 7) float64, server_batch_size,
   (`t - WAIT`). It is in the protocol for three reasons: it makes a reply verifiable, it
   is what the per-step logs join on, and M4's CUDA-graph work will want fixed-shape
   requests keyed by step parity.
-- **Images go as raw uint8** (2 x 256 x 256 x 3 = 393 KB), not as prepared tensors. The
+- **Images go as raw uint8**, not as prepared tensors. (Correction, M3b: the figure first
+  given here was 2 x 256 x 256 x 3 = 393 KB. The worker actually sends
+  `prepare_observation`'s output, which has already been resized to 224x224, so the real
+  payload is 2 x 224 x 224 x 3 = **301 KB**. The argument is unchanged -- the processor
+  output is 602 KB -- but the number was wrong and the Triton config inherited it, which
+  is how it was caught.) The
   processor output is `(1, 6, 224, 224)` bf16 = 602 KB, so sending prepared inputs would
   be 53% more bytes on the wire *and* would hard-code the preprocessing into the protocol.
   The cost is that ~33 ms of per-request CPU preprocessing (crop, normalise, tokenise)
@@ -337,3 +342,118 @@ this project is the packaging, metrics and model-repository story in M5.
 The GPU is now the bottleneck at 85% utilisation and 6 forwards/s, so the next gain has to
 come from the forward itself — which is M4, and which the M2 handoff already flagged as
 having crossed the audit's 30%-of-step threshold.
+
+---
+
+# M3b: Triton, measured
+
+Unblocked by `fastvla/server/CONTAINERS.md`: unprivileged Apptainer runs the NVIDIA Triton
+23.07 image, and the GPU gate (section 8 there) passes. Started with
+`bench/triton_serve.sh`, stopped with `bench/triton_stop.sh`.
+
+## What it took to get the Python backend running
+
+Recorded because none of it is in the Triton docs for this situation, and each step was a
+separate failed load:
+
+| failure | cause | fix |
+|---|---|---|
+| `specifies invalid or unsupported gpu id 1 ... GPUs ... are: 0` | `CUDA_VISIBLE_DEVICES=1` already selects the card and renumbers it, so inside the container the only CUDA device is 0 | `gpus: [ 0 ]` in config.pbtxt; the instance's real card is logged with its UUID at load |
+| `ModuleNotFoundError: No module named 'libero'` | libero, openvla_oft and robosuite are **editable** installs whose `__editable__*.pth` files install import finders, and `.pth` files run only for directories registered through `site`, never for a directory merely on `PYTHONPATH` | `site.addsitedir(SITE_PACKAGES)` at the top of `model.py` |
+| `ImportError: libX11.so.6` | the Triton image has no X or GL libraries; robosuite pulls them in through libero | a curated `bench/triton_libs/` of **graphics libraries only** |
+| `ImportError: Error importing numpy: you should not try to import numpy from its source directory` | putting the env's whole `lib/` on `LD_LIBRARY_PATH` shadows the container's `libtinfo` and `libstdc++`, and numpy's C extension then fails to load. The giveaway was `bash` itself warning about the env's `libtinfo.so.6` | expose only `bench/triton_libs`, and append rather than prepend |
+| `ImportError: libXext.so.6` after linking the env's X libs | the env has no libXext, and symlinks into the host's `/usr/lib/x86_64-linux-gnu` **dangle inside the container**, where that path is the container's own | copy the host's X libraries into `bench/triton_libs` rather than symlink them |
+| `Incorrect path_or_model_id: ''` | `triton_serve.sh` passed `CKPT=""` and `os.environ.get("CKPT", default)` returns `""`, not the default | set CKPT in the launcher; use `os.environ.get("CKPT") or default` in the backend |
+| `unexpected shape for input 'wrist_image'` | config.pbtxt said `256x256x3`, taken from this document's own (wrong) claim about the payload. The worker sends `prepare_observation`'s output, already resized to 224x224 | `dims: [-1, -1, 3]`, and the payload figure corrected above to 301 KB |
+
+The model instance logs its device at load, which is the same evidence the pre-flight
+produces:
+
+    [triton] model instance on cuda:0 device_count=1 pci=0000:C1:00.0
+             uuid=GPU-040542a1-6ad7-1ddd-f7ca-595acfd703a7
+
+## Parity through Triton (gate10, one worker)
+
+| check | required | measured |
+|---|---|---|
+| collisions | 10/10 | **10/10** |
+| completions | 3/10 on starts 4, 6, 9 | **3/10 on [4, 6, 9]** |
+| mean min clearance | 0.00 cm | **0.000 cm** |
+
+Nine of ten rollouts have step counts identical to the ZeroMQ parity run; the tenth is
+oa1 init 6 (239 against 204), the marginal start that has differed in every comparison
+since M0.
+
+## 60 starts at N=8, Triton against ZeroMQ
+
+Acceptance (`bench/accept.py`, the M4 rule) on the Triton run: **29 collisions, 25
+completions, 0 collision flips, 0 completion flips, 60/60 diagonal, max per-start
+clearance difference 0.0072 cm. PASS.**
+
+| | ZeroMQ (M4_T1) | Triton 23.07 |
+|---|---|---|
+| **rollouts/hour** | **544.8** | **511.2** (−6.2%) |
+| wall, 60 starts | 396.5 s | 422.6 s |
+| collisions / completions | 29 / 25 | 29 / 25 |
+| acceptance | PASS | PASS |
+
+### Where the 6.2% goes
+
+The per-request split needs care: Triton reports queue and compute time only in aggregate,
+so the first attempt differenced nothing and read statistics that still included the
+parity run — which diluted the queue average and produced a nonsense overhead of 132 ms.
+Re-measured against a before/after snapshot of a freshly started server (1535 requests):
+
+| per request | ZeroMQ | Triton |
+|---|---|---|
+| worker round trip | 1008.2 ms | 751.3 ms |
+| server queue | 798.1 ms | 547.7 ms |
+| GPU forward / `compute_infer` | 184.2 ms | **200.3 ms** |
+| `compute_input` + `compute_output` | — | 0.21 ms |
+| **transport (residual)** | **25.9 ms** | **3.1 ms** |
+
+Two findings, and they point opposite ways:
+
+1. **Triton's transport is much cheaper: 3.1 ms against 25.9 ms.** Its gRPC path is C++ on
+   both ends; the ZeroMQ client encodes and decodes a JSON header per request in Python and
+   the server hands replies through a second queue. That is a real result against my own
+   implementation.
+2. **Triton's service time is higher: 200.3 ms against 184.2 ms**, and that is what sets
+   throughput. The Python backend does `prepare_request` — the ~21 ms of crop, normalise
+   and tokenise — *inside* `execute`, serialised with the GPU forward. The ZeroMQ server
+   deliberately splits that across two threads, so preprocessing overlaps the forward and
+   never reaches the critical path.
+
+Throughput follows service time, not transport, because a worker blocks on its own request
+and its environment does not advance while it waits: 1000/184.2 = 5.43 forwards/s against
+1000/200.3 = 4.99, a predicted 8.1% against the 6.2% measured. The queue numbers are not
+comparable between the two columns (the clean Triton run had 6 live workers, see below), but
+the service and transport figures do not depend on concurrency.
+
+The fix for Triton would be to get preprocessing off `execute` — a two-model ensemble, or
+preprocessing in the client — not to change the model. It was not pursued: it would make
+the comparison a comparison of two different request protocols rather than of two servers.
+
+### A robustness caveat
+
+In one Triton run, **2 of 8 workers died with SIGSEGV at startup**, before producing any
+rollout (45/60 rollouts completed; the other six exited cleanly). The earlier Triton run
+had 8 of 8 succeed, so it is intermittent, and it appears only on the Triton path — the
+likely interaction is gRPC's threads with EGL context creation in a process that also
+loads MuJoCo. The gRPC client also raises a harmless `AttributeError` in `__del__` at
+interpreter shutdown on every worker. Neither affects results, because an incomplete run
+fails the acceptance check on row count, but it is a reason the ZeroMQ path is the one to
+benchmark with.
+
+## Which is which
+
+- **Benchmark default: the ZeroMQ server.** It is faster (544.8 against 511.2
+  rollouts/hour), it has produced 8-of-8 complete worker runs every time, and its
+  two-thread design keeps preprocessing off the critical path.
+- **Deployment option: Triton.** Not because it is faster here — it is not — but because it
+  brings the model repository, versioning, a metrics endpoint and a standard client, and
+  because its transport is genuinely cheaper. On a box where the forward is not the
+  bottleneck, or with preprocessing moved off `execute`, the ranking would likely reverse.
+
+Both are kept. `POLICY_TRANSPORT=zmq|triton` selects one, the workers and manifest are
+identical either way, and the acceptance rule is applied to both.

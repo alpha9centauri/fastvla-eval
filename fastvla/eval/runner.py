@@ -52,7 +52,14 @@ def main():
         raise SystemExit(f"run {RUN_ID} already complete at {run_dir}")
     for d in ("rollouts", "arrays", "videos", "logs"):
         os.makedirs(os.path.join(run_dir, d), exist_ok=True)
-    endpoint = f"ipc:///tmp/fastvla_{RUN_ID}.sock"
+    # POLICY_TRANSPORT=triton drives an already-running Triton server (started separately
+    # by bench/triton_serve.sh inside the container) instead of spawning the ZeroMQ one,
+    # so the comparison is of serving layers with the same workers and the same manifest.
+    transport = os.environ.get("POLICY_TRANSPORT", "zmq")
+    if transport == "triton":
+        endpoint = os.environ.get("TRITON_URL", "localhost:8201")
+    else:
+        endpoint = f"ipc:///tmp/fastvla_{RUN_ID}.sock"
 
     # round-robin so every worker gets a mix of tasks rather than one worker taking all
     # of the slow ones; the manifest is ordered task-major.
@@ -118,8 +125,26 @@ def main():
         cwd=ROOT,
     )
     # wait for READY
-    ready, deadline = False, time.time() + 600
-    while time.time() < deadline:
+    if transport == "triton":
+        import tritonclient.grpc as _g
+
+        cli = _g.InferenceServerClient(url=endpoint)
+        deadline = time.time() + 600
+        ready = False
+        while time.time() < deadline:
+            try:
+                if cli.is_server_live() and cli.is_model_ready("openvla_oft"):
+                    ready = True
+                    break
+            except Exception:
+                pass
+            time.sleep(0.5)
+        if not ready:
+            raise SystemExit(f"triton at {endpoint} not ready within 600 s")
+        cli.close()
+        print(f"[RUN] triton ready at {endpoint}", flush=True)
+    ready, deadline = (transport == "triton"), time.time() + 600
+    while transport == "zmq" and time.time() < deadline:
         if server.poll() is not None:
             raise SystemExit(f"server exited early with {server.returncode}; see logs/server.log")
         with open(os.path.join(run_dir, "logs", "server.log")) as fh:
@@ -128,7 +153,8 @@ def main():
                 break
         time.sleep(0.5)
     if not ready:
-        server.kill()
+        if server is not None:
+            server.kill()
         raise SystemExit("server did not become ready within 600 s")
     t_ready = time.perf_counter()
     print(f"[RUN] server ready in {t_ready - t_start:.1f} s", flush=True)
@@ -178,15 +204,17 @@ def main():
     for wid, p, lg in procs:
         rcs[wid] = p.wait()
         lg.close()
-    try:
-        server.wait(timeout=120)
-    except subprocess.TimeoutExpired:
-        server.terminate()
+    if server is not None:
         try:
-            server.wait(timeout=60)
+            server.wait(timeout=120)
         except subprocess.TimeoutExpired:
-            server.kill()
-    slog.close()
+            server.terminate()
+            try:
+                server.wait(timeout=60)
+            except subprocess.TimeoutExpired:
+                server.kill()
+    if slog is not None:
+        slog.close()
 
     rows = []
     for f in sorted(os.listdir(rollouts_dir)):
@@ -197,7 +225,7 @@ def main():
     merged = dict(
         config=cfg,
         worker_returncodes=rcs,
-        server_returncode=server.returncode,
+        server_returncode=(server.returncode if server is not None else None),
         n_rows=len(rows),
         n_expected=total,
         wall_sec_rollouts=wall,

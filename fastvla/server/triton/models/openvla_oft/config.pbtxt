@@ -8,25 +8,27 @@
 #
 # NOTE on the values. M3 measured that batching this model buys only 1.27x (6.0 -> 7.6
 # requests/s from B=1 to B=4, flat after) because a single request already saturates the
-# card, and that B=8 alongside 8 workers' EGL contexts exhausts the 24 GB card. It also
-# measured that any batching perturbs bf16 reduction order enough to flip marginal starts.
-# So max_batch_size is 4, not 8, and the parity configuration is max_batch_size 1 with
-# dynamic_batching removed -- see fastvla/server/DESIGN.md.
+# card, and that any batching perturbs bf16 reduction order enough to flip per-start
+# collision verdicts. max_batch_size is therefore 1 and dynamic batching is off, matching
+# the accepted configuration measured in M3 and M4.
 
 name: "openvla_oft"
 backend: "python"
-max_batch_size: 4
+max_batch_size: 1
 
 input [
   {
+    # 224x224, not 256x256: the worker sends prepare_observation's output, which has
+    # already been resized from the 256x256 the cameras render. The dimensions are left
+    # dynamic so the backend is not pinned to one resize size.
     name: "full_image"
     data_type: TYPE_UINT8
-    dims: [ 256, 256, 3 ]
+    dims: [ -1, -1, 3 ]
   },
   {
     name: "wrist_image"
     data_type: TYPE_UINT8
-    dims: [ 256, 256, 3 ]
+    dims: [ -1, -1, 3 ]
   },
   {
     name: "state"
@@ -48,16 +50,26 @@ output [
   }
 ]
 
-dynamic_batching {
-  preferred_batch_size: [ 2, 4 ]
-  max_queue_delay_microseconds: 10000
-}
+# No dynamic_batching. M3 measured that batching this model buys 1.27x at best and flips
+# per-start collision verdicts (oa3 inits 0/1/6, oa5 init 6 at D=10 ms), so the accepted
+# configuration is B=1 with no queue delay and that is what is served here. The batching
+# stanza is kept, commented, so the rejected configuration is visible rather than absent:
+#
+# dynamic_batching {
+#   preferred_batch_size: [ 2, 4 ]
+#   max_queue_delay_microseconds: 10000
+# }
 
 instance_group [
   {
     count: 1
     kind: KIND_GPU
-    gpus: [ 1 ]
+    # 0, not 1. CUDA_VISIBLE_DEVICES=1 already selects the physical card and renumbers it,
+    # so inside the container the only CUDA device is 0. Setting 1 here fails the load with
+    # "specifies invalid or unsupported gpu id 1 ... GPUs ... are: 0". The instance's actual
+    # device is logged with its UUID at model load (model.py _log_device) so the physical
+    # card is confirmed rather than inferred from this number.
+    gpus: [ 0 ]
   }
 ]
 

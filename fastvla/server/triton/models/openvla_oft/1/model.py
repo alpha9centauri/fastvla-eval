@@ -10,14 +10,14 @@ this backend does not implement batching itself -- it converts the group into on
 `BatchedPolicy.forward` call. `max_batch_size` and `max_queue_delay_microseconds` in
 config.pbtxt are the B and D of M3a's sweep.
 
-Not executed on gpu5: `tritonserver` is not installed, Docker is present but its socket is
-root:docker and this user is in no such group, no other container runtime exists, and
-Triton for Linux x86_64 is distributed only as a container image. See DESIGN.md
-section 7. This file is complete and is what M5 containerises.
+Runs on gpu5 under unprivileged Apptainer (fastvla/server/CONTAINERS.md): plain `--nv`
+with `CUDA_VISIBLE_DEVICES=1`, the libero-vla env bound and reached through PYTHONPATH,
+started by `bench/triton_serve.sh`. Docker is not available here and is not needed.
 """
 
 import json
 import os
+import site
 import sys
 
 import numpy as np
@@ -26,6 +26,16 @@ try:
     import triton_python_backend_utils as pb_utils
 except ImportError:  # pragma: no cover - only present inside Triton
     pb_utils = None
+
+SITE_PACKAGES = "/data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages"
+
+# libero, openvla_oft and robosuite are EDITABLE installs: their __editable__*.pth files
+# install import finders, and .pth files are executed only for directories registered
+# through `site`, never for a directory that merely sits on PYTHONPATH. Triton's Python
+# backend runs the container's own interpreter, so without this the stub fails to
+# initialise with "ModuleNotFoundError: No module named 'libero'" even though PYTHONPATH
+# is correct -- which is exactly how this first failed.
+site.addsitedir(SITE_PACKAGES)
 
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
 for _p in (
@@ -56,7 +66,9 @@ class TritonPythonModel:
             "openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32"
             "+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit"
         )
-        ckpt = os.environ.get("CKPT", f"/data_new/vchandr2/runs/{base}--17500_chkpt")
+        # `or` not `.get(default)`: triton_serve.sh may pass CKPT as an empty string, and
+        # .get would then return "" rather than falling back.
+        ckpt = os.environ.get("CKPT") or f"/data_new/vchandr2/runs/{base}--17500_chkpt"
         cfg = GenerateConfig(
             model_family="openvla",
             pretrained_checkpoint=ckpt,
@@ -76,9 +88,47 @@ class TritonPythonModel:
         proc = get_processor(cfg)
         cfg.unnorm_key = "libero_safety"
         self.policy = BatchedPolicy(cfg, model, proc, ah, pp)
+        self._log_device()
         self.model_config = json.loads(args["model_config"]) if "model_config" in args else {}
         self.n_requests = 0
         self.n_batches = 0
+
+    def _log_device(self):
+        """Prove the model instance landed on the masked device, as preflight_gpu.py does.
+
+        config.pbtxt pins the instance to GPU 1 via `gpus: [1]`, but inside the container
+        the mask has already renumbered the devices, so the instance must be confirmed
+        rather than assumed. Logged at load so every server start carries the evidence.
+        """
+        import subprocess
+
+        import torch
+
+        from fastvla.server.preflight_gpu import norm_bus, pci_bus_id_of_cuda0
+
+        bus = pci_bus_id_of_cuda0()
+        uuid = None
+        try:
+            q = subprocess.run(
+                ["nvidia-smi", "--query-gpu=uuid,pci.bus_id", "--format=csv,noheader"],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            ).stdout
+            for line in q.strip().splitlines():
+                u, b = [x.strip() for x in line.split(",")]
+                if norm_bus(b) == norm_bus(bus):
+                    uuid = u
+                    break
+        except Exception as e:
+            uuid = f"(nvidia-smi failed: {e})"
+        print(
+            f"[triton] model instance on cuda:0 device_count={torch.cuda.device_count()} "
+            f"pci={bus} uuid={uuid}",
+            flush=True,
+        )
+        self.device_uuid = uuid
+        self.device_bus = bus
 
     def execute(self, requests):
         """One call per dynamic batch Triton has formed."""

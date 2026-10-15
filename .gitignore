@@ -84,3 +84,4 @@ audit/logs/
 # bulky per-call arrays are excluded, by the *.npz rule above. The compiled extension is
 # already excluded by the *.so rule in the Python section.
 bench/runs/
+bench/triton_libs/

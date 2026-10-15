@@ -67,7 +67,15 @@ def main():
     from physics_safety import SafetyMonitor, unwrap_domain
     from prismatic.vla.constants import NUM_ACTIONS_CHUNK
 
-    from fastvla.server.client import PolicyClient
+    # POLICY_TRANSPORT selects the serving layer; the two clients share an interface so
+    # the comparison is of servers, not of client designs.
+    transport = os.environ.get("POLICY_TRANSPORT", "zmq")
+    if transport == "triton":
+        from fastvla.server.triton_client import TritonPolicyClient as PolicyClient
+    elif transport == "zmq":
+        from fastvla.server.client import PolicyClient
+    else:
+        raise SystemExit(f"POLICY_TRANSPORT must be zmq or triton, got {transport!r}")
 
     class _Cfg:
         model_family = "openvla"

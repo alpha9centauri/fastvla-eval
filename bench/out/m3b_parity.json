@@ -1,0 +1,19 @@
+{
+  "gate_collisions": 10,
+  "completions_on": [
+    4,
+    6,
+    9
+  ],
+  "max_gate_clearance_cm": 0.0,
+  "PASS": true,
+  "rollouts_per_hour": 114.51693695781084,
+  "wall_sec": 314.363979306072,
+  "step_diffs_vs_zmq": [
+    [
+      "oa1__i06__intr5",
+      239,
+      204
+    ]
+  ]
+}

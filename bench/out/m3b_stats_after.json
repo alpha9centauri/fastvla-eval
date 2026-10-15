@@ -1,0 +1,53 @@
+{
+  "model_stats": [
+    {
+      "name": "openvla_oft",
+      "version": "1",
+      "last_inference": "1792084308894",
+      "inference_count": "1535",
+      "execution_count": "1535",
+      "inference_stats": {
+        "success": {
+          "count": "1535",
+          "ns": "1148663919155"
+        },
+        "fail": {},
+        "queue": {
+          "count": "1535",
+          "ns": "840721979385"
+        },
+        "compute_input": {
+          "count": "1535",
+          "ns": "130257993"
+        },
+        "compute_infer": {
+          "count": "1535",
+          "ns": "307489110615"
+        },
+        "compute_output": {
+          "count": "1535",
+          "ns": "203558183"
+        },
+        "cache_hit": {},
+        "cache_miss": {}
+      },
+      "batch_stats": [
+        {
+          "batch_size": "1",
+          "compute_input": {
+            "count": "1535",
+            "ns": "130257993"
+          },
+          "compute_infer": {
+            "count": "1535",
+            "ns": "307489110615"
+          },
+          "compute_output": {
+            "count": "1535",
+            "ns": "203558183"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "zeromq": {
+    "tag": "m4_t1_n8b1",
+    "rollouts_per_hour": 544.7910204079758,
+    "wall": 396.4823058908805,
+    "collisions": 29,
+    "completions": 25,
+    "round_trip_ms": 1008.2067742812194,
+    "p95_round_trip_ms": 1196.8515806889627,
+    "queue_ms": 798.1086937481828,
+    "forward_ms": 184.2417020864178,
+    "overhead_ms": 25.856378446618876,
+    "requests": 2039
+  },
+  "triton": {
+    "tag": "m3b_triton_n8",
+    "rollouts_per_hour": 511.1706091018164,
+    "wall": 422.5595058752224,
+    "collisions": 29,
+    "completions": 25,
+    "round_trip_ms": 1108.2424306125122,
+    "p95_round_trip_ms": 1321.1481256352272,
+    "queue_ms": 0.0,
+    "forward_ms": 0.0,
+    "overhead_ms": 1108.2424306125122,
+    "requests": 2040
+  },
+  "triton_server_stats": {
+    "requests": 2378,
+    "queue_ms": 778.7131721879731,
+    "compute_input_ms": 0.07986621278385198,
+    "compute_infer_ms": 197.05272872455845,
+    "compute_output_ms": 0.12348727375946174,
+    "success_ms": 976.0402742598823
+  },
+  "overhead_delta_ms": 106.62015125336175,
+  "throughput_delta_pct": -6.171249166511994
+}

@@ -1,0 +1,13 @@
+{
+  "requests": 1535,
+  "per_request_ms": {
+    "success": 748.3152567785016,
+    "queue": 547.7016152345277,
+    "compute_input": 0.08485862736156352,
+    "compute_infer": 200.31863883713356,
+    "compute_output": 0.13261119413680783
+  },
+  "worker_round_trip_ms": 751.2932367513476,
+  "overhead_ms": 3.0555128581880076,
+  "note": "from a run where 2 of 8 workers segfaulted at startup; 45/60 rollouts. Per-request figures are valid for the requests served; throughput is not."
+}

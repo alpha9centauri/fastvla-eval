@@ -1,0 +1,18 @@
+{
+  "model_stats": [
+    {
+      "name": "openvla_oft",
+      "version": "1",
+      "inference_stats": {
+        "success": {},
+        "fail": {},
+        "queue": {},
+        "compute_input": {},
+        "compute_infer": {},
+        "compute_output": {},
+        "cache_hit": {},
+        "cache_miss": {}
+      }
+    }
+  ]
+}

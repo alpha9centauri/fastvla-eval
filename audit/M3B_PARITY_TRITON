@@ -1,0 +1,9 @@
+# displacement test, started 2026-10-15 09:40:30
+# cmd: bash /data_new/vchandr2/fastvla-eval/bench/m3a_run.sh gate10 1 1 0
+[RUN] m3b_parity_triton: 10 rollouts, N=1, B=1, D=0.0 ms, parity=False
+[RUN] triton ready at localhost:8201
+[RUN] server ready in 0.3 s
+[RUN] spawned 1 workers
+[RUN] merged 0/10 rollouts in 20.0 s = 0.0 rollouts/hour; collisions 0, completions 0
+[RUN] -> /data_new/vchandr2/fastvla-eval/bench/runs/m3b_parity_triton/merged.json
+[RUN] INCOMPLETE: 0/10 rows, worker rcs {0: 1}
