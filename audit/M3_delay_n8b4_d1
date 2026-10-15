@@ -1,0 +1,5 @@
+# displacement test, started 2026-10-14 21:30:09
+# cmd: bash /data_new/vchandr2/fastvla-eval/bench/sweep.sh ctrl60 8 4 1 delay_n8b4_d1
+[RUN] delay_n8b4_d1: 60 rollouts, N=8, B=4, D=1.0 ms, parity=False
+[RUN] server ready in 14.5 s
+[RUN] spawned 8 workers

@@ -1,0 +1,74 @@
+{
+  "ctrl60_n16b1": {
+    "n_samples": 196,
+    "gpu1_sm_mean": 80.83673469387755,
+    "gpu1_sm_p50": 94.0,
+    "gpu1_sm_p95": 95.0,
+    "gpu1_mem_mean": 35.816326530612244,
+    "gpu0_sm_mean": 0.0
+  },
+  "ctrl60_n8b1": {
+    "n_samples": 412,
+    "gpu1_sm_mean": 84.95631067961165,
+    "gpu1_sm_p50": 94.0,
+    "gpu1_sm_p95": 96.0,
+    "gpu1_mem_mean": 38.25,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n16b1": {
+    "n_samples": 99,
+    "gpu1_sm_mean": 59.93939393939394,
+    "gpu1_sm_p50": 90.0,
+    "gpu1_sm_p95": 95.0,
+    "gpu1_mem_mean": 26.606060606060606,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n1": {
+    "n_samples": 326,
+    "gpu1_sm_mean": 17.561349693251532,
+    "gpu1_sm_p50": 1.0,
+    "gpu1_sm_p95": 76.0,
+    "gpu1_mem_mean": 8.294478527607362,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n2": {
+    "n_samples": 186,
+    "gpu1_sm_mean": 31.731182795698924,
+    "gpu1_sm_p50": 22.0,
+    "gpu1_sm_p95": 83.75,
+    "gpu1_mem_mean": 14.440860215053764,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n4": {
+    "n_samples": 137,
+    "gpu1_sm_mean": 43.97080291970803,
+    "gpu1_sm_p50": 43.0,
+    "gpu1_sm_p95": 91.0,
+    "gpu1_mem_mean": 19.474452554744527,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n4b1": {
+    "n_samples": 125,
+    "gpu1_sm_mean": 46.464,
+    "gpu1_sm_p50": 40.0,
+    "gpu1_sm_p95": 94.0,
+    "gpu1_mem_mean": 20.968,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n8": {
+    "n_samples": 456,
+    "gpu1_sm_mean": 1.3596491228070176,
+    "gpu1_sm_p50": 0.0,
+    "gpu1_sm_p95": 0.0,
+    "gpu1_mem_mean": 0.17763157894736842,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n8b1": {
+    "n_samples": 120,
+    "gpu1_sm_mean": 50.575,
+    "gpu1_sm_p50": 63.0,
+    "gpu1_sm_p95": 95.0,
+    "gpu1_mem_mean": 22.45,
+    "gpu0_sm_mean": 0.0
+  }
+}

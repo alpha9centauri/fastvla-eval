@@ -1,0 +1,13 @@
+# displacement test, started 2026-10-14 21:13:34
+# cmd: bash /data_new/vchandr2/fastvla-eval/bench/sweep.sh gate10 16 1 0 sweep_n16b1
+[RUN] sweep_n16b1: 10 rollouts, N=16, B=1, D=0.0 ms, parity=False
+[RUN] server ready in 14.5 s
+[RUN] spawned 16 workers
+[PROGRESS] done=1 total=10
+[PROGRESS] done=2 total=10
+[PROGRESS] done=3 total=10
+[PROGRESS] done=6 total=10
+[PROGRESS] done=10 total=10
+[RUN] merged 10/10 rollouts in 85.1 s = 422.8 rollouts/hour; collisions 10, completions 3
+[RUN] -> /data_new/vchandr2/fastvla-eval/bench/runs/sweep_n16b1/merged.json
+RUNNER DONE

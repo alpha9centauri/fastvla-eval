@@ -1,0 +1,34 @@
+{
+  "ctrl60_n8b1": {
+    "collisions": 29,
+    "completions": 25,
+    "rollouts_per_hour": 539.3490412713751,
+    "wall_sec": 400.48277362436056,
+    "transition_matrix": {
+      "01->01": 20,
+      "00->00": 11,
+      "11->11": 5,
+      "10->10": 24
+    },
+    "collision_flips": [],
+    "completion_flips": [],
+    "max_clearance_diff_cm": 0.14369999999999994,
+    "max_clearance_diff_identical_outcome_cm": 0.14369999999999994
+  },
+  "ctrl60_n16b1": {
+    "collisions": 29,
+    "completions": 25,
+    "rollouts_per_hour": 544.7109205484036,
+    "wall_sec": 396.5406087003648,
+    "transition_matrix": {
+      "01->01": 20,
+      "00->00": 11,
+      "11->11": 5,
+      "10->10": 24
+    },
+    "collision_flips": [],
+    "completion_flips": [],
+    "max_clearance_diff_cm": 0.0,
+    "max_clearance_diff_identical_outcome_cm": 0.0
+  }
+}
