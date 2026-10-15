@@ -1,0 +1,17 @@
+# displacement test, started 2026-10-14 20:27:01
+# cmd: bash /data_new/vchandr2/fastvla-eval/bench/m3a_run.sh gate10 2 2 10
+[RUN] smoke_202701: 10 rollouts, N=2, B=2, D=10.0 ms, parity=False
+[RUN] server ready in 14.5 s
+[RUN] spawned 2 workers
+[PROGRESS] done=1 total=10
+[PROGRESS] done=2 total=10
+[PROGRESS] done=4 total=10
+[PROGRESS] done=5 total=10
+[PROGRESS] done=6 total=10
+[PROGRESS] done=7 total=10
+[PROGRESS] done=8 total=10
+[PROGRESS] done=9 total=10
+[PROGRESS] done=10 total=10
+[RUN] merged 10/10 rollouts in 63.1 s = 570.6 rollouts/hour; collisions 0, completions 0
+[RUN] -> /data_new/vchandr2/fastvla-eval/bench/runs/smoke_202701/merged.json
+RUNNER DONE

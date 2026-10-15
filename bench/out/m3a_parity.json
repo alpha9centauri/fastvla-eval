@@ -1,0 +1,30 @@
+{
+  "manifest": "gate10",
+  "n_workers": 1,
+  "max_batch": 1,
+  "parity": true,
+  "gate_collisions": 10,
+  "completions_on_inits": [
+    4,
+    6,
+    9
+  ],
+  "mean_gate_min_clearance_cm": 0.0,
+  "phys_collisions": 10,
+  "n_chunks_compared": 338,
+  "max_abs_action_diff": 1.07275390625,
+  "exact": false,
+  "wall_sec": 315.38250106200576,
+  "rollouts_per_hour": 114.14710669988067,
+  "server": {
+    "forwards": 342,
+    "requests": 342,
+    "mean_batch": 1.0,
+    "forward_ms_mean": 180.8532836318713,
+    "forward_ms_p95": 178.84963038377464,
+    "queue_wait_ms_mean": 0.06775585226496758,
+    "queue_wait_ms_p95": 0.12858547270298004,
+    "prep_ms_mean": 22.436371917308072,
+    "requests_per_s_gpu": 5.529343896434361
+  }
+}

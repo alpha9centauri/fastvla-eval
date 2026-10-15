@@ -27,11 +27,9 @@ for p in (
 ):
     sys.path.insert(0, p)
 
-import rollout_bootstrap  # noqa: F401, E402
-
 import numpy as np  # noqa: E402
+import rollout_bootstrap  # noqa: F401, E402
 import torch  # noqa: E402
-
 from experiments.robot.libero.run_libero_eval import (  # noqa: E402
     GenerateConfig,
     prepare_observation,
@@ -46,8 +44,9 @@ from experiments.robot.robot_utils import (  # noqa: E402
     get_image_resize_size,
     get_model,
 )
-from fastvla.server.batched_forward import BatchedPolicy  # noqa: E402
 from prismatic.vla.constants import NUM_ACTIONS_CHUNK  # noqa: E402
+
+from fastvla.server.batched_forward import BatchedPolicy  # noqa: E402
 
 OUT = os.environ["OUT"]
 N_OBS = int(os.environ.get("N_OBS", "16"))
@@ -80,11 +79,10 @@ resize_size = get_image_resize_size(cfg)
 # ---- capture real observations by stepping one env ------------------------------------
 import random  # noqa: E402
 
-from libero.libero import benchmark, get_libero_path  # noqa: E402
-from libero.libero.envs import OffScreenRenderEnv  # noqa: E402
-
 from experiments.robot.libero.libero_utils import get_libero_dummy_action  # noqa: E402
 from experiments.robot.libero.run_libero_eval import process_action  # noqa: E402
+from libero.libero import benchmark, get_libero_path  # noqa: E402
+from libero.libero.envs import OffScreenRenderEnv  # noqa: E402
 
 bd = benchmark.get_benchmark_dict()
 ts = bd["obstacle_avoidance"]()

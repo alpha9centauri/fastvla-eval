@@ -1,0 +1,18 @@
+# displacement test, started 2026-10-14 20:40:32
+# cmd: bash /data_new/vchandr2/fastvla-eval/bench/m3a_run.sh gate10 1 1 0
+[RUN] parity_n1b1_v2: 10 rollouts, N=1, B=1, D=0.0 ms, parity=True
+[RUN] server ready in 15.0 s
+[RUN] spawned 1 workers
+[PROGRESS] done=1 total=10
+[PROGRESS] done=2 total=10
+[PROGRESS] done=3 total=10
+[PROGRESS] done=4 total=10
+[PROGRESS] done=5 total=10
+[PROGRESS] done=6 total=10
+[PROGRESS] done=7 total=10
+[PROGRESS] done=8 total=10
+[PROGRESS] done=9 total=10
+[PROGRESS] done=10 total=10
+[RUN] merged 10/10 rollouts in 315.4 s = 114.1 rollouts/hour; collisions 10, completions 3
+[RUN] -> /data_new/vchandr2/fastvla-eval/bench/runs/parity_n1b1_v2/merged.json
+RUNNER DONE

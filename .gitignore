@@ -83,3 +83,4 @@ audit/logs/
 # every number in DESIGN.md, and tests/test_gjk_real_states.py gates one of them. Only the
 # bulky per-call arrays are excluded, by the *.npz rule above. The compiled extension is
 # already excluded by the *.so rule in the Python section.
+bench/runs/

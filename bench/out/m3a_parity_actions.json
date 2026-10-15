@@ -1,0 +1,23 @@
+{
+  "bit_exact_inits": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    7,
+    8,
+    9
+  ],
+  "diverging_inits": [
+    6
+  ],
+  "n_exact_chunks": 312,
+  "n_total_chunks": 342,
+  "init6_first_differing_chunk": 3,
+  "init6_ref_chunks": 26,
+  "init6_my_chunks": 30,
+  "init6_my_steps": 239,
+  "max_abs_action_diff_on_exact": 0.0
+}

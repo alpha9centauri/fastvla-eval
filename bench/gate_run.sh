@@ -14,4 +14,5 @@ exec env CUDA_VISIBLE_DEVICES=1 MUJOCO_GL=egl MUJOCO_EGL_DEVICE_ID=1 \
   LABELER="${1:-cpp}" LABELER_LEVEL="${2:-batch}" LABELER_THREADS="${3:-1}" \
   TARGET="$D/datagen/curve_gate.py" \
   REDIRECT_WRITE="curve_gate.json:$ROOT/bench/out/m2_curve_gate_${1:-cpp}.json" \
+  RECORD_ACTIONS="${RECORD_ACTIONS:-}" \
   /data_new/vchandr2/miniconda3/envs/libero-vla/bin/python -u "$ROOT/fastvla/run_with_labeler.py"

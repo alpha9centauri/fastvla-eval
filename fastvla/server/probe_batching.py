@@ -26,11 +26,9 @@ DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
 for p in ("/data_new/vchandr2", "/data_new/vchandr2/openvla-oft", DISP):
     sys.path.insert(0, p)
 
-import rollout_bootstrap  # noqa: F401, E402
-
 import numpy as np  # noqa: E402
+import rollout_bootstrap  # noqa: F401, E402
 import torch  # noqa: E402
-
 from experiments.robot.libero.run_libero_eval import GenerateConfig  # noqa: E402
 from experiments.robot.openvla_utils import (  # noqa: E402
     get_action_head,
@@ -105,7 +103,7 @@ def run_single(req):
     inputs, proprio = req
     with torch.inference_mode():
         act, _ = model.predict_action(
-            **{k: v for k, v in inputs.items()},
+            **dict(inputs),
             unnorm_key=cfg.unnorm_key,
             do_sample=False,
             proprio=proprio,
@@ -171,7 +169,7 @@ for B in (2, 4):
         res["batch"][str(B)] = dict(
             ok=True, shape=list(out.shape), max_abs_diff_vs_single=diffs, worst=max(diffs)
         )
-        print(f"[PROBE] B={B} max |batched - single| per request: {['%.3e' % d for d in diffs]}")
+        print(f"[PROBE] B={B} max |batched - single| per request: {[f'{d:.3e}' for d in diffs]}")
     except Exception as e:
         res["batch"][str(B)] = dict(ok=False, error=f"{type(e).__name__}: {e}")
         print(f"[PROBE] B={B} FAILED: {type(e).__name__}: {e}")

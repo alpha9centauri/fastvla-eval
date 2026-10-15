@@ -60,4 +60,35 @@ if _redirect:
 
     builtins.open = _open
 
+_record = os.environ.get("RECORD_ACTIONS", "")
+if _record:
+    # Record every action chunk the REFERENCE path returns, so a parity run can be
+    # compared chunk for chunk against it. Wrapping get_action rather than reproducing the
+    # target's loop keeps the reference the reference.
+    import atexit
+
+    import numpy as np
+
+    from experiments.robot import robot_utils as _ru
+
+    _chunks = []
+    _orig_get_action = _ru.get_action
+
+    def _recording_get_action(*a, **kw):
+        out = _orig_get_action(*a, **kw)
+        _chunks.append(np.asarray(out, dtype=np.float64).copy())
+        return out
+
+    _ru.get_action = _recording_get_action
+
+    def _dump():
+        if not _chunks:
+            print("[LABELER] RECORD_ACTIONS: no chunks captured", flush=True)
+            return
+        os.makedirs(os.path.dirname(_record) or ".", exist_ok=True)
+        np.savez_compressed(_record, chunks=np.stack(_chunks, axis=0))
+        print(f"[LABELER] recorded {len(_chunks)} reference chunks -> {_record}", flush=True)
+
+    atexit.register(_dump)
+
 runpy.run_path(TARGET, run_name="__main__")
