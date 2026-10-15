@@ -76,6 +76,8 @@ audit/DONE
 audit/FAILED
 audit/SUMMARY.txt
 audit/M0_AUDIT_*
+audit/M2_*
+audit/logs/
 
 # Benchmark measurement records (small JSON) ARE committed -- they are the provenance for
 # every number in DESIGN.md, and tests/test_gjk_real_states.py gates one of them. Only the
