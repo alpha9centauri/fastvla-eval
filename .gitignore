@@ -77,6 +77,7 @@ audit/FAILED
 audit/SUMMARY.txt
 audit/M0_AUDIT_*
 
-# Compiled extensions and benchmark outputs
-*.so
-bench/out/
+# Benchmark measurement records (small JSON) ARE committed -- they are the provenance for
+# every number in DESIGN.md, and tests/test_gjk_real_states.py gates one of them. Only the
+# bulky per-call arrays are excluded, by the *.npz rule above. The compiled extension is
+# already excluded by the *.so rule in the Python section.

@@ -1,0 +1,30 @@
+{
+  "labeler": "cpp",
+  "level": "batch",
+  "threads": 8,
+  "distmax": 0.5,
+  "clearance_every": 25,
+  "n_calls": 1000,
+  "ms_per_call_mean": 0.4928985172882676,
+  "ms_per_call_p50": 0.48764050006866455,
+  "ms_per_call_p95": 0.6726334337145089,
+  "ms_per_call_max": 11.630773544311523,
+  "ms_per_control_step": 0.9857970345765352,
+  "rollouts_used": [
+    {
+      "key": "oa1__i00__base",
+      "control_steps": 226,
+      "calls": 452
+    },
+    {
+      "key": "oa1__i01__base",
+      "control_steps": 215,
+      "calls": 430
+    },
+    {
+      "key": "oa1__i02__base",
+      "control_steps": 59,
+      "calls": 118
+    }
+  ]
+}

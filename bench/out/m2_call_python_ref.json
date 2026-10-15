@@ -1,0 +1,30 @@
+{
+  "labeler": "python",
+  "level": null,
+  "threads": 1,
+  "distmax": 0.5,
+  "clearance_every": 25,
+  "n_calls": 1000,
+  "ms_per_call_mean": 63.638106506317854,
+  "ms_per_call_p50": 56.694834027439356,
+  "ms_per_call_p95": 161.96135459467766,
+  "ms_per_call_max": 251.83776952326298,
+  "ms_per_control_step": 127.27621301263571,
+  "rollouts_used": [
+    {
+      "key": "oa1__i00__base",
+      "control_steps": 226,
+      "calls": 452
+    },
+    {
+      "key": "oa1__i01__base",
+      "control_steps": 215,
+      "calls": 430
+    },
+    {
+      "key": "oa1__i02__base",
+      "control_steps": 59,
+      "calls": 118
+    }
+  ]
+}

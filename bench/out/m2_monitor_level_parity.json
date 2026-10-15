@@ -1,0 +1,27 @@
+{
+  "cpp_gjk": {
+    "n": 1000,
+    "bit_identical": 841,
+    "max_abs_diff_m": 2.7755575615628914e-17
+  },
+  "cpp_batch": {
+    "n": 1000,
+    "bit_identical": 782,
+    "max_abs_diff_m": 2.0816681711721685e-16
+  },
+  "omp_t1": {
+    "n": 1000,
+    "bit_identical": 782,
+    "max_abs_diff_m": 2.0816681711721685e-16
+  },
+  "omp_t4": {
+    "n": 1000,
+    "bit_identical": 782,
+    "max_abs_diff_m": 2.0816681711721685e-16
+  },
+  "omp_t8": {
+    "n": 1000,
+    "bit_identical": 782,
+    "max_abs_diff_m": 2.0816681711721685e-16
+  }
+}
