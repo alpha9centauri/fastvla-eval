@@ -1,0 +1,16 @@
+# The rollout manifest, as data rather than baked into the image: which (task, init, arm)
+# triples a run covers. The worker Job reads MANIFEST_JSON from here, so re-running a
+# different set is a ConfigMap edit, not a rebuild.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fastvla-manifest
+  labels: {app: fastvla}
+data:
+  MANIFEST: "ctrl60"
+  N_WORKERS: "8"          # the knee measured in M3; GPU is ~85% busy here
+  MAX_BATCH: "1"          # B>1 flips per-start collision verdicts (M3 delay sweep)
+  BATCH_DELAY_MS: "0"
+  LABELER: "cpp"
+  CONTACTS: "1"
+  MAX_STEPS: "300"

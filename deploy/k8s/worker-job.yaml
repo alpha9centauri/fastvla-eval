@@ -1,0 +1,51 @@
+# N workers as one Job with parallelism N. Each pod takes a slice of the manifest by its
+# completion index, so the slices are disjoint without a coordinator.
+#
+# completions == parallelism == N_WORKERS. Indexed completion mode is what gives each pod
+# its JOB_COMPLETION_INDEX, which the worker turns into WORKER_ID.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fastvla-workers
+  labels: {app: fastvla, component: worker}
+spec:
+  completions: 8
+  parallelism: 8
+  completionMode: Indexed
+  backoffLimit: 2
+  template:
+    metadata:
+      labels: {app: fastvla, component: worker}
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: worker
+          image: ghcr.io/alpha9centauri/fastvla-eval:latest
+          args: ["fastvla-worker"]
+          env:
+            - {name: ENDPOINT, value: "tcp://fastvla-server:5555"}
+            - {name: RUN_DIR, value: "/results/k8s"}
+            - {name: RUN_ID, value: "k8s"}
+            # the worker reads WORKER_ID; Indexed mode supplies the index
+            - {name: WORKER_ID, valueFrom: {fieldRef: {fieldPath: "metadata.annotations['batch.kubernetes.io/job-completion-index']"}}}
+          envFrom:
+            - configMapRef: {name: fastvla-manifest}
+          resources:
+            requests:
+              # Workers need a GPU only for EGL rendering (0.7 ms per camera, M4 addendum);
+              # the policy lives in the server. On a cluster with time-slicing or MPS this
+              # is a fractional request; without it, workers share the server's node.
+              nvidia.com/gpu: "1"
+              memory: "8Gi"
+              cpu: "4"
+            limits:
+              memory: "12Gi"
+          volumeMounts:
+            - {name: results, mountPath: /results}
+      volumes:
+        - name: results
+          persistentVolumeClaim: {claimName: fastvla-results}

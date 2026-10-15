@@ -34,6 +34,7 @@ import numpy as np  # noqa: E402
 import rollout_bootstrap  # noqa: F401, E402
 import zmq  # noqa: E402
 
+from fastvla.server import metrics as MET  # noqa: E402
 from fastvla.server import protocol as P  # noqa: E402
 
 ENDPOINT = os.environ["ENDPOINT"]
@@ -56,6 +57,9 @@ if os.environ.get("PROBE", "0") == "1" and not PARITY:
         "h[0, ...] (assumption B2 in audit/single_env_assumptions.md), so at batch > 1 it "
         "would silently return batch element 0 for every request. See DESIGN.md section 5."
     )
+
+METRICS_PORT = int(os.environ.get("METRICS_PORT", "9400"))
+METRICS = MET.Metrics()
 
 STATS = dict(
     forwards=0,
@@ -177,6 +181,9 @@ def main():
     work = queue.Queue()
     replies = queue.Queue()
     state = dict(workers=0, hellos=0, byes=0, stop=False)
+    if METRICS_PORT:
+        MET.serve(METRICS, METRICS_PORT)
+        print(f"[SERVER] metrics on :{METRICS_PORT}/metrics", flush=True)
     print(f"[SERVER] READY {ENDPOINT}", flush=True)
 
     def receiver():
@@ -200,14 +207,18 @@ def main():
                 prepared = pol.prepare_request(full, wrist, st, header["instruction"])
                 prep_ms = 1000 * (time.perf_counter() - t0)
                 STATS["prep_ms"].append(prep_ms)
+                METRICS.observe_preprocess(prep_ms / 1000.0)
                 work.put((ident, header, prepared, time.perf_counter()))
+                METRICS.set_queue_depth(work.qsize())
             elif kind == P.HELLO:
                 state["hellos"] += 1
                 state["workers"] += 1
+                METRICS.set_workers(state["workers"])
                 print(f"[SERVER] worker joined ({state['workers']} active)", flush=True)
             elif kind == P.BYE:
                 state["byes"] += 1
                 state["workers"] -= 1
+                METRICS.set_workers(state["workers"])
                 print(f"[SERVER] worker left ({state['workers']} active)", flush=True)
                 if state["workers"] <= 0 and state["hellos"] > 0:
                     state["stop"] = True
@@ -266,6 +277,8 @@ def main():
             STATS["queue_wait_ms"].extend(waits)
             k = str(len(batch))
             STATS["batch_hist"][k] = STATS["batch_hist"].get(k, 0) + 1
+            METRICS.observe_forward(len(batch), fms / 1000.0, [w / 1000.0 for w in waits])
+            METRICS.set_queue_depth(work.qsize())
             for (ident, header, _prep, _t), chunk, w in zip(batch, chunks, waits, strict=True):
                 h = dict(header)
                 h.update(server_batch_size=len(batch), queue_wait_ms=w, forward_ms=fms)

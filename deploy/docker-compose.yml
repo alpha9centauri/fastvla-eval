@@ -1,0 +1,61 @@
+# Single-box deployment: one server, N workers against it.
+#
+# The server and workers share a ZeroMQ ipc:// socket through a shared volume rather than
+# TCP, because the payload is 301 KB per request and both sit on the same machine. Set
+# N with `docker compose up --scale worker=8`; 8 is the knee measured in M3.
+services:
+  server:
+    image: ghcr.io/alpha9centauri/fastvla-eval:${TAG:-latest}
+    command: ["fastvla-server"]
+    environment:
+      ENDPOINT: ipc:///run/fastvla/policy.sock
+      RUN_ID: ${RUN_ID:-compose}
+      MAX_BATCH: "1"          # M3: batching flips per-start verdicts; B=1 is accepted
+      BATCH_DELAY_MS: "0"
+      METRICS_PORT: "9400"
+      CUDA_VISIBLE_DEVICES: "1"
+      CKPT: /checkpoints/openvla-oft-17500
+    ports:
+      - "9400:9400"           # Prometheus scrape
+    volumes:
+      - sock:/run/fastvla
+      - ${CKPT_DIR:-/data_new/vchandr2/checkpoints}:/checkpoints:ro
+      - ${RESULTS_DIR:-./results}:/results
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["1"]
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:9400/healthz',timeout=3)"]
+      interval: 30s
+      start_period: 600s
+
+  worker:
+    image: ghcr.io/alpha9centauri/fastvla-eval:${TAG:-latest}
+    command: ["fastvla-worker"]
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      ENDPOINT: ipc:///run/fastvla/policy.sock
+      RUN_DIR: /results/${RUN_ID:-compose}
+      RUN_ID: ${RUN_ID:-compose}
+      CUDA_VISIBLE_DEVICES: "1"   # EGL rendering only; the policy lives in the server
+      LABELER: cpp
+      CONTACTS: "1"
+    volumes:
+      - sock:/run/fastvla
+      - ${RESULTS_DIR:-./results}:/results
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["1"]
+              capabilities: [gpu]
+
+volumes:
+  sock:

@@ -1,0 +1,17 @@
+# Checkpoints are read-only and large (15 GB per checkpoint); results are small but must
+# outlive the Job so the runner can merge them.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fastvla-checkpoints
+spec:
+  accessModes: [ReadOnlyMany]
+  resources: {requests: {storage: 64Gi}}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fastvla-results
+spec:
+  accessModes: [ReadWriteMany]
+  resources: {requests: {storage: 16Gi}}

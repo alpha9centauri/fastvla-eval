@@ -1,0 +1,73 @@
+# One server, one GPU. replicas stays 1 on purpose: the bf16 weights are ~20 GB of a
+# 24 GB card (M3), so a second replica does not fit beside the workers' EGL contexts.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastvla-server
+  labels: {app: fastvla, component: server}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: fastvla, component: server}
+  template:
+    metadata:
+      labels: {app: fastvla, component: server}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9400"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: server
+          image: ghcr.io/alpha9centauri/fastvla-eval:latest
+          args: ["fastvla-server"]
+          env:
+            - {name: ENDPOINT, value: "tcp://0.0.0.0:5555"}
+            - {name: METRICS_PORT, value: "9400"}
+            - {name: CKPT, value: "/checkpoints/openvla-oft-17500"}
+            - {name: RUN_ID, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
+          envFrom:
+            - configMapRef: {name: fastvla-manifest}
+          ports:
+            - {name: policy, containerPort: 5555}
+            - {name: metrics, containerPort: 9400}
+          resources:
+            requests:
+              nvidia.com/gpu: "1"
+              memory: "32Gi"
+              cpu: "4"
+            limits:
+              nvidia.com/gpu: "1"
+              memory: "48Gi"
+          readinessProbe:
+            httpGet: {path: /healthz, port: 9400}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 60      # the 7B checkpoint takes ~35 s to load, be generous
+          livenessProbe:
+            httpGet: {path: /healthz, port: 9400}
+            initialDelaySeconds: 600
+            periodSeconds: 30
+          volumeMounts:
+            - {name: checkpoints, mountPath: /checkpoints, readOnly: true}
+            - {name: results, mountPath: /results}
+      volumes:
+        - name: checkpoints
+          persistentVolumeClaim: {claimName: fastvla-checkpoints}
+        - name: results
+          persistentVolumeClaim: {claimName: fastvla-results}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fastvla-server
+  labels: {app: fastvla, component: server}
+spec:
+  selector: {app: fastvla, component: server}
+  ports:
+    - {name: policy, port: 5555, targetPort: 5555}
+    - {name: metrics, port: 9400, targetPort: 9400}
