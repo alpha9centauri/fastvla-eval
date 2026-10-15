@@ -17,7 +17,12 @@ import json
 import os
 import sys
 
-import numpy as np
+# Capped before numpy loads, because BLAS defaults to every core: an uncapped fit took 29
+# cores and dropped the collection run sharing this box from 541 to 471 rollouts/hour.
+for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+    os.environ.setdefault(_v, os.environ.get("FIT_THREADS", "8"))
+
+import numpy as np  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -36,13 +41,24 @@ def alarm_score(pred_log_clearance):
 
 
 def threshold_for_recall(scores, labels, target):
-    """Lowest threshold achieving at least `target` recall (most permissive wins)."""
+    """The HIGHEST threshold that still recalls at least `target` of the positives.
+
+    Raising the threshold lowers recall, so the highest one meeting the recall requirement
+    is the one with the fewest false alarms -- which is what the false-alarm number below
+    should be measured at.
+    """
     s, y = np.asarray(scores), np.asarray(labels, bool)
     if not y.any():
         return float("nan")
     pos = np.sort(s[y])
-    idx = max(0, int(np.floor((1.0 - target) * len(pos))))
-    return float(pos[idx])
+    n = len(pos)
+    # recall at threshold pos[i], counted exactly so repeated scores are handled: the
+    # positives at or above pos[i] are those from its first occurrence onward. Computing
+    # the index as floor((1-target)*n) instead got this wrong by one sample, because
+    # (1 - 0.90) * 50 is 4.999999999999999 in binary floating point.
+    rec = (n - np.searchsorted(pos, pos, side="left")) / n
+    ok = np.where(rec >= target - 1e-12)[0]
+    return float(pos[ok[-1]] if len(ok) else pos[0])
 
 
 def per_rollout_alarms(d, scores, thr):
@@ -186,6 +202,31 @@ def main():
             control_steps_in_clean_rollouts=steps_clean,
             alarms_per_100_control_steps=(100.0 * fa_events / steps_clean) if steps_clean else None,
         )
+        # The single operating point the milestone asks for is one point on a curve; the
+        # sweep shows the knee, so "6.8 alarms per 100 steps" can be read against what a
+        # lower recall would have cost.
+        s["recall_sweep"] = []
+        for target in (0.5, 0.6, 0.7, 0.8, 0.9, 0.95):
+            t = threshold_for_recall(tr_scores[tr["pre"]], tr["hit_16"][tr["pre"]], target)
+            al = per_rollout_alarms(d, sc, t)
+            clean_k = [kk for kk, a in al.items() if not a["collided"]]
+            ev = tot = 0
+            for kk in clean_k:
+                mm = d["key"] == kk
+                ev += int(((sc[mm] >= t) & d["pre"][mm]).sum())
+                tot += int(d["step"][mm].max() + 1) if mm.any() else 0
+            s["recall_sweep"].append(
+                dict(
+                    train_recall_target=target,
+                    threshold=float(t),
+                    test_recall_k16=float((sc[pre] >= t)[d["hit_16"][pre]].mean())
+                    if d["hit_16"][pre].any()
+                    else None,
+                    clean_rollouts_alarming=sum(1 for kk in clean_k if al[kk]["any_alarm"]),
+                    n_clean_rollouts=len(clean_k),
+                    alarms_per_100_control_steps=(100.0 * ev / tot) if tot else None,
+                )
+            )
         res["sets"][name] = s
         print(
             f"\n[PROBE] {name}: Spearman(pre-contact) {s['spearman_pre_contact']:+.4f}  "
@@ -201,6 +242,15 @@ def main():
             f"{lt['n_collision_rollouts']} collisions alarmed first; median "
             f"{lt['steps_median']} steps, p10 {lt['steps_p10']}, p90 {lt['steps_p90']}"
         )
+        print("         recall sweep (threshold chosen on train, measured on test):")
+        for r in s["recall_sweep"]:
+            print(
+                f"           train recall {r['train_recall_target']:.2f} -> thr "
+                f"{r['threshold']:+.3f}, test recall@k16 "
+                f"{(r['test_recall_k16'] or 0):.3f}, "
+                f"{r['clean_rollouts_alarming']}/{r['n_clean_rollouts']} clean alarm, "
+                f"{(r['alarms_per_100_control_steps'] or 0):.2f} per 100 steps"
+            )
         fa = s["false_alarms"]
         print(
             f"         false alarms: {fa['rollouts_with_any_alarm']}/{fa['n_clean_rollouts']} "

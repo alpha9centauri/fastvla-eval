@@ -47,6 +47,7 @@ both.
 | `fastvla/server/` | the policy server (ZeroMQ and Triton), `DESIGN.md`, `FORWARD.md`, `CONTAINERS.md` |
 | `fastvla/sim/` | the simulator worker: one MuJoCo environment per process |
 | `fastvla/eval/` | manifests and the run orchestrator |
+| `fastvla/monitor/` | the runtime collision monitor: activation capture, the probe, `EVAL.md` |
 | `audit/` | the M0 audit: `AUDIT.md`, its scripts, and the single-environment assumption list |
 | `bench/` | every benchmark, and `accept.py`, the correctness gate each change must pass |
 | `deploy/` | Dockerfile (GPU and CPU), compose file, Kubernetes manifests |

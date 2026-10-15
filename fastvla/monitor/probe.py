@@ -20,13 +20,17 @@ What differs on purpose: the reference fixed alpha at 1e5; here it is chosen by
 scene-split CV on the training set only, which is what the milestone asks for.
 """
 
+import glob
 import json
 import os
 
 import numpy as np
 
 CLEARANCE_FLOOR_M = 1e-4
-ALPHA_GRID = (1e3, 3e3, 1e4, 3e4, 1e5, 3e5, 1e6)
+# Extended below 1e3 after the first fit chose the grid's edge: an optimum at an
+# endpoint is not an optimum, it is an unexplored direction. The reference used a
+# fixed 1e5, which this grid contains.
+ALPHA_GRID = (1e1, 3e1, 1e2, 3e2, 1e3, 3e3, 1e4, 3e4, 1e5, 3e5, 1e6)
 
 
 def spearman(a, b):
@@ -87,10 +91,19 @@ def load_set(run_dirs, k_list=(8, 16, 32)):
     n_rollouts = 0
     for rd in run_dirs:
         merged = os.path.join(rd, "merged.json")
-        if not os.path.exists(merged):
-            continue
-        with open(merged) as fh:
-            rows = json.load(fh)["rows"]
+        if os.path.exists(merged):
+            with open(merged) as fh:
+                rows = json.load(fh)["rows"]
+        else:
+            # merged.json is written when the run ends; the per-rollout records are
+            # written as each rollout finishes (assumption A1: written once, never
+            # rewritten), so a run still in flight can be read from those.
+            rows = []
+            for f in sorted(glob.glob(os.path.join(rd, "rollouts", "*.json"))):
+                with open(f) as fh:
+                    rows.append(json.load(fh))
+            if not rows:
+                continue
         for r in rows:
             p = os.path.join(rd, "arrays", f"{r['key']}.npz")
             if not os.path.exists(p):
@@ -131,13 +144,21 @@ def load_set(run_dirs, k_list=(8, 16, 32)):
     return out
 
 
-def fit_ridge(X, y, alpha):
-    """Standardise, then closed-form ridge on the centred target -- the reference's form."""
+def _standardise(X):
     mu, sd = X.mean(0), X.std(0)
     sd = np.maximum(sd, max(1e-6, 1e-3 * np.median(sd)))
-    Z = (X - mu) / sd
+    return mu, sd, (X - mu) / sd
+
+
+def _solve(gram, rhs, alpha):
+    return np.linalg.solve(gram + alpha * np.eye(gram.shape[0]), rhs)
+
+
+def fit_ridge(X, y, alpha):
+    """Standardise, then closed-form ridge on the centred target -- the reference's form."""
+    mu, sd, Z = _standardise(X)
     ybar = y.mean()
-    w = np.linalg.solve(Z.T @ Z + alpha * np.eye(Z.shape[1]), Z.T @ (y - ybar))
+    w = _solve(Z.T @ Z, Z.T @ (y - ybar), alpha)
     return dict(w=w, mu=mu, sd=sd, ybar=ybar, alpha=float(alpha))
 
 
@@ -152,23 +173,30 @@ def scene_split_cv(X, y, scene, alphas=ALPHA_GRID, n_folds=5, seed=0):
     rng = np.random.default_rng(seed)
     order = rng.permutation(len(uniq))
     folds = np.array_split(order, min(n_folds, len(uniq)))
-    results = []
-    for a in alphas:
-        rhos = []
-        for f in folds:
-            held = set(uniq[f].tolist())
-            te = np.array([s in held for s in scene])
-            tr = ~te
-            if tr.sum() < 10 or te.sum() < 5:
-                continue
-            p = fit_ridge(X[tr], y[tr], a)
-            rhos.append(spearman(predict(p, X[te]), y[te]))
-        results.append(
-            dict(
-                alpha=float(a),
-                mean_spearman=float(np.nanmean(rhos)),
-                per_fold=[float(r) for r in rhos],
-            )
+    # Folds outside, alphas inside: the standardisation and the 4096x4096 Gram matrix
+    # depend only on the fold, so they are formed once per fold and every alpha reuses
+    # them. Identical arithmetic to calling fit_ridge per (fold, alpha) -- same Gram, same
+    # solve -- but it does the expensive part 5 times instead of 35.
+    rhos = {float(a): [] for a in alphas}
+    for f in folds:
+        held = set(uniq[f].tolist())
+        te = np.array([s in held for s in scene])
+        tr = ~te
+        if tr.sum() < 10 or te.sum() < 5:
+            continue
+        mu, sd, Z = _standardise(X[tr])
+        ybar = y[tr].mean()
+        gram, rhs = Z.T @ Z, Z.T @ (y[tr] - ybar)
+        for a in alphas:
+            p = dict(w=_solve(gram, rhs, a), mu=mu, sd=sd, ybar=ybar, alpha=float(a))
+            rhos[float(a)].append(spearman(predict(p, X[te]), y[te]))
+    results = [
+        dict(
+            alpha=float(a),
+            mean_spearman=float(np.nanmean(rhos[float(a)])) if rhos[float(a)] else float("nan"),
+            per_fold=[float(r) for r in rhos[float(a)]],
         )
+        for a in alphas
+    ]
     best = max(results, key=lambda r: r["mean_spearman"])
     return best, results

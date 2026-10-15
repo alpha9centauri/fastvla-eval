@@ -1,0 +1,59 @@
+# displacement test, started 2026-10-15 12:23:27
+# cmd: bash /data_new/vchandr2/fastvla-eval/bench/m3a_run.sh test_unshifted 8 1 0
+[RUN] m7b_test_unshifted: 60 rollouts, N=8, B=1, D=0.0 ms, parity=False
+[RUN] server ready in 14.6 s
+[RUN] spawned 8 workers
+[PROGRESS] done=1 total=60
+[PROGRESS] done=4 total=60
+[PROGRESS] done=6 total=60
+[PROGRESS] done=7 total=60
+[PROGRESS] done=8 total=60
+[PROGRESS] done=9 total=60
+[PROGRESS] done=10 total=60
+[PROGRESS] done=11 total=60
+[PROGRESS] done=12 total=60
+[PROGRESS] done=13 total=60
+[PROGRESS] done=14 total=60
+[PROGRESS] done=15 total=60
+[PROGRESS] done=16 total=60
+[PROGRESS] done=17 total=60
+[PROGRESS] done=18 total=60
+[PROGRESS] done=19 total=60
+[PROGRESS] done=20 total=60
+[PROGRESS] done=21 total=60
+[PROGRESS] done=22 total=60
+[PROGRESS] done=23 total=60
+[PROGRESS] done=24 total=60
+[PROGRESS] done=25 total=60
+[PROGRESS] done=26 total=60
+[PROGRESS] done=27 total=60
+[PROGRESS] done=28 total=60
+[PROGRESS] done=29 total=60
+[PROGRESS] done=31 total=60
+[PROGRESS] done=32 total=60
+[PROGRESS] done=34 total=60
+[PROGRESS] done=35 total=60
+[PROGRESS] done=36 total=60
+[PROGRESS] done=37 total=60
+[PROGRESS] done=39 total=60
+[PROGRESS] done=40 total=60
+[PROGRESS] done=41 total=60
+[PROGRESS] done=42 total=60
+[PROGRESS] done=43 total=60
+[PROGRESS] done=44 total=60
+[PROGRESS] done=45 total=60
+[PROGRESS] done=46 total=60
+[PROGRESS] done=47 total=60
+[PROGRESS] done=48 total=60
+[PROGRESS] done=49 total=60
+[PROGRESS] done=50 total=60
+[PROGRESS] done=51 total=60
+[PROGRESS] done=52 total=60
+[PROGRESS] done=53 total=60
+[PROGRESS] done=56 total=60
+[PROGRESS] done=58 total=60
+[PROGRESS] done=59 total=60
+[PROGRESS] done=60 total=60
+[RUN] merged 60/60 rollouts in 400.5 s = 539.3 rollouts/hour; collisions 29, completions 25
+[RUN] -> /data_new/vchandr2/fastvla-eval/bench/runs/m7b_test_unshifted/merged.json
+RUNNER DONE
