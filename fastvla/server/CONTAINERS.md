@@ -178,3 +178,79 @@ remove `$APPTAINER_CACHEDIR/tmp` if a pull was interrupted.
   is enabled.
 - `~/bin/rpm2cpio` is only needed to reinstall or upgrade Apptainer. It is not
   used at runtime.
+
+---
+
+## 8. The `--nv` GPU check: RUN, and it FAILS the safety condition
+
+Added 2026-10-15. Section 5 above left one thing unverified and predicted
+"Expected: exactly one card listed". That prediction is **wrong**, and the
+check is a blocker for running anything GPU-bound in a container on this box.
+
+GPU 1 was idle (3 MiB, 0%) and GPU 0 held another user's job, so the check ran
+under the right conditions.
+
+    $ nvidia-smi --query-gpu=index,uuid --format=csv,noheader     # host, for reference
+    0, GPU-2c6273fb-12cf-6171-8708-36c7225f4ba3                   # chunyiy's card
+    1, GPU-040542a1-6ad7-1ddd-f7ca-595acfd703a7                   # ours
+
+    $ CUDA_VISIBLE_DEVICES=1 apptainer exec --nv \
+        ~/images/tritonserver_23.07-py3.sif nvidia-smi --query-gpu=index,name,uuid --format=csv
+    index, name, uuid
+    0, NVIDIA RTX A5000, GPU-2c6273fb-12cf-6171-8708-36c7225f4ba3   <-- NOT OURS
+    1, NVIDIA RTX A5000, GPU-040542a1-6ad7-1ddd-f7ca-595acfd703a7
+
+**Two cards, including the one that belongs to another user.**
+
+### Why
+
+`CUDA_VISIBLE_DEVICES` is honoured inside the container (it reads back as `1`),
+but it only filters what the **CUDA runtime** enumerates. `nvidia-smi` talks to
+the driver through NVML and `/dev/nvidiactl`, and `--nv` binds **every** GPU
+device node in:
+
+    $ CUDA_VISIBLE_DEVICES=1 apptainer exec --nv <sif> ls -la /dev/nvidia*
+    crw-rw-rw- 1 nobody nogroup 195,   0 /dev/nvidia0      <-- other user's card
+    crw-rw-rw- 1 nobody nogroup 195,   1 /dev/nvidia1
+    crw-rw-rw- 1 nobody nogroup 195, 255 /dev/nvidiactl
+    crw-rw-rw- 1 nobody nogroup 510,   0 /dev/nvidia-uvm
+
+Both nodes are world read/write, so a process in the container can open GPU 0
+directly. Confinement rests entirely on every process inside honouring
+`CUDA_VISIBLE_DEVICES`. The CUDA runtime does; NVML tools do not; and anything
+that sets the variable itself, or uses the driver API directly, is unconstrained.
+Against this project's hard rule -- GPU 0 belongs to someone else, never touch
+it -- that is not good enough.
+
+### Attempted fixes, none of which work
+
+| attempt | result |
+|---|---|
+| `CUDA_VISIBLE_DEVICES=1 --nv` | both cards |
+| `CUDA_VISIBLE_DEVICES=1 --nv --contain` | both cards |
+| `--nv --nvccli` with `NVIDIA_VISIBLE_DEVICES=1` (`nvidia-container-cli` **is** present at `/usr/bin/nvidia-container-cli`) | both cards |
+| `--nv --contain` + explicit `--bind /dev/nvidia1` | **one card, and it was GPU 0 -- the wrong one.** Apptainer reported `Skipping /dev/nvidia1 bind mount: already mounted`, so the explicit binds were ignored and the selection came from somewhere else |
+
+The last row is the reason this is a hard stop rather than a cosmetic
+complaint: the device set the container ends up with is not reliably the one
+asked for, and in one configuration it was exactly the card that must not be
+touched.
+
+### What would fix it
+
+- `nvidia-container-cli` exists but `--nvccli` did not restrict the device set
+  here; it may need a host-side configuration change (`/etc/nvidia-container-runtime/config.toml`)
+  that requires root.
+- Apptainer 1.5 has no unprivileged way to drop a `/dev` node that `--nv`
+  has already bound; `--contain` does not remove them.
+- The dependable route is a host change: either a cgroup device rule, or
+  running the container under a wrapper that sets up `/dev` before `--nv`.
+  Both need the box's administrator.
+
+### Consequence for M3b and M5
+
+Container-hosted GPU work on gpu5 is **not cleared**. The CPU-only container
+path is fine and is still verified (section 3), so the parts of M5 that do not
+need a GPU inside a container -- image build, CI, CPU tests, manifests -- can
+proceed. Anything that runs the policy inside a container on this box waits on
+the administrator.
