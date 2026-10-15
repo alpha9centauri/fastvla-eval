@@ -53,6 +53,43 @@ both.
 | `deploy/` | Dockerfile (GPU and CPU), compose file, Kubernetes manifests |
 | `tests/` | the CPU suite: GJK parity, metrics format, source guards |
 
+## Runtime collision monitor
+
+A linear probe on the policy's own activations, read at every forward, built into the
+server. `MONITOR=off|log|stop`, off by default. Full results and method in
+[`fastvla/monitor/EVAL.md`](fastvla/monitor/EVAL.md).
+
+| | unshifted (60) | intrusion-5 (48, never trained on) |
+|---|---|---|
+| Spearman to true clearance, pre-contact | +0.868 | +0.480 |
+| AUROC, contact within 8 / 16 / 32 control steps | 0.918 / 0.807 / 0.756 | 0.743 / 0.670 / 0.630 |
+| collisions alarmed before contact | 28 of 29 | 38 of 40 |
+| clean rollouts raising a false alarm | 31 of 31 | 8 of 8 |
+
+`MONITOR=log` costs **0.067 ms per forward**, 0.037% of a 183.4 ms forward, and runs at
+**546.2 rollouts/hour against the 544.8 baseline** — within noise. It passes the 60-start
+acceptance unchanged: 29 collisions, 25 completions, zero flips, 60/60 diagonal,
+max per-start clearance difference 0.0000 cm.
+
+**`MONITOR=stop` is a brake, not an avoidance.** It zeroes the pose delta and holds the
+gripper for the rest of the rollout; it has no notion of which direction is safe and it
+never resumes. At the evaluated operating point (90% recall at k=16) it braked every
+rollout in both sets, at a median first hold of control step 8 of 300:
+
+| | collisions | completions | rollouts braked |
+|---|---|---|---|
+| unshifted, 60 starts | 29 → **1** | 25 → **1** | 60 of 60 |
+| intrusion-5, 48 starts | 40 → **2** | 4 → **0** | 48 of 48 |
+
+No start was made worse — zero newly-colliding starts in either set — but the collisions
+and the completions go together, because one cause removes both: the arm stops moving.
+The recall sweep in EVAL.md section 5 shows the knee is at 0.6-0.7 recall, where the
+monitor is quiet on half the clean rollouts; that operating point was not run here.
+
+As background, the research tree's probe-gated *steering* (a different intervention, not
+re-run for this milestone) reports 14/60 collisions and 18/60 completions against the
+same 29/25 baseline: 0 rescued, 3 lost.
+
 ## Correctness
 
 Every change is gated by `bench/accept.py` on the 60 fixed starts: **29 collisions**,

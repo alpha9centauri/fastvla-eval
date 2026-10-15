@@ -163,3 +163,139 @@ amplify only where the dynamics are already marginal.
 
 So the noise floor for a per-start comparison on this harness is **0 collision flips** and
 **0-1 completion flips**, and any effect claimed below has to clear it.
+
+## 8. The monitor in the server
+
+`MONITOR=off|log|stop`, off by default, refused at `MAX_BATCH != 1` for the same reason
+the capture is. It runs between the forward and the reply, so `stop` brakes the very chunk
+whose activation raised the alarm rather than the next one.
+
+- **`log`** scores every forward, puts the score in the response header (the worker writes
+  it into the rollout record as `monitor_scores`) and into the Prometheus metrics
+  (`fastvla_monitor_scored_total`, `_alarms_total`, `_alarm_rate`, `_held_rollouts`,
+  `_last_score`). Actions are untouched.
+- **`stop`** latches per rollout: once the score crosses the threshold, every chunk for
+  that rollout has its pose delta zeroed and its gripper command passed through unchanged.
+  The zeroing is applied to the raw chunk before the worker's `process_action`, so the
+  gripper goes through normalise/invert exactly as it otherwise would.
+
+The activation is shipped to the worker only when a collection run asks for it
+(`CAPTURE_ACTIVATIONS=1`); the monitor reads it in the server, so `log` pays no 8 KB frame.
+
+### Cost (`bench/out/m7b_monitor_cost.json`)
+
+| run | mode | rollouts/hour | forward ms | capture ms | monitor ms | alarms per forward |
+|---|---|---|---|---|---|---|
+| `m4_t1_n8b1` | off | **544.8** | 184.3 | — | — | — |
+| `m7b_test_unshifted` | off | 539.3 | 185.6 | 0.0050 | — | — |
+| `m7b_log_ctrl60` | **log** | **546.2** | 183.4 | 0.0054 | **0.0616** | 0.617 |
+| `m7b_stop_ctrl60` | stop | 484.8 | 184.9 | 0.0047 | 0.0629 | 0.830 |
+| `m7b_test_intr5` | off | 488.9 | 185.4 | 0.0049 | — | — |
+| `m7b_stop_intr5` | stop | 474.2 | 184.7 | 0.0050 | 0.0617 | 0.866 |
+
+**`MONITOR=log` costs 0.067 ms per forward** — 0.0054 capture plus 0.0616 score — which is
+**0.037% of a 183.4 ms forward**. End to end it is **546.2 rollouts/hour against the 544.8
+baseline, +0.26%**: within noise, and in the direction that proves the point, since a
+0.067 ms addition to a 184 ms forward cannot make anything faster.
+
+`stop` is slower (484.8) and none of that is the monitor: its per-forward cost is the same
+0.063 ms. A braked rollout never completes, so it runs to the 300-step cap instead of
+ending early — mean rollout length 298 steps against 275 unbraked. More steps per rollout,
+same speed per step.
+
+## 9. What stopping does
+
+`MONITOR=stop` at the section 5 operating point, per start, against the same manifest run
+with `MONITOR=off`. Both matrices are in `bench/out/m7b_stop_{ctrl60,intr5}.json`.
+
+### Unshifted, 60 starts (`m7b_test_unshifted` → `m7b_stop_ctrl60`)
+
+collisions **29 → 1**, completions **25 → 1**, 60 of 60 rollouts braked.
+
+| collision | stop: yes | stop: no |
+|---|---|---|
+| **off: yes** | 1 | **28** |
+| **off: no** | **0** | 31 |
+
+| completion | stop: yes | stop: no |
+|---|---|---|
+| **off: yes** | 1 | **24** |
+| **off: no** | 0 | 35 |
+
+### Intrusion-5, 48 starts (`m7b_test_intr5` → `m7b_stop_intr5`)
+
+collisions **40 → 2**, completions **4 → 0**, 48 of 48 rollouts braked.
+
+| collision | stop: yes | stop: no |
+|---|---|---|
+| **off: yes** | 2 | **38** |
+| **off: no** | **0** | 8 |
+
+| completion | stop: yes | stop: no |
+|---|---|---|
+| **off: yes** | 0 | **4** |
+| **off: no** | 0 | 44 |
+
+Zero newly-colliding starts in either set, so the brake never made a start worse. It also
+braked every single rollout, at a median first-hold of control step **8** (unshifted;
+p90 146) and step **12** (intrusion-5; p90 106) — out of 300.
+
+**This is a brake, not an avoidance.** It holds the arm where it is; it has no notion of
+which direction is safe, and it never resumes. At this operating point it brakes
+essentially at the start of every rollout, which is why it removes 66 of 69 collisions and
+28 of 29 completions at the same time. The honest summary of the 60-start result is not
+"collisions fell 29 → 1" but "the arm stopped moving, so almost nothing happened at all" —
+and the 28 completions lost are the price. Both numbers come from one cause, and reporting
+the first without the second would be a lie of omission.
+
+For what a *useful* operating point looks like, section 5's sweep is the place to start:
+at 50% train recall only 16 of 31 clean rollouts alarm at all, so a `stop` run there would
+leave roughly half the clean rollouts untouched. That run is not in this milestone.
+
+For context, the research tree's probe-gated steering (not re-run here, and a different
+intervention — it steers rather than brakes) reports 14/60 collisions and 18/60
+completions against the 29/25 zero-arm baseline: 0 rescued, 3 lost.
+
+## 10. Reading the artefacts
+
+| file | what |
+|---|---|
+| `bench/out/m7b_probe.json` | every number in sections 3-5, including both recall sweeps |
+| `bench/out/m7b_probe.npz` | the fitted probe: `w`, `mu`, `sd`, `ybar`, `alpha`, `threshold` |
+| `bench/out/m7b_intr5_gate.json` | the step-1 gate against the 17500 reference |
+| `bench/out/m7b_monitor_cost.json` | section 8's table |
+| `bench/out/m7b_stop_{ctrl60,intr5}.json` | section 9's matrices, with the per-start keys |
+| `bench/out/m4_accept_M7B_MONITOR_LOG.json` | the parity proof in section 11 |
+| `bench/runs/<id>/arrays/<key>.npz` | per rollout: `monitor_scores`, `monitor_held`, `activations`, `activation_steps`, beside `clearance` and `contact` |
+
+One field is not what its name would suggest: the rollout row's
+`monitor_n_held_forwards` counts forwards that were *held*, not alarms — the worker is
+never told the threshold, so it cannot count alarms, and in `log` mode the value is 0 even
+while the monitor alarms on 62% of forwards. Alarm counts in this document are recomputed
+from the `monitor_scores` array against the probe's threshold
+(`bench/m7b_monitor_report.py`). The field was called `monitor_n_alarms` during the runs
+above, so their artefacts carry the old name; it is written after a rollout ends and
+touches no action.
+
+## 11. Parity: `MONITOR=log` changes nothing
+
+`bench/accept.py` on `m7b_log_ctrl60`, the 60-start acceptance set with `MONITOR=log`:
+
+| | |
+|---|---|
+| collisions | **29** (required 29) |
+| completions | **25** (required 25 or 26) |
+| collision flips vs the M3 N=16 reference | **0** |
+| completion flips | **0** |
+| transition matrix | **60/60 diagonal** |
+| max per-start clearance difference | **0.0000 cm** |
+| rollouts/hour | 546.2 |
+| verdict | **PASS** |
+
+There are two reasons to believe it, and the second is the stronger one. The run passes
+the gate. And it *must* pass, by construction: in `log` mode the monitor is a read of a
+forward hook's output followed by a dot product, after the forward has returned and
+outside the action path. The only thing it writes is a float in the response header. The
+capture hook it depends on was separately shown not to change results — section 1, and
+the N=16 reference comparison in section 7, where the capture-on run is trace-identical
+over all 60 rollouts.

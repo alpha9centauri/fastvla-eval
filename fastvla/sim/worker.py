@@ -208,7 +208,11 @@ def main():
             # control step the brake first applied, so a stop run can be read without the
             # arrays.
             monitor_n_scored=len(mon_scores),
-            monitor_n_alarms=int(sum(mon_held)) if mon_held else 0,
+            # Held forwards, NOT alarms: the worker is never told the threshold, so it
+            # cannot count alarms. In log mode this is always 0 even while the monitor is
+            # alarming. Alarm counts come from the `monitor_scores` array and the probe's
+            # threshold -- see bench/m7b_monitor_report.py and EVAL.md section 10.
+            monitor_n_held_forwards=int(sum(mon_held)) if mon_held else 0,
             monitor_held=bool(any(mon_held)),
             monitor_held_from_step=(
                 int(act_steps[mon_held.index(True)])
