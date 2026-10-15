@@ -1,0 +1,76 @@
+{
+  "tag": "MEASURED",
+  "rows_source": "/data_new/vchandr2/fastvla-eval/bench/out/t1_cpp/rows_I0_ctrl.json",
+  "log": "M2_T1",
+  "n_rollouts": 60,
+  "collisions": 29,
+  "completions": 25,
+  "reference_collisions": 29,
+  "reference_completions_allowed": [
+    25,
+    26
+  ],
+  "total_steps": 16046,
+  "steps_mean": 267.43333333333334,
+  "steps_min": 193,
+  "steps_max": 300,
+  "n_at_300_cap": 35,
+  "rollout_loop_wall_sec": 1297,
+  "wrapper_total_wall_sec": 1313,
+  "wrapper_marker": "exit=0 wall=0h21m53s progress=60/60 rollouts (child [PROGRESS])",
+  "rollouts_per_hour_loop": 166.53816499614496,
+  "steps_per_sec_loop": 12.371626831148806,
+  "sec_per_rollout_loop": 21.616666666666667,
+  "ms_per_step_loop": 80.83011342390627,
+  "rollouts_per_hour_incl_startup": 164.5087585681645,
+  "model_load_and_startup_sec": 16,
+  "gpu0_sm_util_pct_mean": 0.0,
+  "gpu0_sm_util_pct_p50": 0.0,
+  "gpu0_sm_util_pct_p95": 0.0,
+  "gpu0_mem_util_pct_mean": 0.020815264527320035,
+  "gpu0_n_samples": 1153,
+  "gpu1_sm_util_pct_mean": 26.08846487424111,
+  "gpu1_sm_util_pct_p50": 13.0,
+  "gpu1_sm_util_pct_p95": 77.0,
+  "gpu1_mem_util_pct_mean": 12.488291413703383,
+  "gpu1_n_samples": 1153,
+  "per_task": {
+    "oa1": {
+      "n": 10,
+      "collisions": 0,
+      "completions": 9,
+      "steps": 2187
+    },
+    "oa2": {
+      "n": 10,
+      "collisions": 9,
+      "completions": 4,
+      "steps": 2779
+    },
+    "oa3": {
+      "n": 10,
+      "collisions": 6,
+      "completions": 0,
+      "steps": 3000
+    },
+    "oa4": {
+      "n": 10,
+      "collisions": 5,
+      "completions": 3,
+      "steps": 2920
+    },
+    "oa5": {
+      "n": 10,
+      "collisions": 9,
+      "completions": 0,
+      "steps": 3000
+    },
+    "oa6_L1": {
+      "n": 10,
+      "collisions": 0,
+      "completions": 9,
+      "steps": 2160
+    }
+  },
+  "VALID": true
+}

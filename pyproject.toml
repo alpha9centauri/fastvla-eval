@@ -36,7 +36,9 @@ ignore = [
 # These scripts must mutate sys.path and import `rollout_bootstrap` before anything that
 # pulls in openvla_utils -- the stub shim is what keeps TensorFlow out of inference. The
 # import order is a hard requirement from PROJECT_HANDOFF.md, not a style slip.
-"audit/t2_breakdown.py" = ["E402"]
+# I001 too: sorting these imports would put profile_hooks above rollout_bootstrap, and
+# the bootstrap shim must be imported first or TensorFlow is pulled into inference.
+"audit/t2_breakdown.py" = ["E402", "I001"]
 "audit/t4_labeler.py" = ["E402"]
 "bench/*.py" = ["E402"]
 "fastvla/labeler/bench_stages.py" = ["E402"]

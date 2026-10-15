@@ -19,10 +19,19 @@ LOG = os.environ["LOG"]
 DMON = os.environ.get("DMON", "")
 OUT = os.environ["OUT"]
 
+# Prefer the driver's own rows file. The run log is a stream and can be truncated -- it
+# was, in the M2 run: a second wrapper started with the same RUN_LOG_NAME opened it with
+# mode "w" while the first was still writing, losing two [ROLLOUT] lines. _save() in the
+# driver rewrites the complete rows list, so it is the authoritative record.
+ROWS_JSON = os.environ.get("ROWS_JSON", "")
 rows = []
+if ROWS_JSON and os.path.exists(ROWS_JSON):
+    with open(ROWS_JSON) as fh:
+        rows = json.load(fh)
+    print(f"[T1] rows from driver output: {ROWS_JSON} ({len(rows)} rows)")
 with open(LOG, errors="replace") as fh:
     for line in fh:
-        if line.startswith("[ROLLOUT] {"):
+        if not rows and line.startswith("[ROLLOUT] {"):
             with contextlib.suppress(json.JSONDecodeError):
                 rows.append(json.loads(line[len("[ROLLOUT] ") :]))
 with open(LOG, errors="replace") as fh:
@@ -50,6 +59,7 @@ steps = np.array([int(r.get("steps", 0)) for r in rows], dtype=np.int64)
 
 res = dict(
     tag="MEASURED",
+    rows_source=(ROWS_JSON if rows and ROWS_JSON else "run log"),
     log=LOG,
     n_rollouts=n,
     collisions=coll,

@@ -210,3 +210,100 @@ At 0.578 ms/call the labeler is 1.16 ms per control step, down from 127.28. Agai
 73.6 ms if nothing else changes -- which makes the policy forward (25.4 ms, 12.7% before)
 about 34% of the step, and the OSC controller plus `sim.forward()` (30.3 ms together,
 AUDIT.md addendum) the new largest block. The 60-start run in step 6 is what settles it.
+
+---
+
+## Step 6: the gate and the 60-start run
+
+### 12-minute gate (`bench/gate_run.sh`, `bench/out/m2_curve_gate_cpp.json`)
+
+**PASS.** 10/10 collisions, 0.000 cm mean min clearance, completions 3/10 on starts
+{4, 6, 9}, every start marked OK. Per-start identity is the point of this gate — the
+handoff records four divergences that were found while the aggregate still matched — and
+all ten match. Wall-clock 5m22s against the reference's ~12 min.
+
+`datagen/curve_gate.py` runs unmodified. Its one write to the research tree
+(`datagen/curve_gate.json`) is redirected by basename in `fastvla/run_with_labeler.py`;
+the file's md5 is verified unchanged.
+
+### 60-start evaluation, LABELER=cpp (`RUN_LOG_NAME=M2_T1`)
+
+**VALID: 29/60 collisions, 25/60 completions** — the acceptance condition (29 collisions,
+completions in {25, 26}).
+
+| metric | M0 (Python labeler) | M2 (C++ labeler) | change |
+|---|---|---|---|
+| collisions | 29/60 | 29/60 | — |
+| completions | 26/60 | 25/60 | within {25, 26} |
+| wall-clock, rollout loop | 3032 s (50m32s) | **1297 s (21m37s)** | **2.34x** |
+| wall-clock incl. model load | 3066 s | 1313 s | 2.33x |
+| **rollouts per hour** | **71.24** | **166.54** | **2.34x** |
+| seconds per rollout | 50.53 | 21.62 | 2.34x |
+| control steps per second | 5.26 | 12.37 | 2.35x |
+| **ms per control step** | **190.27** | **80.83** | **2.35x** |
+| total control steps | 15935 | 16046 | (one start no longer completes) |
+| GPU 1 SM utilisation, mean | 9.9% | **26.1%** | p95 69% -> 77% |
+
+Because the step counts differ slightly, ms per control step is the fairer comparison than
+wall-clock: **190.27 -> 80.83 ms, 2.35x**.
+
+### The one start that differs
+
+Per-start diff against M0, all 60 starts: **collision verdict differs on 0 starts**;
+completion differs on 1. Over the 58 starts with identical outcomes, the largest
+difference in reported `min_clearance_cm` is **0.0031 cm** (31 um).
+
+| start | M0 coll/comp/steps | M2 coll/comp/steps | clearance M0 | clearance M2 |
+|---|---|---|---|---|
+| oa1 init 6 | 0/1/202 | 0/1/203 | 5.900 cm | 5.890 cm |
+| **oa6_L1 init 6** | 0/1/190 | 0/0/300 | **5.710 cm** | **11.109 cm** |
+
+`oa6_L1` init 6 is the start PROJECT_HANDOFF.md documents as a coin flip: "completes at
+step 190 in some runs and hits the 300-step cap in others (clearance 5.71 vs 11.11 cm)".
+The measured pair is 5.710 / 11.109 — the documented values. The handoff's instruction for
+this start is to gate on collisions, or on completions in {25, 26}, or to exclude it; all
+three are satisfied.
+
+This is reproduction rather than regression, and the architecture says why: the monitor
+only *reads* the simulation. `SafetyMonitor.attach()` wraps `sim.step` and records; no
+clearance value reaches the policy, the controller or the environment, so the labeler
+cannot change a trajectory. The remaining run-to-run variation is the nondeterminism the
+handoff already attributes to the policy forward (cuDNN kernel selection), and it is why
+that start is a coin flip on identical inputs in the first place. One run cannot prove a
+negative, but the per-pair parity (2.22e-16 m), the monitor-level parity (2.08e-16 m) and
+the read-only coupling together make a labeler-caused flip implausible.
+
+### Where the time goes now
+
+Same 6-task benchmark as M0's Table 2, 1575 control steps, `LABELER=cpp`
+(`audit/arrays/t2_alltasks_cpp.json`):
+
+| component | M0 ms/step | M2 ms/step | M0 share | M2 share |
+|---|---|---|---|---|
+| SafetyMonitor total | 142.11 | 9.39 | 71.2% | 14.2% |
+| &nbsp;&nbsp;of which GJK clearance | 134.10 | **1.30** | 67.2% | 2.0% |
+| &nbsp;&nbsp;of which contact scan (not ported) | 8.01 | 8.09 | 4.0% | 12.3% |
+| **policy forward** | 25.37 | 24.94 | 12.7% | **37.6%** |
+| OSC controller + obs assembly | 17.86 | 18.27 | 8.9% | 27.5% |
+| obs preprocessing | 8.60 | 7.91 | 4.3% | 11.9% |
+| MuJoCo physics | 4.50 | 4.66 | 2.3% | 7.0% |
+| rendering (2 cameras) | 1.21 | 1.15 | 0.6% | 1.7% |
+| total | 199.68 | 66.4 | | |
+
+Three things to carry into M3 and M4:
+
+1. **The GJK clearance line fell 134.10 -> 1.30 ms/step, 103x**, which agrees with the
+   110x measured per call. The contact scan is unchanged at ~8 ms/step because M2 did not
+   touch it — as predicted in step 1 — and it is now 12.3% of a step, larger than the
+   whole clearance computation. It is the obvious next labeler target, and it is a
+   different problem: reading MuJoCo's contact list every substep, not convex distance.
+2. **The policy forward is now the largest single block at 37.6%**, up from 12.7% — not
+   because it changed (25.37 -> 24.94 ms) but because everything around it shrank. The
+   M0 audit's decision rule put M4 after M3 on the basis of the forward being under 30%
+   of step time; it is now above that threshold, so **the M3-vs-M4 ordering decision
+   should be re-read before M3 starts**. That is Varun's call, not the agent's; the
+   evidence is here and in AUDIT.md.
+3. The instrumented 6-task figure (66.4 ms/step) is lower than the uninstrumented 60-start
+   figure (80.83 ms/step) because the task mixes differ — one init per task against ten.
+   In M0 the same two numbers ran the other way (199.68 against 190.27). Neither is wrong;
+   they measure different mixes, and only same-mix comparisons are used above.
