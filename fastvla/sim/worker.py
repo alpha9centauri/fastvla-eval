@@ -136,7 +136,7 @@ def main():
             q = deque(maxlen=NUM_ACTIONS_CHUNK)
             eef, clr, hit, acts, frames, chunks = [], [], [], [], [], []
             activations, act_steps = [], []
-            mon_scores, mon_held = [], []
+            mon_scores, mon_held, mon_alarm = [], [], []
             want_video = key in VIDEO_KEYS
             success, t, n_forward = False, 0, 0
             while t < MAX_STEPS + WAIT:
@@ -163,6 +163,7 @@ def main():
                     if getattr(cli, "last_monitor_score", None) is not None:
                         mon_scores.append(float(cli.last_monitor_score))
                         mon_held.append(bool(cli.last_monitor_held))
+                        mon_alarm.append(bool(cli.last_monitor_alarm))
                     q.extend(chunk)
                 a = np.asarray(q.popleft(), dtype=np.float64)
                 ta = np.asarray(process_action(a, "openvla"), dtype=np.float64)
@@ -208,11 +209,12 @@ def main():
             # control step the brake first applied, so a stop run can be read without the
             # arrays.
             monitor_n_scored=len(mon_scores),
-            # Held forwards, NOT alarms: the worker is never told the threshold, so it
-            # cannot count alarms. In log mode this is always 0 even while the monitor is
-            # alarming. Alarm counts come from the `monitor_scores` array and the probe's
-            # threshold -- see bench/m7b_monitor_report.py and EVAL.md section 10.
+            # Two different things. `held` counts forwards whose actions were braked,
+            # which is always 0 in log mode. `alarms` counts debounced alarms, which the
+            # server now reports in the response header -- before that the worker could
+            # not count them at all, having never been told the threshold.
             monitor_n_held_forwards=int(sum(mon_held)) if mon_held else 0,
+            monitor_n_alarms=int(sum(mon_alarm)) if mon_alarm else 0,
             monitor_held=bool(any(mon_held)),
             monitor_held_from_step=(
                 int(act_steps[mon_held.index(True)])
@@ -236,6 +238,7 @@ def main():
             activation_steps=np.asarray(act_steps, np.int32),
             monitor_scores=np.asarray(mon_scores, np.float32),
             monitor_held=np.asarray(mon_held, bool),
+            monitor_alarm=np.asarray(mon_alarm, bool),
         )
         if frames:
             import imageio

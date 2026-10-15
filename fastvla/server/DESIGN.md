@@ -114,7 +114,9 @@ overhead of each is reported separately.
 - the worker is the only client, so each forward sees exactly one request;
 - `BatchedPolicy.forward` on a single request is **bit-exact** against the reference
   `get_action` — verified at max |difference| **0.000e+00** on 16 real re-plan
-  observations captured from a replayed rollout (`bench/out/m3_batched_parity.json`);
+  observations captured from a replayed rollout (`bench/out/m3_batched_parity.json`).
+  That comparison runs both paths in one process: it says this wrapper adds no arithmetic,
+  not that a forward repeats across runs. It does not — see [fastvla/monitor/EVAL.md section 7](../monitor/EVAL.md);
 - the worker's rollout loop reproduces the driver's four invariants (gripper
   `process_action` before `env.step`, WAIT = 10 dummy steps with the monitor indexed from
   `t - WAIT`, completion from the env's `done` flag at the break, and the scene-setup
@@ -218,8 +220,8 @@ gate10, N=1, B=1, D=0, `PARITY=1`:
 | completions | 3/10 on starts 4, 6, 9 | **3/10 on [4, 6, 9]** |
 
 Action parity against chunks recorded from the unmodified `curve_gate.py`: **9 of 10
-rollouts bit-exact, max |action diff| 0.000e+00 over 312 of 342 chunks**, including all
-four 300-step rollouts. The exception is oa1 init 6: bit-exact for 3 chunks, then departs
+rollouts showed no action difference at all, max |action diff| 0.000e+00 over 312 of 342
+chunks**, including all four 300-step rollouts. The exception is oa1 init 6: bit-exact for 3 chunks, then departs
 at control step 24 (3.9e-03) and runs 239 steps against the reference's ~208; both collide
 and both complete. So max |action diff| is 0 where trajectories stay aligned and is **not**
 0 across the whole set. oa1 init 6 is independently marginal — it is the other start that
@@ -290,8 +292,11 @@ ctrl60, N=8, B=1, D=0 — and N=16 for comparison:
 | N=16, B=1 | 29 | 25 | 60/60 diagonal | **0** | **0** | **0.0000 cm** |
 
 The transition matrix is perfectly diagonal at both: (0,0)→(0,0) 11, (0,1)→(0,1) 20,
-(1,0)→(1,0) 24, (1,1)→(1,1) 5. At N=16 the 60-start run is **bit-identical** to M2's
-single-process run, including oa6_L1 init 6 — the start that flipped between M0 and M2.
+(1,0)→(1,0) 24, (1,1)→(1,1) 5. At N=16 the 60-start run matches M2's single-process run
+with **zero collision flips on 60 starts; completions within the run-to-run floor (0 to 1)** and no per-start clearance difference, including oa6_L1 init 6 — the start
+that flipped between M0 and M2. That is a per-start verdict identity measured once, not a
+property of the harness: repeating a run can move individual traces, and the floor is
+measured in [fastvla/monitor/EVAL.md section 7](../monitor/EVAL.md).
 
 ## Per-request overhead, and what M3b would be compared against
 

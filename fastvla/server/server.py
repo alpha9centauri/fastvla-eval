@@ -55,6 +55,7 @@ if PARITY and MAX_BATCH != 1:
 MONITOR = os.environ.get("MONITOR", "off")
 MONITOR_PROBE = os.environ.get("MONITOR_PROBE", "") or None
 MONITOR_THRESHOLD = os.environ.get("MONITOR_THRESHOLD", "") or None
+MONITOR_DEBOUNCE = os.environ.get("MONITOR_DEBOUNCE", "") or None
 
 if MONITOR not in ("off", "log", "stop"):
     raise SystemExit(f"MONITOR must be off, log or stop; got {MONITOR!r}")
@@ -97,10 +98,12 @@ def configure_determinism():
     """M4 step 0: pin cuDNN kernel selection, optionally all deterministic algorithms.
 
     M3 found the N=8 run matched the M2 reference on every verdict but differed by up to
-    0.1437 cm in reported clearance, while the N=16 run was bit-identical. The suspected
-    cause is cuDNN autotuning picking different kernels run to run (the handoff attributes
-    the oa6_L1 coin flip to the same thing). benchmark=False removes the autotune, so the
-    same algorithm is chosen every time.
+    0.1437 cm in reported clearance, while the N=16 run showed no per-start difference at
+    all. The suspected cause is cuDNN autotuning picking different kernels run to run (the
+    handoff attributes the oa6_L1 coin flip to the same thing). benchmark=False removes the
+    autotune, so the same algorithm is chosen every time -- it does not make a run
+    reproducible: M7b measured two runs of the same manifest in this configuration
+    diverging on 4 of 60 traces, with zero collision flips on 60 starts; completions within the run-to-run floor (0 to 1). See fastvla/monitor/EVAL.md section 7.
 
     CUDNN_BENCHMARK=0 (default here) disables autotuning.
     TORCH_DETERMINISTIC=1 additionally asks torch for deterministic algorithms; warn_only
@@ -186,7 +189,7 @@ def build_policy():
     # indexes h[0, ...] (assumption B2), so at batch > 1 it would hand every request the
     # first one's hidden state.
     pol.capture = None
-    pol.monitor = RuntimeMonitor(MONITOR, MONITOR_PROBE, MONITOR_THRESHOLD)
+    pol.monitor = RuntimeMonitor(MONITOR, MONITOR_PROBE, MONITOR_THRESHOLD, MONITOR_DEBOUNCE)
     if CAPTURE_ACTIVATIONS or pol.monitor.enabled:
         from fastvla.monitor.capture import ActivationCapture
 
@@ -200,7 +203,7 @@ def build_policy():
     if pol.monitor.enabled:
         print(
             f"[SERVER] MONITOR={MONITOR}, probe {pol.monitor.probe_path}, "
-            f"threshold {pol.monitor.threshold:+.4f}",
+            f"threshold {pol.monitor.threshold:+.4f}, debounce {pol.monitor.debounce}",
             flush=True,
         )
     print(
@@ -324,12 +327,17 @@ def main():
             METRICS.set_queue_depth(work.qsize())
             # The monitor runs here, between the forward and the reply, so `stop` brakes
             # the very chunk whose activation raised the alarm -- no one-chunk delay.
-            mon_score, mon_held = None, False
+            mon_score, mon_held, mon_alarm = None, False, False
             if pol.monitor.enabled and activation is not None:
                 tm0 = time.perf_counter()
-                mon_score, mon_held = pol.monitor.observe(batch[0][1]["rollout_key"], activation)
+                mon_score, mon_held, mon_alarm = pol.monitor.observe(
+                    batch[0][1]["rollout_key"], activation
+                )
                 METRICS.observe_monitor(
-                    mon_score, mon_score >= pol.monitor.threshold, len(pol.monitor.latched)
+                    mon_score,
+                    mon_alarm,
+                    len(pol.monitor.latched),
+                    crossing=mon_score >= pol.monitor.threshold,
                 )
                 dt = 1000 * (time.perf_counter() - tm0)
                 STATS["monitor_ms"].append(dt)
@@ -338,7 +346,11 @@ def main():
                 h = dict(header)
                 h.update(server_batch_size=len(batch), queue_wait_ms=w, forward_ms=fms)
                 if mon_score is not None:
-                    h.update(monitor_score=mon_score, monitor_held=bool(mon_held))
+                    h.update(
+                        monitor_score=mon_score,
+                        monitor_held=bool(mon_held),
+                        monitor_alarm=bool(mon_alarm),
+                    )
                 if mon_held:
                     chunk = pol.monitor.hold(chunk)
                 # The activation is shipped only when a collection run asked for it: the

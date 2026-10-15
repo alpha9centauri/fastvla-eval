@@ -22,6 +22,7 @@ class PolicyClient:
         self.last_activation = None  # probe activation from the most recent reply
         self.last_monitor_score = None  # monitor score from the most recent reply, if any
         self.last_monitor_held = False
+        self.last_monitor_alarm = False
         self.round_trips = []  # wall time of get_chunk, worker side
         self.server_forwards = []  # the forward the server reported for this request
 
@@ -63,6 +64,7 @@ class PolicyClient:
         self.server_forwards.append(header.get("forward_ms", 0.0))
         self.last_monitor_score = header.get("monitor_score")
         self.last_monitor_held = bool(header.get("monitor_held", False))
+        self.last_monitor_alarm = bool(header.get("monitor_alarm", False))
         return actions
 
     def close(self):

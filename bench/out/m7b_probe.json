@@ -150,103 +150,267 @@
       "positives_k16": 55,
       "auroc_k32": 0.7563555860536548,
       "positives_k32": 101,
+      "operating_points": {
+        "chosen": {
+          "threshold": 1.2979330839671812,
+          "debounce": 2,
+          "train_recall_target": 0.6,
+          "test_recall_k16": 0.2909090909090909,
+          "lead_time": {
+            "n_collision_rollouts": 29,
+            "n_with_alarm_before_contact": 18,
+            "n_missed": 11,
+            "steps_mean": 60.22222222222222,
+            "steps_median": 74.0,
+            "steps_p10": 4.1000000000000005,
+            "steps_p90": 90.9,
+            "steps_min": 1.0,
+            "steps_max": 102.0,
+            "all_steps": [
+              90,
+              87,
+              102,
+              89,
+              93,
+              1,
+              49,
+              2,
+              25,
+              5,
+              9,
+              87,
+              74,
+              74,
+              79,
+              73,
+              66,
+              79
+            ]
+          },
+          "false_alarms": {
+            "n_clean_rollouts": 31,
+            "rollouts_with_any_alarm": 18,
+            "fraction_of_clean_rollouts_alarming": 0.5806451612903226,
+            "alarming_forwards": 61,
+            "control_steps_in_clean_rollouts": 7543,
+            "alarms_per_100_control_steps": 0.808696804984754
+          }
+        },
+        "recall90": {
+          "threshold": 1.017792274360732,
+          "debounce": 1,
+          "train_recall_target": 0.9,
+          "test_recall_k16": 0.8545454545454545,
+          "lead_time": {
+            "n_collision_rollouts": 29,
+            "n_with_alarm_before_contact": 28,
+            "n_missed": 1,
+            "steps_mean": 87.0,
+            "steps_median": 95.0,
+            "steps_p10": 11.600000000000001,
+            "steps_p90": 122.5,
+            "steps_min": 6.0,
+            "steps_max": 188.0,
+            "all_steps": [
+              106,
+              6,
+              14,
+              95,
+              118,
+              105,
+              109,
+              6,
+              16,
+              121,
+              188,
+              77,
+              137,
+              126,
+              85,
+              74,
+              121,
+              76,
+              85,
+              105,
+              103,
+              6,
+              90,
+              90,
+              95,
+              89,
+              98,
+              95
+            ]
+          },
+          "false_alarms": {
+            "n_clean_rollouts": 31,
+            "rollouts_with_any_alarm": 31,
+            "fraction_of_clean_rollouts_alarming": 1.0,
+            "alarming_forwards": 493,
+            "control_steps_in_clean_rollouts": 7543,
+            "alarms_per_100_control_steps": 6.535861063237439
+          }
+        }
+      },
       "lead_time": {
         "n_collision_rollouts": 29,
-        "n_with_alarm_before_contact": 28,
-        "n_missed": 1,
-        "steps_mean": 87.0,
-        "steps_median": 95.0,
-        "steps_p10": 11.600000000000001,
-        "steps_p90": 122.5,
-        "steps_min": 6.0,
-        "steps_max": 188.0,
+        "n_with_alarm_before_contact": 18,
+        "n_missed": 11,
+        "steps_mean": 60.22222222222222,
+        "steps_median": 74.0,
+        "steps_p10": 4.1000000000000005,
+        "steps_p90": 90.9,
+        "steps_min": 1.0,
+        "steps_max": 102.0,
         "all_steps": [
-          106,
-          6,
-          14,
-          95,
-          118,
-          105,
-          109,
-          6,
-          16,
-          121,
-          188,
-          77,
-          137,
-          126,
-          85,
-          74,
-          121,
-          76,
-          85,
-          105,
-          103,
-          6,
           90,
-          90,
-          95,
+          87,
+          102,
           89,
-          98,
-          95
+          93,
+          1,
+          49,
+          2,
+          25,
+          5,
+          9,
+          87,
+          74,
+          74,
+          79,
+          73,
+          66,
+          79
         ]
       },
       "false_alarms": {
         "n_clean_rollouts": 31,
-        "rollouts_with_any_alarm": 31,
-        "fraction_of_clean_rollouts_alarming": 1.0,
-        "alarming_forwards": 493,
+        "rollouts_with_any_alarm": 18,
+        "fraction_of_clean_rollouts_alarming": 0.5806451612903226,
+        "alarming_forwards": 61,
         "control_steps_in_clean_rollouts": 7543,
-        "alarms_per_100_control_steps": 6.535861063237439
+        "alarms_per_100_control_steps": 0.808696804984754
       },
       "recall_sweep": [
         {
           "train_recall_target": 0.5,
           "threshold": 1.3705668910824695,
-          "test_recall_k16": 0.509090909090909,
-          "clean_rollouts_alarming": 16,
-          "n_clean_rollouts": 31,
-          "alarms_per_100_control_steps": 0.676123558265942
+          "debounce1": {
+            "test_recall_k16": 0.509090909090909,
+            "clean_rollouts_alarming": 16,
+            "n_clean_rollouts": 31,
+            "alarms_per_100_control_steps": 0.676123558265942,
+            "collisions_alarmed_before_contact": 24,
+            "n_collision_rollouts": 29
+          },
+          "debounce2": {
+            "test_recall_k16": 0.2,
+            "clean_rollouts_alarming": 11,
+            "n_clean_rollouts": 31,
+            "alarms_per_100_control_steps": 0.33143311679703036,
+            "collisions_alarmed_before_contact": 14,
+            "n_collision_rollouts": 29
+          }
         },
         {
           "train_recall_target": 0.6,
           "threshold": 1.2979330839671812,
-          "test_recall_k16": 0.6363636363636364,
-          "clean_rollouts_alarming": 22,
-          "n_clean_rollouts": 31,
-          "alarms_per_100_control_steps": 1.3124751425162402
+          "debounce1": {
+            "test_recall_k16": 0.6363636363636364,
+            "clean_rollouts_alarming": 22,
+            "n_clean_rollouts": 31,
+            "alarms_per_100_control_steps": 1.3124751425162402,
+            "collisions_alarmed_before_contact": 26,
+            "n_collision_rollouts": 29
+          },
+          "debounce2": {
+            "test_recall_k16": 0.2909090909090909,
+            "clean_rollouts_alarming": 18,
+            "n_clean_rollouts": 31,
+            "alarms_per_100_control_steps": 0.808696804984754,
+            "collisions_alarmed_before_contact": 18,
+            "n_collision_rollouts": 29
+          }
         },
         {
           "train_recall_target": 0.7,
           "threshold": 1.2144171990205117,
-          "test_recall_k16": 0.6909090909090909,
-          "clean_rollouts_alarming": 25,
-          "n_clean_rollouts": 31,
-          "alarms_per_100_control_steps": 2.492377038313668
+          "debounce1": {
+            "test_recall_k16": 0.6909090909090909,
+            "clean_rollouts_alarming": 25,
+            "n_clean_rollouts": 31,
+            "alarms_per_100_control_steps": 2.492377038313668,
+            "collisions_alarmed_before_contact": 27,
+            "n_collision_rollouts": 29
+          },
+          "debounce2": {
+            "test_recall_k16": 0.38181818181818183,
+            "clean_rollouts_alarming": 23,
+            "n_clean_rollouts": 31,
+            "alarms_per_100_control_steps": 1.8295108047196076,
+            "collisions_alarmed_before_contact": 20,
+            "n_collision_rollouts": 29
+          }
         },
         {
           "train_recall_target": 0.8,
           "threshold": 1.1122307528778745,
-          "test_recall_k16": 0.8181818181818182,
-          "clean_rollouts_alarming": 30,
-          "n_clean_rollouts": 31,
-          "alarms_per_100_control_steps": 4.348402492377038
+          "debounce1": {
+            "test_recall_k16": 0.8181818181818182,
+            "clean_rollouts_alarming": 30,
+            "n_clean_rollouts": 31,
+            "alarms_per_100_control_steps": 4.348402492377038,
+            "collisions_alarmed_before_contact": 28,
+            "n_collision_rollouts": 29
+          },
+          "debounce2": {
+            "test_recall_k16": 0.5454545454545454,
+            "clean_rollouts_alarming": 27,
+            "n_clean_rollouts": 31,
+            "alarms_per_100_control_steps": 3.4866763887047596,
+            "collisions_alarmed_before_contact": 23,
+            "n_collision_rollouts": 29
+          }
         },
         {
           "train_recall_target": 0.9,
           "threshold": 1.017792274360732,
-          "test_recall_k16": 0.8545454545454545,
-          "clean_rollouts_alarming": 31,
-          "n_clean_rollouts": 31,
-          "alarms_per_100_control_steps": 6.535861063237439
+          "debounce1": {
+            "test_recall_k16": 0.8545454545454545,
+            "clean_rollouts_alarming": 31,
+            "n_clean_rollouts": 31,
+            "alarms_per_100_control_steps": 6.535861063237439,
+            "collisions_alarmed_before_contact": 28,
+            "n_collision_rollouts": 29
+          },
+          "debounce2": {
+            "test_recall_k16": 0.6,
+            "clean_rollouts_alarming": 31,
+            "n_clean_rollouts": 31,
+            "alarms_per_100_control_steps": 5.687392284237041,
+            "collisions_alarmed_before_contact": 25,
+            "n_collision_rollouts": 29
+          }
         },
         {
           "train_recall_target": 0.95,
           "threshold": 0.9195360105250344,
-          "test_recall_k16": 0.9090909090909091,
-          "clean_rollouts_alarming": 31,
-          "n_clean_rollouts": 31,
-          "alarms_per_100_control_steps": 8.232798621238235
+          "debounce1": {
+            "test_recall_k16": 0.9090909090909091,
+            "clean_rollouts_alarming": 31,
+            "n_clean_rollouts": 31,
+            "alarms_per_100_control_steps": 8.232798621238235,
+            "collisions_alarmed_before_contact": 29,
+            "n_collision_rollouts": 29
+          },
+          "debounce2": {
+            "test_recall_k16": 0.6727272727272727,
+            "clean_rollouts_alarming": 31,
+            "n_clean_rollouts": 31,
+            "alarms_per_100_control_steps": 7.278271244862787,
+            "collisions_alarmed_before_contact": 26,
+            "n_collision_rollouts": 29
+          }
         }
       ]
     },
@@ -262,121 +426,279 @@
       "positives_k16": 77,
       "auroc_k32": 0.6299333245549983,
       "positives_k32": 139,
+      "operating_points": {
+        "chosen": {
+          "threshold": 1.2979330839671812,
+          "debounce": 2,
+          "train_recall_target": 0.6,
+          "test_recall_k16": 0.18181818181818182,
+          "lead_time": {
+            "n_collision_rollouts": 40,
+            "n_with_alarm_before_contact": 12,
+            "n_missed": 28,
+            "steps_mean": 77.58333333333333,
+            "steps_median": 78.0,
+            "steps_p10": 30.000000000000004,
+            "steps_p90": 125.50000000000001,
+            "steps_min": 1.0,
+            "steps_max": 148.0,
+            "all_steps": [
+              26,
+              83,
+              129,
+              94,
+              148,
+              1,
+              73,
+              77,
+              82,
+              66,
+              73,
+              79
+            ]
+          },
+          "false_alarms": {
+            "n_clean_rollouts": 8,
+            "rollouts_with_any_alarm": 7,
+            "fraction_of_clean_rollouts_alarming": 0.875,
+            "alarming_forwards": 40,
+            "control_steps_in_clean_rollouts": 2360,
+            "alarms_per_100_control_steps": 1.694915254237288
+          }
+        },
+        "recall90": {
+          "threshold": 1.017792274360732,
+          "debounce": 1,
+          "train_recall_target": 0.9,
+          "test_recall_k16": 0.7792207792207793,
+          "lead_time": {
+            "n_collision_rollouts": 40,
+            "n_with_alarm_before_contact": 38,
+            "n_missed": 2,
+            "steps_mean": 54.473684210526315,
+            "steps_median": 45.5,
+            "steps_p10": 8.0,
+            "steps_p90": 105.10000000000002,
+            "steps_min": 2.0,
+            "steps_max": 156.0,
+            "all_steps": [
+              8,
+              8,
+              17,
+              29,
+              32,
+              12,
+              9,
+              8,
+              15,
+              28,
+              42,
+              99,
+              137,
+              11,
+              110,
+              13,
+              156,
+              75,
+              70,
+              151,
+              9,
+              49,
+              16,
+              5,
+              75,
+              72,
+              73,
+              72,
+              86,
+              89,
+              93,
+              98,
+              2,
+              8,
+              11,
+              82,
+              97,
+              103
+            ]
+          },
+          "false_alarms": {
+            "n_clean_rollouts": 8,
+            "rollouts_with_any_alarm": 8,
+            "fraction_of_clean_rollouts_alarming": 1.0,
+            "alarming_forwards": 183,
+            "control_steps_in_clean_rollouts": 2360,
+            "alarms_per_100_control_steps": 7.754237288135593
+          }
+        }
+      },
       "lead_time": {
         "n_collision_rollouts": 40,
-        "n_with_alarm_before_contact": 38,
-        "n_missed": 2,
-        "steps_mean": 54.473684210526315,
-        "steps_median": 45.5,
-        "steps_p10": 8.0,
-        "steps_p90": 105.10000000000002,
-        "steps_min": 2.0,
-        "steps_max": 156.0,
+        "n_with_alarm_before_contact": 12,
+        "n_missed": 28,
+        "steps_mean": 77.58333333333333,
+        "steps_median": 78.0,
+        "steps_p10": 30.000000000000004,
+        "steps_p90": 125.50000000000001,
+        "steps_min": 1.0,
+        "steps_max": 148.0,
         "all_steps": [
-          8,
-          8,
-          17,
-          29,
-          32,
-          12,
-          9,
-          8,
-          15,
-          28,
-          42,
-          99,
-          137,
-          11,
-          110,
-          13,
-          156,
-          75,
-          70,
-          151,
-          9,
-          49,
-          16,
-          5,
-          75,
-          72,
+          26,
+          83,
+          129,
+          94,
+          148,
+          1,
           73,
-          72,
-          86,
-          89,
-          93,
-          98,
-          2,
-          8,
-          11,
+          77,
           82,
-          97,
-          103
+          66,
+          73,
+          79
         ]
       },
       "false_alarms": {
         "n_clean_rollouts": 8,
-        "rollouts_with_any_alarm": 8,
-        "fraction_of_clean_rollouts_alarming": 1.0,
-        "alarming_forwards": 183,
+        "rollouts_with_any_alarm": 7,
+        "fraction_of_clean_rollouts_alarming": 0.875,
+        "alarming_forwards": 40,
         "control_steps_in_clean_rollouts": 2360,
-        "alarms_per_100_control_steps": 7.754237288135593
+        "alarms_per_100_control_steps": 1.694915254237288
       },
       "recall_sweep": [
         {
           "train_recall_target": 0.5,
           "threshold": 1.3705668910824695,
-          "test_recall_k16": 0.2727272727272727,
-          "clean_rollouts_alarming": 8,
-          "n_clean_rollouts": 8,
-          "alarms_per_100_control_steps": 1.652542372881356
+          "debounce1": {
+            "test_recall_k16": 0.2727272727272727,
+            "clean_rollouts_alarming": 8,
+            "n_clean_rollouts": 8,
+            "alarms_per_100_control_steps": 1.652542372881356,
+            "collisions_alarmed_before_contact": 18,
+            "n_collision_rollouts": 40
+          },
+          "debounce2": {
+            "test_recall_k16": 0.12987012987012986,
+            "clean_rollouts_alarming": 5,
+            "n_clean_rollouts": 8,
+            "alarms_per_100_control_steps": 0.847457627118644,
+            "collisions_alarmed_before_contact": 10,
+            "n_collision_rollouts": 40
+          }
         },
         {
           "train_recall_target": 0.6,
           "threshold": 1.2979330839671812,
-          "test_recall_k16": 0.33766233766233766,
-          "clean_rollouts_alarming": 8,
-          "n_clean_rollouts": 8,
-          "alarms_per_100_control_steps": 2.669491525423729
+          "debounce1": {
+            "test_recall_k16": 0.33766233766233766,
+            "clean_rollouts_alarming": 8,
+            "n_clean_rollouts": 8,
+            "alarms_per_100_control_steps": 2.669491525423729,
+            "collisions_alarmed_before_contact": 22,
+            "n_collision_rollouts": 40
+          },
+          "debounce2": {
+            "test_recall_k16": 0.18181818181818182,
+            "clean_rollouts_alarming": 7,
+            "n_clean_rollouts": 8,
+            "alarms_per_100_control_steps": 1.694915254237288,
+            "collisions_alarmed_before_contact": 12,
+            "n_collision_rollouts": 40
+          }
         },
         {
           "train_recall_target": 0.7,
           "threshold": 1.2144171990205117,
-          "test_recall_k16": 0.4805194805194805,
-          "clean_rollouts_alarming": 8,
-          "n_clean_rollouts": 8,
-          "alarms_per_100_control_steps": 4.364406779661017
+          "debounce1": {
+            "test_recall_k16": 0.4805194805194805,
+            "clean_rollouts_alarming": 8,
+            "n_clean_rollouts": 8,
+            "alarms_per_100_control_steps": 4.364406779661017,
+            "collisions_alarmed_before_contact": 28,
+            "n_collision_rollouts": 40
+          },
+          "debounce2": {
+            "test_recall_k16": 0.24675324675324675,
+            "clean_rollouts_alarming": 8,
+            "n_clean_rollouts": 8,
+            "alarms_per_100_control_steps": 3.305084745762712,
+            "collisions_alarmed_before_contact": 17,
+            "n_collision_rollouts": 40
+          }
         },
         {
           "train_recall_target": 0.8,
           "threshold": 1.1122307528778745,
-          "test_recall_k16": 0.6623376623376623,
-          "clean_rollouts_alarming": 8,
-          "n_clean_rollouts": 8,
-          "alarms_per_100_control_steps": 6.52542372881356
+          "debounce1": {
+            "test_recall_k16": 0.6623376623376623,
+            "clean_rollouts_alarming": 8,
+            "n_clean_rollouts": 8,
+            "alarms_per_100_control_steps": 6.52542372881356,
+            "collisions_alarmed_before_contact": 34,
+            "n_collision_rollouts": 40
+          },
+          "debounce2": {
+            "test_recall_k16": 0.42857142857142855,
+            "clean_rollouts_alarming": 8,
+            "n_clean_rollouts": 8,
+            "alarms_per_100_control_steps": 5.508474576271187,
+            "collisions_alarmed_before_contact": 21,
+            "n_collision_rollouts": 40
+          }
         },
         {
           "train_recall_target": 0.9,
           "threshold": 1.017792274360732,
-          "test_recall_k16": 0.7792207792207793,
-          "clean_rollouts_alarming": 8,
-          "n_clean_rollouts": 8,
-          "alarms_per_100_control_steps": 7.754237288135593
+          "debounce1": {
+            "test_recall_k16": 0.7792207792207793,
+            "clean_rollouts_alarming": 8,
+            "n_clean_rollouts": 8,
+            "alarms_per_100_control_steps": 7.754237288135593,
+            "collisions_alarmed_before_contact": 38,
+            "n_collision_rollouts": 40
+          },
+          "debounce2": {
+            "test_recall_k16": 0.5194805194805194,
+            "clean_rollouts_alarming": 8,
+            "n_clean_rollouts": 8,
+            "alarms_per_100_control_steps": 6.779661016949152,
+            "collisions_alarmed_before_contact": 29,
+            "n_collision_rollouts": 40
+          }
         },
         {
           "train_recall_target": 0.95,
           "threshold": 0.9195360105250344,
-          "test_recall_k16": 0.935064935064935,
-          "clean_rollouts_alarming": 8,
-          "n_clean_rollouts": 8,
-          "alarms_per_100_control_steps": 9.61864406779661
+          "debounce1": {
+            "test_recall_k16": 0.935064935064935,
+            "clean_rollouts_alarming": 8,
+            "n_clean_rollouts": 8,
+            "alarms_per_100_control_steps": 9.61864406779661,
+            "collisions_alarmed_before_contact": 39,
+            "n_collision_rollouts": 40
+          },
+          "debounce2": {
+            "test_recall_k16": 0.7272727272727273,
+            "clean_rollouts_alarming": 8,
+            "n_clean_rollouts": 8,
+            "alarms_per_100_control_steps": 8.516949152542374,
+            "collisions_alarmed_before_contact": 34,
+            "n_collision_rollouts": 40
+          }
         }
       ]
     }
   },
   "threshold": {
-    "value": 1.017792274360732,
+    "value": 1.2979330839671812,
+    "debounce": 2,
     "chosen_on": "train",
-    "target_recall": 0.9,
-    "at_k": 16
+    "target_recall": 0.6,
+    "at_k": 16,
+    "comparison_recall90": {
+      "value": 1.017792274360732,
+      "debounce": 1,
+      "target_recall": 0.9
+    }
   }
 }

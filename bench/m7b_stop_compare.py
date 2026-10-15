@@ -13,6 +13,8 @@ import json
 import os
 import sys
 
+import numpy as np
+
 
 def rows(run_dir):
     with open(os.path.join(run_dir, "merged.json")) as fh:
@@ -67,6 +69,31 @@ def main():
     res["collided_without_being_held"] = [
         k for k in shared if stop[k]["collision"] and not stop[k].get("monitor_held")
     ]
+    # when the brake first applied, in control steps
+    onset = []
+    for k in held:
+        z = np.load(os.path.join(stop_dir, "arrays", f"{k}.npz"))
+        h = np.asarray(z["monitor_held"], bool)
+        st = np.asarray(z["activation_steps"])
+        if h.any():
+            i = int(np.argmax(h))
+            onset.append(int(st[i]) if i < len(st) else 8 * i)
+    onset = np.asarray(onset, float)
+    res["first_hold_step"] = dict(
+        n=len(onset),
+        median=float(np.median(onset)) if len(onset) else None,
+        p10=float(np.percentile(onset, 10)) if len(onset) else None,
+        p90=float(np.percentile(onset, 90)) if len(onset) else None,
+        min=float(onset.min()) if len(onset) else None,
+        max=float(onset.max()) if len(onset) else None,
+        all_steps=[int(x) for x in onset],
+    )
+    if len(onset):
+        print(
+            f"[STOP] first hold at control step: median {np.median(onset):.0f}, "
+            f"p10 {np.percentile(onset, 10):.0f}, p90 {np.percentile(onset, 90):.0f}, "
+            f"min {onset.min():.0f}, max {onset.max():.0f}"
+        )
     print(
         f"[STOP] braked {len(held)}/{len(shared)} rollouts; "
         f"{len(res['held_but_still_collided'])} braked and still collided, "

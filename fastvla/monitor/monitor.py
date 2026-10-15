@@ -37,19 +37,22 @@ DEFAULT_PROBE = os.path.join(
 
 
 class RuntimeMonitor:
-    def __init__(self, mode, probe_path=None, threshold=None):
+    def __init__(self, mode, probe_path=None, threshold=None, debounce=None):
         if mode not in MODES:
             raise ValueError(f"MONITOR must be one of {MODES}, got {mode!r}")
         self.mode = mode
         self.lock = threading.Lock()
         self.n_scored = 0
-        self.n_alarms = 0
+        self.n_crossings = 0  # forwards over the threshold
+        self.n_alarms = 0  # forwards where the debounce was satisfied
         self.score_ms = []
         self.latched = {}  # rollout_key -> the score that latched it
+        self.consecutive = {}  # rollout_key -> crossings in a row, the online debounce
         self.probe_path = probe_path or DEFAULT_PROBE
         if mode == "off":
             self.w = None
             self.threshold = float("inf")
+            self.debounce = 1
             return
         z = np.load(self.probe_path)
         self.w = np.asarray(z["w"], np.float64)
@@ -58,6 +61,12 @@ class RuntimeMonitor:
         self.ybar = float(z["ybar"][0])
         self.alpha = float(z["alpha"][0])
         self.threshold = float(z["threshold"][0]) if threshold is None else float(threshold)
+        # The debounce travels with the probe, so the server's default operating point is
+        # the one EVAL.md reports rather than something a caller has to remember to pass.
+        stored = int(z["debounce"][0]) if "debounce" in z.files else 1
+        self.debounce = stored if debounce is None else int(debounce)
+        if self.debounce < 1:
+            raise ValueError(f"debounce must be >= 1, got {self.debounce}")
 
     @property
     def enabled(self):
@@ -73,17 +82,26 @@ class RuntimeMonitor:
         return float(-(((x - self.mu) / self.sd) @ self.w + self.ybar))
 
     def observe(self, rollout_key, activation):
-        """Score one forward. Returns (score, hold) -- hold is True only in `stop` mode."""
+        """Score one forward.
+
+        Returns (score, hold, alarm). `alarm` is the debounced alarm -- the threshold
+        crossed on this forward AND on the `debounce - 1` before it, for this rollout --
+        which is what `stop` acts on and what the alarm metric counts. `hold` is True only
+        in `stop` mode, and stays True for the rest of a rollout once latched.
+        """
         s = self.score(activation)
-        alarm = s >= self.threshold
+        cross = s >= self.threshold
         with self.lock:
+            run = (self.consecutive.get(rollout_key, 0) + 1) if cross else 0
+            self.consecutive[rollout_key] = run
+            alarm = run >= self.debounce
             self.n_scored += 1
-            if alarm:
-                self.n_alarms += 1
+            self.n_crossings += int(cross)
+            self.n_alarms += int(alarm)
             if self.mode == "stop" and alarm and rollout_key not in self.latched:
                 self.latched[rollout_key] = s
             hold = self.mode == "stop" and rollout_key in self.latched
-        return s, hold
+        return s, hold, alarm
 
     @staticmethod
     def hold(chunk):
@@ -99,7 +117,10 @@ class RuntimeMonitor:
                 mode=self.mode,
                 probe=self.probe_path,
                 threshold=self.threshold,
+                debounce=self.debounce,
                 scored=self.n_scored,
+                crossings=self.n_crossings,
+                crossing_rate=self.n_crossings / max(1, self.n_scored),
                 alarms=self.n_alarms,
                 alarm_rate=self.n_alarms / max(1, self.n_scored),
                 latched_rollouts=len(self.latched),

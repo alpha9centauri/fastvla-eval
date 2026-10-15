@@ -18,8 +18,11 @@
       "monitor_alarm_rate_server": null,
       "held_rollouts": null,
       "alarm_forwards": 0,
+      "crossing_forwards": 0,
       "forwards_with_scores": 0,
       "alarm_rate": null,
+      "crossing_rate": null,
+      "debounce": null,
       "rollouts_with_an_alarm": 0
     },
     {
@@ -40,8 +43,11 @@
       "monitor_alarm_rate_server": 0.0,
       "held_rollouts": 0,
       "alarm_forwards": 0,
+      "crossing_forwards": 0,
       "forwards_with_scores": 0,
       "alarm_rate": null,
+      "crossing_rate": null,
+      "debounce": null,
       "rollouts_with_an_alarm": 0
     },
     {
@@ -62,8 +68,11 @@
       "monitor_alarm_rate_server": 0.6166666666666667,
       "held_rollouts": 0,
       "alarm_forwards": 1258,
+      "crossing_forwards": 1258,
       "forwards_with_scores": 2040,
       "alarm_rate": 0.6166666666666667,
+      "crossing_rate": 0.6166666666666667,
+      "debounce": null,
       "rollouts_with_an_alarm": 60
     },
     {
@@ -84,9 +93,37 @@
       "monitor_alarm_rate_server": 0.8298810048479507,
       "held_rollouts": 60,
       "alarm_forwards": 1883,
+      "crossing_forwards": 1883,
       "forwards_with_scores": 2269,
       "alarm_rate": 0.8298810048479507,
+      "crossing_rate": 0.8298810048479507,
+      "debounce": null,
       "rollouts_with_an_alarm": 60
+    },
+    {
+      "run_id": "m7b_stopknee_ctrl60",
+      "monitor": "stop",
+      "capture": "0",
+      "n_rollouts": 60,
+      "rollouts_per_hour": 518.5706431957718,
+      "collisions": 11,
+      "completions": 12,
+      "forwards": 2150,
+      "forward_ms_mean": 183.92519899232443,
+      "prep_ms_mean": 21.34864872927929,
+      "capture_ms_mean": 0.004734294272439424,
+      "monitor_ms_mean": 0.06504914268504741,
+      "threshold": 1.2979330839671812,
+      "monitor_scored": 2150,
+      "monitor_alarm_rate_server": 0.5502325581395349,
+      "held_rollouts": 46,
+      "alarm_forwards": 1183,
+      "crossing_forwards": 1246,
+      "forwards_with_scores": 2150,
+      "alarm_rate": 0.5502325581395349,
+      "crossing_rate": 0.5795348837209302,
+      "debounce": 2,
+      "rollouts_with_an_alarm": 46
     },
     {
       "run_id": "m7b_test_intr5",
@@ -106,8 +143,11 @@
       "monitor_alarm_rate_server": 0.0,
       "held_rollouts": 0,
       "alarm_forwards": 0,
+      "crossing_forwards": 0,
       "forwards_with_scores": 0,
       "alarm_rate": null,
+      "crossing_rate": null,
+      "debounce": null,
       "rollouts_with_an_alarm": 0
     },
     {
@@ -128,9 +168,37 @@
       "monitor_alarm_rate_server": 0.8662280701754386,
       "held_rollouts": 48,
       "alarm_forwards": 1580,
+      "crossing_forwards": 1580,
       "forwards_with_scores": 1824,
       "alarm_rate": 0.8662280701754386,
+      "crossing_rate": 0.8662280701754386,
+      "debounce": null,
       "rollouts_with_an_alarm": 48
+    },
+    {
+      "run_id": "m7b_stopknee_intr5",
+      "monitor": "stop",
+      "capture": "0",
+      "n_rollouts": 48,
+      "rollouts_per_hour": 474.1317368405582,
+      "collisions": 28,
+      "completions": 0,
+      "forwards": 1824,
+      "forward_ms_mean": 184.88376451454027,
+      "prep_ms_mean": 21.671449730842653,
+      "capture_ms_mean": 0.0046693021431565285,
+      "monitor_ms_mean": 0.06305125415357843,
+      "threshold": 1.2979330839671812,
+      "monitor_scored": 1824,
+      "monitor_alarm_rate_server": 0.5158991228070176,
+      "held_rollouts": 43,
+      "alarm_forwards": 941,
+      "crossing_forwards": 1004,
+      "forwards_with_scores": 1824,
+      "alarm_rate": 0.5158991228070176,
+      "crossing_rate": 0.5504385964912281,
+      "debounce": 2,
+      "rollouts_with_an_alarm": 43
     }
   ]
 }

@@ -24,6 +24,7 @@ def fake_probe(tmp_path):
         ybar=np.array([0.0]),
         alpha=np.array([1.0]),
         threshold=np.array([0.5]),
+        debounce=np.array([1]),
     )
     return str(p)
 
@@ -49,18 +50,19 @@ def test_score_sign_is_minus_log_clearance(fake_probe):
 def test_log_mode_never_holds(fake_probe):
     m = RuntimeMonitor("log", fake_probe)
     for _ in range(3):
-        _s, hold = m.observe("k", np.array([-9.0, 0, 0, 0]))
+        _s, hold, alarm = m.observe("k", np.array([-9.0, 0, 0, 0]))
         assert hold is False
+        assert alarm is True
     assert m.n_alarms == 3, "log still counts the alarm it does not act on"
 
 
 def test_stop_latches_per_rollout_and_persists(fake_probe):
     m = RuntimeMonitor("stop", fake_probe)
-    _s, hold = m.observe("a", np.array([-9.0, 0, 0, 0]))
+    _s, hold, _a = m.observe("a", np.array([-9.0, 0, 0, 0]))
     assert hold
-    _s, hold = m.observe("a", np.array([9.0, 0, 0, 0]))  # score now far below threshold
+    _s, hold, _a = m.observe("a", np.array([9.0, 0, 0, 0]))  # score far below threshold
     assert hold, "the brake holds for the rest of the rollout"
-    _s, hold = m.observe("b", np.array([9.0, 0, 0, 0]))
+    _s, hold, _a = m.observe("b", np.array([9.0, 0, 0, 0]))
     assert not hold, "another rollout is unaffected"
 
 
@@ -130,3 +132,65 @@ def test_threshold_with_no_positives_is_nan():
     from fastvla.monitor.fit_eval import threshold_for_recall
 
     assert np.isnan(threshold_for_recall(np.arange(5.0), np.zeros(5, bool), 0.9))
+
+
+def _probe(tmp_path, threshold=0.5, debounce=1, d=4):
+    p = tmp_path / f"probe_d{debounce}.npz"
+    np.savez(
+        p,
+        w=np.ones(d),
+        mu=np.zeros(d),
+        sd=np.ones(d),
+        ybar=np.array([0.0]),
+        alpha=np.array([1.0]),
+        threshold=np.array([threshold]),
+        debounce=np.array([debounce]),
+    )
+    return str(p)
+
+
+def test_debounce_requires_consecutive_crossings(tmp_path):
+    """One isolated crossing must not brake when the debounce is 2."""
+    m = RuntimeMonitor("stop", _probe(tmp_path, debounce=2))
+    assert m.debounce == 2
+    hi, lo = np.array([-9.0, 0, 0, 0]), np.array([9.0, 0, 0, 0])
+    _s, hold, alarm = m.observe("a", hi)
+    assert not alarm and not hold, "one crossing is not an alarm"
+    _s, hold, alarm = m.observe("a", lo)
+    assert not alarm and not hold, "the run was broken"
+    _s, hold, alarm = m.observe("a", hi)
+    assert not alarm and not hold
+    _s, hold, alarm = m.observe("a", hi)
+    assert alarm and hold, "two in a row brakes"
+    assert m.n_crossings == 3 and m.n_alarms == 1
+
+
+def test_debounce_stored_in_the_probe_is_the_default(tmp_path):
+    p = _probe(tmp_path, debounce=3)
+    assert RuntimeMonitor("log", p).debounce == 3
+    assert RuntimeMonitor("log", p, debounce=1).debounce == 1
+
+
+def test_debounce_is_per_rollout(tmp_path):
+    """One crossing in each of two rollouts is not two in a row in either."""
+    m = RuntimeMonitor("stop", _probe(tmp_path, debounce=2))
+    hi = np.array([-9.0, 0, 0, 0])
+    assert m.observe("a", hi)[2] is False
+    assert m.observe("b", hi)[2] is False
+    assert m.observe("a", hi)[2] is True
+
+
+@pytest.mark.parametrize("n", [1, 2, 3])
+def test_online_debounce_matches_the_offline_mask(tmp_path, n):
+    """The number reported offline and the number acted on online must be the same.
+
+    RuntimeMonitor keeps a running count per rollout; probe.debounce_mask scans the whole
+    sequence. Two implementations of one definition, checked against each other on a
+    random crossing pattern.
+    """
+    rng = np.random.default_rng(7)
+    cross = rng.random(200) < 0.45
+    m = RuntimeMonitor("stop", _probe(tmp_path, threshold=0.0, debounce=n, d=1), debounce=n)
+    # score = -x, so x = -1 crosses a threshold of 0 and x = +1 does not
+    online = [m.observe("r", np.array([-1.0 if c else 1.0]))[2] for c in cross]
+    assert list(np.asarray(online, bool)) == list(P.debounce_mask(cross, n))

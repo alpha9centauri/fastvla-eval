@@ -69,7 +69,8 @@ class Metrics:
         self.preprocess = _Hist(LATENCY_BUCKETS)
         self.batch = _Hist(BATCH_BUCKETS)
         self.monitor_scored_total = 0
-        self.monitor_alarms_total = 0
+        self.monitor_alarms_total = 0  # debounce satisfied -- what the monitor acts on
+        self.monitor_crossings_total = 0  # threshold crossed, debounce or not
         self.monitor_held_rollouts = 0
         self.monitor_last_score = float("nan")
         self.started = time.time()
@@ -87,12 +88,13 @@ class Metrics:
         with self.lock:
             self.preprocess.observe(seconds)
 
-    def observe_monitor(self, score, alarm, held_rollouts):
+    def observe_monitor(self, score, alarm, held_rollouts, crossing=None):
         """One monitor evaluation. `alarm` counts crossings, not rollouts: the alarm rate
         a dashboard wants is alarms_total / scored_total."""
         with self.lock:
             self.monitor_scored_total += 1
             self.monitor_alarms_total += int(bool(alarm))
+            self.monitor_crossings_total += int(bool(alarm if crossing is None else crossing))
             self.monitor_held_rollouts = held_rollouts
             self.monitor_last_score = float(score)
 
@@ -124,6 +126,8 @@ class Metrics:
                     f"fastvla_monitor_scored_total {self.monitor_scored_total}",
                     "# TYPE fastvla_monitor_alarms_total counter",
                     f"fastvla_monitor_alarms_total {self.monitor_alarms_total}",
+                    "# TYPE fastvla_monitor_crossings_total counter",
+                    f"fastvla_monitor_crossings_total {self.monitor_crossings_total}",
                     "# TYPE fastvla_monitor_alarm_rate gauge",
                     f"fastvla_monitor_alarm_rate "
                     f"{self.monitor_alarms_total / self.monitor_scored_total:.6f}",

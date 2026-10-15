@@ -1,4 +1,4 @@
-"""M4 acceptance: compare a 60-start run against the M3 N=16 bit-exact reference.
+"""M4 acceptance: compare a 60-start run against the M3 N=16 reference.
 
 Acceptance rule (set in M4, learned from M3):
   * collisions == 29
@@ -6,9 +6,13 @@ Acceptance rule (set in M4, learned from M3):
   * ZERO collision-verdict flips, per start, against the M3 N=16 reference
   * report max per-start clearance difference and the transition matrix
 
-The reference is bench/runs/ctrl60_n16b1, which M3 measured as bit-identical to M2's
-single-process run (max |clearance diff| 0.0000 cm over all 60 starts). Comparing against
-it rather than against an aggregate count is the point: M3's delay sweep produced a run
+The reference is bench/runs/ctrl60_n16b1, which M3 measured against M2's single-process
+run at zero collision flips on 60 starts, completions within the run-to-run floor (0 to 1),
+and max |clearance diff| 0.0000 cm. The identity is a per-start verdict identity, not a
+guarantee that two runs produce the same trajectories: closed-loop runs of the same
+manifest in the same configuration can diverge, because the policy forward is not
+bit-reproducible run to run. The measured floor is in fastvla/monitor/EVAL.md section 7. Comparing per start rather
+than against an aggregate count is the point either way: M3's delay sweep produced a run
 with the right totals and four flipped collision verdicts that happened to cancel.
 
 usage: accept.py <run_dir> [label]
@@ -106,7 +110,7 @@ def check(run_dir, label=None):
     print(f"  transition matrix   {diag}/{len(d)} diagonal")
     print(
         f"  max |clearance diff| {res['max_clearance_diff_cm']:.4f} cm"
-        f"{'  (bit-identical)' if res['bit_identical'] else ''}"
+        f"{'  (no per-start difference)' if res['bit_identical'] else ''}"
     )
     print(
         f"  rollouts/hour       {m['rollouts_per_hour']:.1f}   wall {m['wall_sec_rollouts']:.1f} s"

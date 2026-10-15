@@ -39,6 +39,21 @@ def rollout(run_dir, key):
     )
 
 
+def _caught(run_dir, key):
+    """Does the debounced alarm fire before first contact in this rollout?"""
+    z = np.load(os.path.join(run_dir, "arrays", f"{key}.npz"))
+    con = np.asarray(z["contact"], bool)
+    if not con.any():
+        return False
+    c = int(np.argmax(con))
+    score = -P.predict(
+        dict(w=panel.w, mu=panel.mu, sd=panel.sd, ybar=panel.ybar),
+        np.asarray(z["activations"], np.float32),
+    )
+    steps = np.asarray(z["activation_steps"], np.int64)
+    return bool((P.debounce_mask(score >= panel.thr, panel.debounce) & (steps < c)).any())
+
+
 def _first_contact(run_dir, key):
     con = np.asarray(np.load(os.path.join(run_dir, "arrays", f"{key}.npz"))["contact"], bool)
     return int(np.argmax(con)) if con.any() else -1
@@ -62,11 +77,13 @@ def pick(sets):
                 clean.append(item)
             else:
                 near.append(item)
-    # The collision with the LATEST first contact, so the panel shows an approach rather
-    # than a rollout already touching: sorting by trace length instead picked a 300-step
-    # rollout whose contact was at step 6. Then the tightest non-contact rollout, and the
-    # completion that stayed furthest from the obstacle.
-    coll.sort(key=lambda t: -_first_contact(t[1], t[2]))
+    # The collision panel shows one the monitor CATCHES, latest contact first, so the
+    # panel illustrates the mechanism -- the rise, the alarm, the lead. It is a chosen
+    # example, not a typical one: at this operating point 11 of 29 unshifted collisions
+    # raise no alarm before contact at all, which is in EVAL.md's tables and is the real
+    # cost of the quieter threshold. Sorting by trace length instead of contact step
+    # picked a 300-step rollout whose contact was at step 6.
+    coll.sort(key=lambda t: (not _caught(t[1], t[2]), -_first_contact(t[1], t[2])))
     near.sort(key=lambda t: t[3])
     clean.sort(key=lambda t: -t[3])
     out = []
@@ -76,7 +93,8 @@ def pick(sets):
     return out
 
 
-def panel(ax, label, setname, run_dir, key, mc, thr, legend=False):
+def panel(ax, label, setname, run_dir, key, mc, thr):
+    """One rollout. `panel.w/mu/sd/ybar/debounce` are set by main from the probe npz."""
     d = rollout(run_dir, key)
     score = -P.predict(dict(w=panel.w, mu=panel.mu, sd=panel.sd, ybar=panel.ybar), d["act"])
     xmax = max(int(d["steps"].max()) + 2, 10)
@@ -84,17 +102,13 @@ def panel(ax, label, setname, run_dir, key, mc, thr, legend=False):
     # The threshold label goes on the title row, outside the data area: inside the axes
     # there is no end of the trace reliably far from the threshold -- the score hovers
     # around it for most of a rollout, which is the point of the figure.
-    ax.axhline(thr, color=SECOND, lw=1, ls=(0, (4, 3)), zorder=2, label="alarm threshold")
-    if legend:
-        ax.legend(
-            loc="lower right",
-            bbox_to_anchor=(1.0, 1.0),
-            frameon=False,
-            fontsize=8,
-            handlelength=2.4,
-            borderaxespad=0.15,
-            labelcolor=SECOND,
-        )
+    ax.axhline(
+        thr,
+        color=SECOND,
+        lw=1,
+        ls=(0, (4, 3)),
+        zorder=2,
+    )
     if d["contact"].any():
         c = int(np.argmax(d["contact"]))
         left = c < 0.45 * xmax  # the label goes to whichever side has room
@@ -112,17 +126,21 @@ def panel(ax, label, setname, run_dir, key, mc, thr, legend=False):
             fontweight="bold",
             zorder=5,
         )
-        fired = np.where((score >= thr) & (d["steps"] < c))[0]
+        # the debounced alarm, which is what the monitor acts on
+        fired = np.where(P.debounce_mask(score >= thr, panel.debounce) & (d["steps"] < c))[0]
         if len(fired):
             s0 = int(d["steps"][fired[0]])
             lf = s0 < 0.5 * xmax
+            lo, hi = float(score.min()), float(score.max())
+            high = (score[fired[0]] - lo) > 0.6 * max(1e-9, hi - lo)
             ax.plot([s0], [score[fired[0]]], "o", ms=8, color=SERIES, mec=SURFACE, mew=2, zorder=5)
             ax.annotate(
                 f"first alarm, step {s0} — {c - s0} steps of lead",
                 xy=(s0, score[fired[0]]),
-                xytext=(7 if lf else -7, 10),
+                xytext=(7 if lf else -7, -12 if high else 11),
                 textcoords="offset points",
                 ha="left" if lf else "right",
+                va="top" if high else "bottom",
                 color=INK,
                 fontsize=8,
                 zorder=6,
@@ -149,7 +167,9 @@ def panel(ax, label, setname, run_dir, key, mc, thr, legend=False):
 def main():
     pz = np.load(os.path.join(ROOT, "bench", "out", "m7b_probe.npz"))
     panel.w, panel.mu, panel.sd, panel.ybar = pz["w"], pz["mu"], pz["sd"], float(pz["ybar"][0])
+    panel.debounce = int(pz["debounce"][0]) if "debounce" in pz.files else 1
     thr = float(pz["threshold"][0])
+    panel.thr = thr
     sets = [
         ("unshifted", os.path.join(RUNS, "m7b_test_unshifted")),
         ("intrusion-5", os.path.join(RUNS, "m7b_test_intr5")),
@@ -173,21 +193,22 @@ def main():
     fig, axes = plt.subplots(len(chosen), 1, figsize=(7.6, 6.6))
     axes = np.atleast_1d(axes)
     for ax, (label, setname, run_dir, key, mc) in zip(axes, chosen, strict=True):
-        panel(ax, label, setname, run_dir, key, mc, thr, legend=ax is axes[0])
+        panel(ax, label, setname, run_dir, key, mc, thr)
     axes[-1].set_xlabel("control step", color=SECOND, fontsize=9)
     fig.suptitle(
         "Monitor alarm score over a rollout", x=0.012, ha="left", color=INK, fontsize=12, y=0.995
     )
     fig.text(
         0.012,
-        0.948,
-        "score = −predicted log₁₀ clearance, read from the policy's own "
-        "activations; higher means closer",
+        0.930,
+        "score = −predicted log₁₀ clearance, read from the policy's own activations;\n"
+        f"higher means closer.  Dashed line: the alarm threshold (debounce "
+        f"{panel.debounce}).",
         ha="left",
         color=SECOND,
         fontsize=8.5,
     )
-    fig.tight_layout(rect=(0, 0, 1, 0.948))
+    fig.tight_layout(rect=(0, 0, 1, 0.918))
     out = os.path.join(ROOT, "fastvla", "monitor", "alarm_score.png")
     fig.savefig(out, dpi=170, facecolor=SURFACE)
     print(f"[FIG] -> {out}")

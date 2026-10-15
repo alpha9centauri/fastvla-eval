@@ -83,6 +83,7 @@ def main():
         monitor=os.environ.get("MONITOR", "off"),
         monitor_probe=os.environ.get("MONITOR_PROBE", ""),
         monitor_threshold=os.environ.get("MONITOR_THRESHOLD", ""),
+        monitor_debounce=os.environ.get("MONITOR_DEBOUNCE", ""),
         contacts=os.environ.get("CONTACTS", "1"),
         per_worker=[len(s) for s in slices],
     )
@@ -121,6 +122,7 @@ def main():
         MONITOR=os.environ.get("MONITOR", "off"),
         MONITOR_PROBE=os.environ.get("MONITOR_PROBE", ""),
         MONITOR_THRESHOLD=os.environ.get("MONITOR_THRESHOLD", ""),
+        MONITOR_DEBOUNCE=os.environ.get("MONITOR_DEBOUNCE", ""),
         STATS_OUT=os.path.join(run_dir, "server_stats.json"),
     )
     # these handles must outlive the block: they are the subprocesses' stdout for the

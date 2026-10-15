@@ -29,7 +29,18 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from fastvla.monitor import probe as P  # noqa: E402
 
 K_LIST = (8, 16, 32)
-RECALL_TARGET = 0.90
+RECALL_TARGET = 0.90  # the first pass's operating point, kept as the comparison
+# The chosen operating point: the knee of the recall/false-alarm curve, plus a debounce so
+# a single crossing cannot brake a rollout. Both travel with the probe in the npz, so the
+# server's default is the point this file reports.
+#
+# 0.60 and not 0.70: on the unshifted curve at debounce 2, going 0.50 -> 0.60 buys 4 more
+# collisions caught for 0.48 more alarms per 100 steps (8.3 per alarm), 0.60 -> 0.70 buys
+# 2 for 1.02 (2.0 per alarm), and it stays flat after. The bend is at 0.60, which is the
+# low end of the 0.6-0.7 range this operating point was asked to sit in.
+CHOSEN_RECALL = float(os.environ.get("CHOSEN_RECALL", "0.60"))
+DEBOUNCE = int(os.environ.get("DEBOUNCE", "2"))
+SWEEP_TARGETS = (0.5, 0.6, 0.7, 0.8, 0.9, 0.95)
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 RUNS = os.path.join(ROOT, "bench", "runs")
 OUT = os.environ.get("OUT", os.path.join(ROOT, "bench", "out", "m7b_probe"))
@@ -61,23 +72,77 @@ def threshold_for_recall(scores, labels, target):
     return float(pos[ok[-1]] if len(ok) else pos[0])
 
 
-def per_rollout_alarms(d, scores, thr):
-    """Group forwards by rollout; return first-alarm step and first-contact step."""
-    out = {}
+def alarms_for(d, scores, thr, debounce=1):
+    """Debounced alarms for one set.
+
+    Returns (per_rollout, mask) where `mask` is aligned to d's rows and marks the forwards
+    at which the monitor would have alarmed. Crossings are debounced along each rollout's
+    forwards in step order -- the order the server sees them in -- and only then
+    intersected with the pre-contact mask, so a run of crossings is not silently broken by
+    the frames the evaluation happens to exclude.
+    """
+    per, mask = {}, np.zeros(len(scores), bool)
     for k in np.unique(d["key"]):
-        m = d["key"] == k
-        st, sc, pre = d["step"][m], scores[m], d["pre"][m]
-        o = np.argsort(st)
-        st, sc, pre = st[o], sc[o], pre[o]
-        fired = np.where((sc >= thr) & pre)[0]
-        first_alarm = int(st[fired[0]]) if len(fired) else None
-        out[str(k)] = dict(
-            first_alarm=first_alarm,
-            n_forwards=int(m.sum()),
-            any_alarm=bool(len(fired)),
+        m = np.where(d["key"] == k)[0]
+        o = m[np.argsort(d["step"][m])]
+        fired = P.debounce_mask(scores[o] >= thr, debounce)
+        mask[o] = fired
+        pre_fired = np.where(fired & d["pre"][o])[0]
+        per[str(k)] = dict(
+            first_alarm=int(d["step"][o][pre_fired[0]]) if len(pre_fired) else None,
+            n_forwards=int(len(m)),
+            any_alarm=bool(len(pre_fired)),
             collided=bool(d["collided"][m][0]),
         )
-    return out
+    return per, mask
+
+
+def false_alarm_stats(d, mask, per):
+    """Alarms on rollouts that never contact, counted over their pre-contact forwards."""
+    clean = [k for k, a in per.items() if not a["collided"]]
+    ev = tot = 0
+    for k in clean:
+        mm = d["key"] == k
+        ev += int((mask[mm] & d["pre"][mm]).sum())
+        tot += int(d["step"][mm].max() + 1) if mm.any() else 0
+    return dict(
+        n_clean_rollouts=len(clean),
+        rollouts_with_any_alarm=sum(1 for k in clean if per[k]["any_alarm"]),
+        fraction_of_clean_rollouts_alarming=(
+            sum(1 for k in clean if per[k]["any_alarm"]) / len(clean) if clean else None
+        ),
+        alarming_forwards=ev,
+        control_steps_in_clean_rollouts=tot,
+        alarms_per_100_control_steps=(100.0 * ev / tot) if tot else None,
+    )
+
+
+def lead_time_stats(d, per, fc):
+    """Control steps between the first debounced alarm and first contact."""
+    leads, missed = [], 0
+    for key, a in per.items():
+        if not a["collided"]:
+            continue
+        c = fc.get(key)
+        if c is None:
+            continue
+        if a["first_alarm"] is None or a["first_alarm"] >= c:
+            missed += 1
+        else:
+            leads.append(c - a["first_alarm"])
+    leads = np.asarray(leads, float)
+    return dict(
+        n_collision_rollouts=int(sum(a["collided"] for a in per.values())),
+        n_with_alarm_before_contact=int(len(leads)),
+        n_missed=int(missed),
+        steps_mean=float(leads.mean()) if len(leads) else None,
+        steps_median=float(np.median(leads)) if len(leads) else None,
+        steps_p10=float(np.percentile(leads, 10)) if len(leads) else None,
+        steps_p90=float(np.percentile(leads, 90)) if len(leads) else None,
+        steps_min=float(leads.min()) if len(leads) else None,
+        steps_max=float(leads.max()) if len(leads) else None,
+        all_steps=[int(x) for x in leads],
+    )
 
 
 def first_contact_steps(run_dirs):
@@ -138,13 +203,29 @@ def main():
     )
     fc = first_contact_steps([te_un, te_in])
 
-    # threshold from TRAINING, so the test false-alarm rate is not fitted on test
+    # Thresholds from TRAINING, so no test false-alarm rate is fitted on the set it is
+    # reported for.
     tr_scores = alarm_score(P.predict(fitted, tr["X"]))
-    thr = threshold_for_recall(tr_scores[tr["pre"]], tr["hit_16"][tr["pre"]], RECALL_TARGET)
+    trp, hit16 = tr_scores[tr["pre"]], tr["hit_16"][tr["pre"]]
+    thr = threshold_for_recall(trp, hit16, CHOSEN_RECALL)
+    thr90 = threshold_for_recall(trp, hit16, RECALL_TARGET)
+    points = {"chosen": (thr, DEBOUNCE), "recall90": (thr90, 1)}
     res["threshold"] = dict(
-        value=float(thr), chosen_on="train", target_recall=RECALL_TARGET, at_k=16
+        value=float(thr),
+        debounce=DEBOUNCE,
+        chosen_on="train",
+        target_recall=CHOSEN_RECALL,
+        at_k=16,
+        comparison_recall90=dict(value=float(thr90), debounce=1, target_recall=RECALL_TARGET),
     )
-    print(f"[PROBE] alarm threshold {thr:+.4f} ({RECALL_TARGET:.0%} recall at k=16, on train)")
+    print(
+        f"[PROBE] chosen operating point: threshold {thr:+.4f}, debounce {DEBOUNCE} "
+        f"({CHOSEN_RECALL:.0%} recall at k=16, on train)"
+    )
+    print(
+        f"[PROBE] comparison: threshold {thr90:+.4f}, debounce 1 "
+        f"({RECALL_TARGET:.0%} recall at k=16, on train)"
+    )
 
     for name, d, _rd in (("test_unshifted", te_u, te_un), ("test_intr5", te_i, te_in)):
         sc = alarm_score(P.predict(fitted, d["X"]))
@@ -159,75 +240,48 @@ def main():
         for k in K_LIST:
             s[f"auroc_k{k}"] = P.auroc(sc[pre], d[f"hit_{k}"][pre])
             s[f"positives_k{k}"] = int(d[f"hit_{k}"][pre].sum())
-        # lead time on rollouts that collide
-        alarms = per_rollout_alarms(d, sc, thr)
-        leads, missed = [], 0
-        for key, a in alarms.items():
-            if not a["collided"]:
-                continue
-            c = fc.get(key)
-            if c is None:
-                continue
-            if a["first_alarm"] is None or a["first_alarm"] >= c:
-                missed += 1
-            else:
-                leads.append(c - a["first_alarm"])
-        leads = np.asarray(leads, float)
-        s["lead_time"] = dict(
-            n_collision_rollouts=int(sum(a["collided"] for a in alarms.values())),
-            n_with_alarm_before_contact=int(len(leads)),
-            n_missed=int(missed),
-            steps_mean=float(leads.mean()) if len(leads) else None,
-            steps_median=float(np.median(leads)) if len(leads) else None,
-            steps_p10=float(np.percentile(leads, 10)) if len(leads) else None,
-            steps_p90=float(np.percentile(leads, 90)) if len(leads) else None,
-            steps_min=float(leads.min()) if len(leads) else None,
-            steps_max=float(leads.max()) if len(leads) else None,
-            all_steps=[int(x) for x in leads],
-        )
-        # false alarms on rollouts that never collide
-        clean = [k for k, a in alarms.items() if not a["collided"]]
-        n_alarm_clean = sum(1 for k in clean if alarms[k]["any_alarm"])
-        steps_clean = 0
-        fa_events = 0
-        for k in clean:
-            mm = d["key"] == k
-            fa_events += int(((sc[mm] >= thr) & d["pre"][mm]).sum())
-            steps_clean += int(d["step"][mm].max() + 1) if mm.any() else 0
-        s["false_alarms"] = dict(
-            n_clean_rollouts=len(clean),
-            rollouts_with_any_alarm=n_alarm_clean,
-            fraction_of_clean_rollouts_alarming=(n_alarm_clean / len(clean)) if clean else None,
-            alarming_forwards=fa_events,
-            control_steps_in_clean_rollouts=steps_clean,
-            alarms_per_100_control_steps=(100.0 * fa_events / steps_clean) if steps_clean else None,
-        )
-        # The single operating point the milestone asks for is one point on a curve; the
-        # sweep shows the knee, so "6.8 alarms per 100 steps" can be read against what a
-        # lower recall would have cost.
+
+        # Both operating points, measured the same way: the chosen one (the knee, with the
+        # debounce) and the 90%-recall one the first pass used, kept as the comparison.
+        s["operating_points"] = {}
+        for label, (t, db) in points.items():
+            per, mask = alarms_for(d, sc, t, db)
+            s["operating_points"][label] = dict(
+                threshold=float(t),
+                debounce=db,
+                train_recall_target=(CHOSEN_RECALL if label == "chosen" else RECALL_TARGET),
+                test_recall_k16=float((mask[pre])[d["hit_16"][pre]].mean())
+                if d["hit_16"][pre].any()
+                else None,
+                lead_time=lead_time_stats(d, per, fc),
+                false_alarms=false_alarm_stats(d, mask, per),
+            )
+        s["lead_time"] = s["operating_points"]["chosen"]["lead_time"]
+        s["false_alarms"] = s["operating_points"]["chosen"]["false_alarms"]
+
+        # The curve behind the choice: each train-recall target, at both debounces.
         s["recall_sweep"] = []
-        for target in (0.5, 0.6, 0.7, 0.8, 0.9, 0.95):
+        for target in SWEEP_TARGETS:
             t = threshold_for_recall(tr_scores[tr["pre"]], tr["hit_16"][tr["pre"]], target)
-            al = per_rollout_alarms(d, sc, t)
-            clean_k = [kk for kk, a in al.items() if not a["collided"]]
-            ev = tot = 0
-            for kk in clean_k:
-                mm = d["key"] == kk
-                ev += int(((sc[mm] >= t) & d["pre"][mm]).sum())
-                tot += int(d["step"][mm].max() + 1) if mm.any() else 0
-            s["recall_sweep"].append(
-                dict(
-                    train_recall_target=target,
-                    threshold=float(t),
-                    test_recall_k16=float((sc[pre] >= t)[d["hit_16"][pre]].mean())
+            row = dict(train_recall_target=target, threshold=float(t))
+            for db in (1, DEBOUNCE):
+                per, mask = alarms_for(d, sc, t, db)
+                fa = false_alarm_stats(d, mask, per)
+                row[f"debounce{db}"] = dict(
+                    test_recall_k16=float((mask[pre])[d["hit_16"][pre]].mean())
                     if d["hit_16"][pre].any()
                     else None,
-                    clean_rollouts_alarming=sum(1 for kk in clean_k if al[kk]["any_alarm"]),
-                    n_clean_rollouts=len(clean_k),
-                    alarms_per_100_control_steps=(100.0 * ev / tot) if tot else None,
+                    clean_rollouts_alarming=fa["rollouts_with_any_alarm"],
+                    n_clean_rollouts=fa["n_clean_rollouts"],
+                    alarms_per_100_control_steps=fa["alarms_per_100_control_steps"],
+                    collisions_alarmed_before_contact=lead_time_stats(d, per, fc)[
+                        "n_with_alarm_before_contact"
+                    ],
+                    n_collision_rollouts=lead_time_stats(d, per, fc)["n_collision_rollouts"],
                 )
-            )
+            s["recall_sweep"].append(row)
         res["sets"][name] = s
+
         print(
             f"\n[PROBE] {name}: Spearman(pre-contact) {s['spearman_pre_contact']:+.4f}  "
             f"all {s['spearman_all']:+.4f}"
@@ -236,31 +290,35 @@ def main():
             f"         AUROC  k=8 {s['auroc_k8']:.3f}  k=16 {s['auroc_k16']:.3f}  "
             f"k=32 {s['auroc_k32']:.3f}"
         )
-        lt = s["lead_time"]
-        print(
-            f"         lead time: {lt['n_with_alarm_before_contact']}/"
-            f"{lt['n_collision_rollouts']} collisions alarmed first; median "
-            f"{lt['steps_median']} steps, p10 {lt['steps_p10']}, p90 {lt['steps_p90']}"
-        )
-        print("         recall sweep (threshold chosen on train, measured on test):")
-        for r in s["recall_sweep"]:
+        for label in ("chosen", "recall90"):
+            op = s["operating_points"][label]
+            lt, fa = op["lead_time"], op["false_alarms"]
             print(
-                f"           train recall {r['train_recall_target']:.2f} -> thr "
-                f"{r['threshold']:+.3f}, test recall@k16 "
-                f"{(r['test_recall_k16'] or 0):.3f}, "
-                f"{r['clean_rollouts_alarming']}/{r['n_clean_rollouts']} clean alarm, "
-                f"{(r['alarms_per_100_control_steps'] or 0):.2f} per 100 steps"
+                f"         [{label}] thr {op['threshold']:+.4f} debounce {op['debounce']}: "
+                f"recall@k16 {(op['test_recall_k16'] or 0):.3f}, "
+                f"{lt['n_with_alarm_before_contact']}/{lt['n_collision_rollouts']} "
+                f"collisions alarmed, median lead {lt['steps_median']}, "
+                f"{fa['rollouts_with_any_alarm']}/{fa['n_clean_rollouts']} clean alarm, "
+                f"{(fa['alarms_per_100_control_steps'] or 0):.2f} per 100 steps"
             )
-        fa = s["false_alarms"]
-        print(
-            f"         false alarms: {fa['rollouts_with_any_alarm']}/{fa['n_clean_rollouts']} "
-            f"clean rollouts, {fa['alarms_per_100_control_steps']:.2f} per 100 control steps"
-            if fa["alarms_per_100_control_steps"] is not None
-            else "         false alarms: n/a"
-        )
+        print(f"         sweep (threshold on train, measured on test; d=1 vs d={DEBOUNCE}):")
+        for r in s["recall_sweep"]:
+            a, b = r["debounce1"], r[f"debounce{DEBOUNCE}"]
+            print(
+                f"           recall {r['train_recall_target']:.2f} thr {r['threshold']:+.3f}"
+                f" | d1 {a['clean_rollouts_alarming']}/{a['n_clean_rollouts']} clean, "
+                f"{(a['alarms_per_100_control_steps'] or 0):5.2f}/100, "
+                f"caught {a['collisions_alarmed_before_contact']}/"
+                f"{a['n_collision_rollouts']}"
+                f" | d{DEBOUNCE} {b['clean_rollouts_alarming']}/{b['n_clean_rollouts']}, "
+                f"{(b['alarms_per_100_control_steps'] or 0):5.2f}/100, "
+                f"caught {b['collisions_alarmed_before_contact']}/"
+                f"{b['n_collision_rollouts']}"
+            )
 
     np.savez_compressed(
         OUT + ".npz",
+        debounce=np.array([DEBOUNCE]),
         w=fitted["w"],
         mu=fitted["mu"],
         sd=fitted["sd"],

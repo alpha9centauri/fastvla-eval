@@ -73,6 +73,25 @@ def auroc(scores, labels):
     return float((r[y].sum() - npos * (npos + 1) / 2) / (npos * nneg))
 
 
+def debounce_mask(cross, n=2):
+    """True where `n` consecutive crossings have happened, this one included.
+
+    One definition used in two places: offline over a rollout's forwards in step order,
+    and online in RuntimeMonitor, which keeps the same running count per rollout. The
+    equivalence is asserted in tests/test_monitor.py so the number reported and the number
+    acted on cannot drift apart.
+    """
+    cross = np.asarray(cross, bool)
+    if n <= 1:
+        return cross.copy()
+    out = np.zeros_like(cross)
+    run = 0
+    for i, c in enumerate(cross):
+        run = run + 1 if c else 0
+        out[i] = run >= n
+    return out
+
+
 def load_set(run_dirs, k_list=(8, 16, 32)):
     """Gather every captured forward from one or more run directories.
 

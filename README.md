@@ -4,8 +4,8 @@ FastVLA-Eval is a fast and correct closed-loop evaluation harness for vision-lan
 (VLA) policies on LIBERO-Safety. It aims to make closed-loop evaluation substantially faster
 than the current single-environment driver — parallel simulation workers against a batched
 policy server, with a C++ clearance labeler and the LIBERO-Safety scoring fixes built in —
-without changing results, and to prove that with bit-exact parity checks in a reference mode
-and statistical equivalence checks in fast mode. All performance and accuracy numbers are
+without changing results, and to prove that with per-start verdict checks against a
+reference run and statistical equivalence checks in fast mode. All performance and accuracy numbers are
 pending the audit; nothing here is measured yet.
 
 Author: Varun Chandra
@@ -63,28 +63,45 @@ server. `MONITOR=off|log|stop`, off by default. Full results and method in
 |---|---|---|
 | Spearman to true clearance, pre-contact | +0.868 | +0.480 |
 | AUROC, contact within 8 / 16 / 32 control steps | 0.918 / 0.807 / 0.756 | 0.743 / 0.670 / 0.630 |
-| collisions alarmed before contact | 28 of 29 | 38 of 40 |
-| clean rollouts raising a false alarm | 31 of 31 | 8 of 8 |
+
+The operating point is a threshold (+1.2979, the one giving 60% recall at k=16 on the
+training set) plus a **debounce of 2** — act only on two consecutive alarming forwards.
+It sits at the knee of the recall / false-alarm curve:
+
+![recall against false alarms](fastvla/monitor/operating_curve.png)
+
+| at that point | unshifted | intrusion-5 |
+|---|---|---|
+| collisions alarmed before contact | 18 of 29 | 12 of 40 |
+| clean rollouts raising any alarm | 18 of 31 | 7 of 8 |
+| **false alarms per 100 control steps** | **0.81** | 1.69 |
 
 `MONITOR=log` costs **0.067 ms per forward**, 0.037% of a 183.4 ms forward, and runs at
 **546.2 rollouts/hour against the 544.8 baseline** — within noise. It passes the 60-start
-acceptance unchanged: 29 collisions, 25 completions, zero flips, 60/60 diagonal,
-max per-start clearance difference 0.0000 cm.
+acceptance unchanged: 29 collisions, 25 completions, **zero collision flips on 60 starts,
+completions within the run-to-run floor (0 to 1)**, max per-start clearance difference
+0.0000 cm. That floor is measured in
+[EVAL.md section 7](fastvla/monitor/EVAL.md): two runs of the same manifest in the same
+configuration can differ, because the policy forward is not bit-reproducible run to run.
 
 **`MONITOR=stop` is a brake, not an avoidance.** It zeroes the pose delta and holds the
 gripper for the rest of the rollout; it has no notion of which direction is safe and it
-never resumes. At the evaluated operating point (90% recall at k=16) it braked every
-rollout in both sets, at a median first hold of control step 8 of 300:
+never resumes.
 
-| | collisions | completions | rollouts braked |
-|---|---|---|---|
-| unshifted, 60 starts | 29 → **1** | 25 → **1** | 60 of 60 |
-| intrusion-5, 48 starts | 40 → **2** | 4 → **0** | 48 of 48 |
+| | collisions | completions | rollouts braked | median first hold |
+|---|---|---|---|---|
+| unshifted, 60 starts | 29 → **11** | 25 → **12** | 46 of 60 | control step 92 |
+| intrusion-5, 48 starts | 40 → **28** | 4 → **0** | 43 of 48 | control step 88 |
 
-No start was made worse — zero newly-colliding starts in either set — but the collisions
-and the completions go together, because one cause removes both: the arm stops moving.
-The recall sweep in EVAL.md section 5 shows the knee is at 0.6-0.7 recall, where the
-monitor is quiet on half the clean rollouts; that operating point was not run here.
+No start was made worse — zero newly-colliding starts in either set. On the unshifted set
+it prevents 18 collisions and loses 13 completions, which is the trade the brake actually
+offers. On the shifted scenes it is much weaker (12 of 40 prevented, all 4 completions
+lost): the probe transfers poorly to geometry it never saw, and the brake fires late.
+
+An earlier pass ran `stop` at a 90%-recall threshold with no debounce. It braked **every**
+rollout at a median of control step 8, taking collisions to 1/60 and completions to 1/60 —
+the arm stopped moving almost before it started. EVAL.md section 9 keeps both runs, because
+the contrast is the argument for the operating point above.
 
 As background, the research tree's probe-gated *steering* (a different intervention, not
 re-run for this milestone) reports 14/60 collisions and 18/60 completions against the
