@@ -16,7 +16,9 @@ import subprocess
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-ALLOWED_EMPTY = {"fastvla/__init__.py"}
+# Nothing is allowed to be empty: every package marker carries a one-line docstring,
+# which is cheap and means an emptied file is always a real finding.
+ALLOWED_EMPTY = set()
 
 
 def tracked_files():
