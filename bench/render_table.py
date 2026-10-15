@@ -53,7 +53,6 @@ def fmt(v, nd=1, dash="—"):
 
 
 def build():
-    commit = git("rev-parse", "--short", "HEAD")
     card = "RTX A5000 (GPU 1 of 2)"
     driver = "530.30.02"
     torch_v = "2.2.0+cu121"
@@ -199,8 +198,8 @@ def build():
     head = [
         f"Every row measured on **{card}**, driver **{driver}**, torch **{torch_v}** "
         f"(constant across rows -- one box, one environment). The commit column is the "
-        f"commit that last touched that row's artefact, which is when the number was "
-        f"last measured; HEAD is currently `{commit}`. Reproduce with `make bench`.",
+        f"commit that last touched that row's artefact, i.e. when the number was last "
+        f"measured. Reproduce with `make bench`.",
         "",
         "| metric | before | after | how measured | commit |",
         "|---|---|---|---|---|",

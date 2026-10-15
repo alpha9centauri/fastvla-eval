@@ -13,7 +13,7 @@ Author: Varun Chandra
 ## Benchmark
 
 <!-- BENCH TABLE START -->
-Every row measured on **RTX A5000 (GPU 1 of 2)**, driver **530.30.02**, torch **2.2.0+cu121** (constant across rows -- one box, one environment). The commit column is the commit that last touched that row's artefact, which is when the number was last measured; HEAD is currently `02aa037`. Reproduce with `make bench`.
+Every row measured on **RTX A5000 (GPU 1 of 2)**, driver **530.30.02**, torch **2.2.0+cu121** (constant across rows -- one box, one environment). The commit column is the commit that last touched that row's artefact, i.e. when the number was last measured. Reproduce with `make bench`.
 
 | metric | before | after | how measured | commit |
 |---|---|---|---|---|
