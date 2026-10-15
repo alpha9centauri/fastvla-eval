@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "mode": "torch",
+    "count_pairs": true,
+    "driver": "/data_new/vchandr2/vla-safety-interp/src/displacement/rollout_openvla_disp.py",
+    "driver_md5": "a3bd13daa60d30474eec023827560e03",
+    "patched": {
+      "prepare_observation": "experiments.robot.libero.run_libero_eval",
+      "process_action": "experiments.robot.libero.run_libero_eval",
+      "get_action": "experiments.robot.robot_utils",
+      "OffScreenRenderEnv.step": "libero.libero.envs",
+      "MjSim.step": "robosuite.utils.binding_utils",
+      "MjSim.render": "robosuite.utils.binding_utils",
+      "SafetyMonitor._on_substep": "physics_safety",
+      "SafetyMonitor._update_clearance": "physics_safety",
+      "DistanceEngine.distance": "convex_distance"
+    },
+    "torch": "2.2.0+cu121",
+    "numpy": "1.26.4",
+    "cuda": "12.1",
+    "cudnn": 8902,
+    "device_name": "NVIDIA RTX A5000",
+    "nvidia_smi": "0, NVIDIA RTX A5000, 530.30.02\n1, NVIDIA RTX A5000, 530.30.02",
+    "cuda_visible_devices": "1",
+    "mujoco_egl_device_id": "1",
+    "env": {
+      "OUTDIR": "/data_new/vchandr2/fastvla-eval/audit/t2_out",
+      "STEP": "17500",
+      "N_INIT": "1",
+      "SMOKE_INITS": "1",
+      "MAX_STEPS": null,
+      "PROBE": "0",
+      "OFFSETS": "0",
+      "ARMS": "",
+      "USE_FEASIBLE": "0",
+      "WRITE_BASELINE": "0",
+      "STEER_K": "0",
+      "INSTR_MODE": "I0"
+    },
+    "started": "2026-10-14 17:52:09",
+    "wall_sec_total": 93.81205644086003
+  },
+  "components": [
+    "clearance",
+    "env_step",
+    "forward",
+    "gjk_pair",
+    "monitor",
+    "prep",
+    "proc",
+    "render",
+    "sim"
+  ],
+  "calls": {
+    "render": 482,
+    "sim": 5900,
+    "monitor": 5900,
+    "env_step": 236,
+    "prep": 226,
+    "forward": 29,
+    "proc": 226,
+    "gjk_pair": 47548,
+    "clearance": 452
+  },
+  "n_control_steps": 226,
+  "n_warmup_buckets": 1
+}

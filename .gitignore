@@ -62,3 +62,17 @@ dist/
 
 # Experiment tracking
 wandb/
+
+# Audit artefacts: raw profiles, traces and timing arrays stay on disk (plan section 9).
+# The summarised JSON they produce is committed; these are the multi-hundred-MB originals.
+*.prof
+*.sqlite
+*.nsys-rep
+*_trace.json
+audit/t1_out/
+audit/t2_out/
+audit/t3_out/
+audit/DONE
+audit/FAILED
+audit/SUMMARY.txt
+audit/M0_AUDIT_*

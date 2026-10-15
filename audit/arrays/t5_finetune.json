@@ -1,0 +1,23 @@
+{
+  "source_log": "/data_new/vchandr2/vla-safety-interp/src/displacement/ft_liftonly.log",
+  "tag": "ESTIMATE (from an existing complete run's log, not re-measured by this audit)",
+  "recipe": "finetune_headinit.py, batch_size 1 x grad_accumulation_steps 8, lr 5e-5, LoRA r32 a16, 2 images + proprio, libero_safety_oa1_mix TFDS",
+  "effective_batch": 8,
+  "n_sit_samples": 3015,
+  "sec_per_it_mean": 5.296004781881272,
+  "sec_per_it_p50": 4.84,
+  "sec_per_it_p95": 5.0,
+  "sec_per_it_min": 0.22026431718061673,
+  "sec_per_it_max": 206.87,
+  "final_progress": {
+    "step": 3000,
+    "total": 3000,
+    "elapsed_sec": 15930
+  },
+  "gpu_utilisation_pct": "NOT MEASURED -- see module docstring",
+  "samples_per_sec_mean": 1.5105726541957922,
+  "samples_per_sec_p50": 1.6528925619834711,
+  "sec_per_it_from_wall": 5.31,
+  "samples_per_sec_from_wall": 1.5065913370998119,
+  "steps_200_projected_sec": 1062.0
+}

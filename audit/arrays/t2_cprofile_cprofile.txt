@@ -1,0 +1,136 @@
+         41863026 function calls (41287240 primitive calls) in 80.382 seconds
+
+   Ordered by: cumulative time
+   List reduced from 4121 to 60 due to restriction <60>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   80.400   80.400 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/runpy.py:260(run_path)
+        1    0.000    0.000   80.389   80.389 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/runpy.py:89(_run_module_code)
+        1    0.000    0.000   80.389   80.389 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/runpy.py:63(_run_code)
+    171/1    0.001    0.000   80.389   80.389 {built-in method builtins.exec}
+        1    0.000    0.000   80.389   80.389 /data_new/vchandr2/vla-safety-interp/src/displacement/rollout_openvla_disp.py:1(<module>)
+        1    0.009    0.009   72.642   72.642 /data_new/vchandr2/vla-safety-interp/src/displacement/rollout_openvla_disp.py:564(main)
+        1    0.011    0.011   72.631   72.631 /data_new/vchandr2/vla-safety-interp/src/displacement/rollout_openvla_disp.py:330(run_one)
+60518/698    0.177    0.000   57.601    0.083 /data_new/vchandr2/fastvla-eval/audit/profile_hooks.py:63(wrapper)
+      236    0.002    0.000   55.232    0.234 /data_new/vchandr2/LIBERO-Safety/libero/libero/envs/env_wrapper.py:253(step)
+      236    0.002    0.000   55.230    0.234 /data_new/vchandr2/LIBERO-Safety/libero/libero/envs/bddl_base_domain.py:1251(step)
+      236    0.020    0.000   53.919    0.228 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/environments/base.py:361(step)
+     5900    0.010    0.000   46.993    0.008 /data_new/vchandr2/physics_safety.py:163(stepped)
+     5900    1.927    0.000   44.918    0.008 /data_new/vchandr2/physics_safety.py:275(_on_substep)
+      452    0.006    0.000   39.794    0.088 /data_new/vchandr2/fastvla-eval/audit/profile_hooks.py:130(_update_clearance)
+      452    0.198    0.000   39.787    0.088 /data_new/vchandr2/physics_safety.py:337(_update_clearance)
+    81068    6.611    0.000   37.380    0.000 /data_new/vchandr2/convex_distance.py:177(gjk_distance)
+   269650   15.112    0.000   28.537    0.000 /data_new/vchandr2/convex_distance.py:135(_closest_on_simplex)
+    47548    0.122    0.000   24.031    0.001 /data_new/vchandr2/convex_distance.py:228(distance)
+       29    0.001    0.000    8.232    0.284 /data_new/vchandr2/fastvla-eval/audit/profile_hooks.py:101(get_action)
+       29    0.001    0.000    8.231    0.284 /data_new/vchandr2/openvla-oft/experiments/robot/robot_utils.py:99(get_action)
+       29    0.004    0.000    8.228    0.284 /data_new/vchandr2/openvla-oft/experiments/robot/openvla_utils.py:715(get_vla_action)
+   590806    3.453    0.000    7.713    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/linalg/linalg.py:329(solve)
+       29    0.015    0.001    7.371    0.254 /home/vchandr2/.cache/huggingface/modules/transformers_modules/openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt/modeling_prismatic.py:944(predict_action)
+        1    0.000    0.000    6.382    6.382 /data_new/vchandr2/openvla-oft/experiments/robot/robot_utils.py:54(get_model)
+        1    0.000    0.000    6.382    6.382 /data_new/vchandr2/openvla-oft/experiments/robot/openvla_utils.py:253(get_vla)
+73892/174    0.056    0.000    4.841    0.028 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/torch/nn/modules/module.py:1507(_wrapped_call_impl)
+73892/174    0.144    0.000    4.841    0.028 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/torch/nn/modules/module.py:1513(_call_impl)
+        2    0.000    0.000    4.339    2.169 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/environments/base.py:216(_initialize_sim)
+        2    0.000    0.000    4.216    2.108 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/utils/binding_utils.py:1070(from_xml_string)
+        2    4.211    2.106    4.212    2.106 {built-in method mujoco._structs.from_xml_string}
+    11809    0.011    0.000    4.111    0.000 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/utils/binding_utils.py:1086(forward)
+    11809    4.099    0.000    4.099    0.000 {built-in method mujoco._functions.mj_forward}
+        6    0.000    0.000    3.960    0.660 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/torch/nn/modules/module.py:1047(to)
+   1620/6    0.480    0.000    3.960    0.660 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/torch/nn/modules/module.py:799(_apply)
+     5900    0.011    0.000    3.901    0.001 /data_new/vchandr2/LIBERO-Safety/libero/libero/envs/bddl_base_domain.py:1263(_pre_action)
+     5900    0.025    0.000    3.890    0.001 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/environments/robot_env.py:558(_pre_action)
+       29    0.002    0.000    3.835    0.132 /home/vchandr2/.cache/huggingface/modules/transformers_modules/openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt/modeling_prismatic.py:877(_regression_or_discrete_prediction)
+    13234    3.826    0.000    3.826    0.000 {method 'to' of 'torch._C.TensorBase' objects}
+        1    0.000    0.000    3.819    3.819 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/transformers/modeling_utils.py:2666(to)
+     5900    0.060    0.000    3.736    0.001 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/robots/single_arm.py:216(control)
+       29    0.000    0.000    3.468    0.120 /home/vchandr2/.cache/huggingface/modules/transformers_modules/openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt/modeling_prismatic.py:438(_process_vision_features)
+       29    0.001    0.000    3.462    0.119 /home/vchandr2/.cache/huggingface/modules/transformers_modules/openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt/modeling_prismatic.py:186(forward)
+      116    0.001    0.000    3.457    0.030 /home/vchandr2/.cache/huggingface/modules/transformers_modules/openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt/modeling_prismatic.py:46(wrapper)
+      116    0.001    0.000    3.457    0.030 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/timm/models/vision_transformer.py:632(get_intermediate_layers)
+      116    0.008    0.000    3.455    0.030 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/timm/models/vision_transformer.py:612(_intermediate_layers)
+     1122    0.002    0.000    3.453    0.003 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/torch/nn/modules/module.py:1146(convert)
+        1    0.000    0.000    3.293    3.293 /data_new/vchandr2/LIBERO-Safety/libero/libero/envs/env_wrapper.py:379(__init__)
+        1    0.000    0.000    3.293    3.293 /data_new/vchandr2/LIBERO-Safety/libero/libero/envs/env_wrapper.py:176(__init__)
+        1    0.000    0.000    3.292    3.292 /data_new/vchandr2/LIBERO-Safety/libero/libero/envs/problems/libero_tabletop_manipulation.py:124(__init__)
+        1    0.000    0.000    3.292    3.292 /data_new/vchandr2/LIBERO-Safety/libero/libero/envs/bddl_base_domain.py:44(__init__)
+        1    0.000    0.000    3.291    3.291 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/environments/manipulation/manipulation_env.py:119(__init__)
+        1    0.000    0.000    3.291    3.291 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/environments/robot_env.py:119(__init__)
+        1    0.000    0.000    3.291    3.291 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/environments/base.py:87(__init__)
+   590806    0.534    0.000    3.158    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/core/fromnumeric.py:2322(any)
+     5900    0.213    0.000    3.047    0.001 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/controllers/osc.py:278(run_controller)
+        1    0.000    0.000    2.704    2.704 /data_new/vchandr2/LIBERO-Safety/libero/libero/envs/env_wrapper.py:284(reset)
+        1    0.000    0.000    2.704    2.704 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/environments/base.py:238(reset)
+   591278    0.880    0.000    2.628    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/core/fromnumeric.py:71(_wrapreduction)
+11754/3930    0.018    0.000    2.604    0.001 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/tensorflow/python/util/traceback_utils.py:152(error_handler)
+     6138    0.278    0.000    2.579    0.000 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/controllers/base_controller.py:125(update)
+
+
+         41863026 function calls (41287240 primitive calls) in 80.382 seconds
+
+   Ordered by: internal time
+   List reduced from 4121 to 60 due to restriction <60>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+   269650   15.112    0.000   28.537    0.000 /data_new/vchandr2/convex_distance.py:135(_closest_on_simplex)
+    81068    6.611    0.000   37.380    0.000 /data_new/vchandr2/convex_distance.py:177(gjk_distance)
+        2    4.211    2.106    4.212    2.106 {built-in method mujoco._structs.from_xml_string}
+    11809    4.099    0.000    4.099    0.000 {built-in method mujoco._functions.mj_forward}
+    13234    3.826    0.000    3.826    0.000 {method 'to' of 'torch._C.TensorBase' objects}
+   590806    3.453    0.000    7.713    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/linalg/linalg.py:329(solve)
+       29    2.461    0.085    2.461    0.085 {method 'cpu' of 'torch._C.TensorBase' objects}
+      116    2.294    0.020    2.294    0.020 {built-in method torch.conv2d}
+     5900    2.012    0.000    2.012    0.000 {built-in method mujoco._functions.mj_step}
+     5900    1.927    0.000   44.918    0.008 /data_new/vchandr2/physics_safety.py:275(_on_substep)
+        6    1.813    0.302    1.813    0.302 {built-in method gc.collect}
+     8288    1.774    0.000    1.774    0.000 {built-in method tensorflow.python._pywrap_tfe.TFE_Py_FastPathExecute}
+     5650    1.724    0.000    2.450    0.000 /data_new/vchandr2/physics_safety.py:208(_carried_now)
+3652150/3652138    1.600    0.000    1.612    0.000 {built-in method builtins.getattr}
+   594170    1.390    0.000    1.390    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+   590806    1.132    0.000    2.123    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/linalg/linalg.py:159(_commonType)
+      225    0.885    0.004    0.900    0.004 {method 'uniform_' of 'torch._C.TensorBase' objects}
+   591278    0.880    0.000    2.628    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/core/fromnumeric.py:71(_wrapreduction)
+  1843123    0.744    0.000    0.744    0.000 {built-in method numpy.asarray}
+    62956    0.733    0.000    0.830    0.000 /data_new/vchandr2/convex_distance.py:125(world)
+  1165458    0.728    0.000    0.728    0.000 /data_new/vchandr2/convex_distance.py:147(<listcomp>)
+        2    0.637    0.319    0.637    0.319 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/utils/binding_utils.py:111(_set_mujoco_context_and_buffers)
+   128856    0.620    0.000    0.760    0.000 /data_new/vchandr2/convex_distance.py:119(world_bound)
+  1181612    0.619    0.000    0.889    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/linalg/linalg.py:135(_makearray)
+      943    0.618    0.001    0.836    0.001 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/environments/base.py:562(check_contact)
+  1207784    0.549    0.000    0.549    0.000 {built-in method numpy.zeros}
+   590806    0.534    0.000    3.158    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/core/fromnumeric.py:2322(any)
+   704810    0.510    0.000    0.531    0.000 {built-in method numpy.array}
+   1620/6    0.480    0.000    3.960    0.660 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/torch/nn/modules/module.py:799(_apply)
+   720121    0.477    0.000    1.298    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/core/fromnumeric.py:53(_wrapfunc)
+    18618    0.471    0.000    0.471    0.000 {built-in method torch._C._nn.linear}
+  1772692    0.404    0.000    0.546    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/linalg/linalg.py:140(isComplexType)
+   350718    0.368    0.000    1.065    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/core/fromnumeric.py:1140(argmax)
+   350718    0.367    0.000    0.367    0.000 {method 'argmax' of 'numpy.ndarray' objects}
+  1181612    0.359    0.000    0.492    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/linalg/linalg.py:153(_realType)
+  1576598    0.307    0.000    1.561    0.000 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/utils/binding_utils.py:567(<lambda>)
+     1572    0.288    0.000    0.487    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/transformers/modeling_utils.py:568(<setcomp>)
+   350720    0.284    0.000    0.284    0.000 {method 'argmin' of 'numpy.ndarray' objects}
+   590806    0.282    0.000    0.282    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/linalg/linalg.py:209(_assert_stacked_square)
+     6138    0.278    0.000    2.579    0.000 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/controllers/base_controller.py:125(update)
+   350720    0.277    0.000    0.803    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/core/fromnumeric.py:1236(argmin)
+   591278    0.275    0.000    0.275    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/core/fromnumeric.py:72(<dictcomp>)
+      470    0.274    0.001    0.358    0.001 /data_new/vchandr2/LIBERO-Safety/libero/libero/envs/bddl_base_domain.py:985(_check_contact)
+  2961564    0.267    0.000    0.271    0.000 {built-in method builtins.issubclass}
+     5900    0.252    0.000    0.260    0.000 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/utils/control_utils.py:43(opspace_matrices)
+    61563    0.249    0.000    0.249    0.000 {method 'items' of 'collections.OrderedDict' objects}
+   590806    0.249    0.000    0.249    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/linalg/linalg.py:203(_assert_stacked_2d)
+   591063    0.240    0.000    0.240    0.000 {method 'astype' of 'numpy.ndarray' objects}
+1836142/1835938    0.220    0.000    0.221    0.000 {built-in method builtins.len}
+      482    0.216    0.000    0.216    0.000 {built-in method mujoco._render.mjr_render}
+     5900    0.213    0.000    3.047    0.001 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/controllers/osc.py:278(run_controller)
+  1572082    0.202    0.000    0.202    0.000 {method 'startswith' of 'str' objects}
+      452    0.198    0.000   39.787    0.088 /data_new/vchandr2/physics_safety.py:337(_update_clearance)
+   590806    0.196    0.000    0.196    0.000 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/numpy/linalg/linalg.py:130(get_linalg_error_extobj)
+  1587673    0.177    0.000    0.180    0.000 {method 'get' of 'dict' objects}
+60518/698    0.177    0.000   57.601    0.083 /data_new/vchandr2/fastvla-eval/audit/profile_hooks.py:63(wrapper)
+198952/918    0.175    0.000    0.193    0.000 /data_new/vchandr2/LIBERO-Safety/third_party/robosuite-1.4/robosuite/utils/mjcf_utils.py:752(find_elements)
+      470    0.161    0.000    0.651    0.001 /data_new/vchandr2/LIBERO-Safety/libero/libero/envs/bddl_base_domain.py:1027(check_robot_contact)
+     3886    0.154    0.000    0.154    0.000 {built-in method torch._C._nn.scaled_dot_product_attention}
+       21    0.149    0.007    0.193    0.009 /data_new/vchandr2/miniconda3/envs/libero-vla/lib/python3.10/site-packages/torch/serialization.py:1367(load_tensor)
+
+

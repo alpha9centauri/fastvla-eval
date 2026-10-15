@@ -1,0 +1,107 @@
+{
+  "distmax_0.5": {
+    "distmax": 0.5,
+    "clearance_every": 25,
+    "n_calls": 1000,
+    "ms_per_call_mean": 64.12253409810364,
+    "ms_per_call_p50": 57.06410575658083,
+    "ms_per_call_p95": 161.42357522621748,
+    "ms_per_call_max": 236.27326823771,
+    "exact_pairs_per_call_mean": 101.092,
+    "exact_pairs_per_call_p95": 235.0,
+    "exact_pairs_per_call_max": 475,
+    "us_per_exact_pair": 634.298798105722,
+    "obstacle_hull_pieces": {
+      "oa1": 248
+    },
+    "rollouts_used": [
+      {
+        "key": "oa1__i00__base",
+        "calls": 452,
+        "steps": 226
+      },
+      {
+        "key": "oa1__i01__base",
+        "calls": 430,
+        "steps": 215
+      },
+      {
+        "key": "oa1__i02__base",
+        "calls": 118,
+        "steps": 209
+      }
+    ],
+    "ms_per_control_step": 128.24506819620728,
+    "note": null
+  },
+  "distmax_0.1": {
+    "distmax": 0.1,
+    "clearance_every": 25,
+    "n_calls": 1000,
+    "ms_per_call_mean": 45.401341788470745,
+    "ms_per_call_p50": 29.992386233061552,
+    "ms_per_call_p95": 103.21409115567803,
+    "ms_per_call_max": 191.96209777146578,
+    "exact_pairs_per_call_mean": 59.749,
+    "exact_pairs_per_call_p95": 180.0,
+    "exact_pairs_per_call_max": 248,
+    "us_per_exact_pair": 759.8678101469606,
+    "obstacle_hull_pieces": {
+      "oa1": 248
+    },
+    "rollouts_used": [
+      {
+        "key": "oa1__i00__base",
+        "calls": 452,
+        "steps": 226
+      },
+      {
+        "key": "oa1__i01__base",
+        "calls": 430,
+        "steps": 215
+      },
+      {
+        "key": "oa1__i02__base",
+        "calls": 118,
+        "steps": 209
+      }
+    ],
+    "ms_per_control_step": 90.80268357694149,
+    "note": null
+  },
+  "distmax_0.05": {
+    "distmax": 0.05,
+    "clearance_every": 25,
+    "n_calls": 1000,
+    "ms_per_call_mean": 24.19072274491191,
+    "ms_per_call_p50": 26.76495723426342,
+    "ms_per_call_p95": 41.68977187946437,
+    "ms_per_call_max": 73.39901011437178,
+    "exact_pairs_per_call_mean": 0.0,
+    "exact_pairs_per_call_p95": 0.0,
+    "exact_pairs_per_call_max": 0,
+    "us_per_exact_pair": null,
+    "obstacle_hull_pieces": {
+      "oa1": 248
+    },
+    "rollouts_used": [
+      {
+        "key": "oa1__i00__base",
+        "calls": 452,
+        "steps": 226
+      },
+      {
+        "key": "oa1__i01__base",
+        "calls": 430,
+        "steps": 215
+      },
+      {
+        "key": "oa1__i02__base",
+        "calls": 118,
+        "steps": 209
+      }
+    ],
+    "ms_per_control_step": 48.38144548982382,
+    "note": "every candidate pair pruned before any exact GJK evaluation; the remaining cost is the per-actor union-hull GJK and the bounding-volume work"
+  }
+}
