@@ -172,3 +172,168 @@ The server has two threads on purpose. The receiver thread polls the socket, run
 queue; the forward thread pops up to B requests that arrived within D ms and runs one GPU
 forward. Preprocessing therefore overlaps with the forward, and the GIL is released for
 the duration of the CUDA call.
+
+---
+
+# M3 results
+
+## Step 0: the contact scan
+
+The monitor walked `data.ncon` twice per MuJoCo substep, building a `data.contact[i]`
+wrapper per contact each time, 25 substeps per control step. Restructured to read
+`dd.contact.geom` and `.dist` as bulk numpy arrays, filter `dist <= CONTACT_DIST_EPS`
+vectorised, and visit only surviving contacts in Python in ascending original index order;
+`fingers`, the robot half of `actor_of` and the obstacle geom set are built once per
+monitor rather than once per substep.
+
+| component | before | after |
+|---|---|---|
+| SafetyMonitor total | 9.48 ms/step | 3.57 ms/step |
+| of which contact scan | 8.19 ms/step | **2.25 ms/step** (3.6x) |
+| whole control step | 66.70 ms | 61.52 ms (-7.8%) |
+
+Measured with identical instrumentation on both sides. A first attempt with per-part
+timers claimed 17.29 -> 4.04 ms, but that compared unequal instrumentation — the
+restructure stops calling `_carried_now`, so a wrapper disappeared with it.
+
+**Parity: bit-exact.** 700 monitor records compared field for field including the
+`pairs`-list order, 0 mismatches. Coverage had to be fixed first: the parity set was three
+oa1 rollouts, and oa1 has 0 collisions, so it would have compared 700 records without ever
+entering the restructured branch. With oa2/oa3/oa5 included the comparison covers 80
+records with an obstacle contact, 2507 contact pairs and 94 records with a carried object.
+
+## Step 3: parity
+
+gate10, N=1, B=1, D=0, `PARITY=1`:
+
+| check | required | measured |
+|---|---|---|
+| collisions | 10/10 | **10/10** |
+| mean min clearance | 0.00 cm | **0.000 cm** |
+| completions | 3/10 on starts 4, 6, 9 | **3/10 on [4, 6, 9]** |
+
+Action parity against chunks recorded from the unmodified `curve_gate.py`: **9 of 10
+rollouts bit-exact, max |action diff| 0.000e+00 over 312 of 342 chunks**, including all
+four 300-step rollouts. The exception is oa1 init 6: bit-exact for 3 chunks, then departs
+at control step 24 (3.9e-03) and runs 239 steps against the reference's ~208; both collide
+and both complete. So max |action diff| is 0 where trajectories stay aligned and is **not**
+0 across the whole set. oa1 init 6 is independently marginal — it is the other start that
+differed between M0 and M2 — and the policy now runs in a different process from the env,
+so kernel selection and EGL rendering need not match the in-process reference bit for bit.
+
+## Step 3: worker scaling
+
+As specified, B=N and D=10 ms, on gate10:
+
+| N | B | rollouts/h | GPU 1 sm | gate collisions | completions |
+|---|---|---|---|---|---|
+| 1 | 1 | 114.5 | 17.6% | 10/10 | 3 on [4,6,9] |
+| 2 | 2 | 209.1 | 31.7% | 10/10 | 3 on [4,6,9] |
+| 4 | 4 | 292.3 | 44.0% | 10/10 | **1 on [9]** |
+| 8 | 8 | **OOM** | — | — | — |
+
+`B=N=8` OOMs the **server**: eight EGL render contexts plus B=8 activations do not fit
+beside ~20 GB of weights on a 23.68 GB card. And B>1 costs the gate's completions — at
+N=4 only 23 of 339 forwards actually batched (6.8%), and that was enough to flip inits 4
+and 6 to the 300-step cap. At N=1 and N=2 every forward was B=1 and the results matched
+parity exactly.
+
+Since batching is worth at most 1.27x, strict B=1 with more workers is better on both
+axes:
+
+| N | B | manifest | rollouts/h | GPU 1 sm | result |
+|---|---|---|---|---|---|
+| 4 | 1 | gate10 | 326.9 | 46.5% | 10/10, 3 completions |
+| 8 | 1 | gate10 | 342.4 | 50.6% | 10/10, 3 completions |
+| 16 | 1 | gate10 | 422.8 | 59.9% | 10/10, 3 completions |
+| 8 | 1 | ctrl60 | **539.3 / 542.1** | 85.0% | 29 coll, 25 compl |
+| 16 | 1 | ctrl60 | 544.7 | 80.8% | 29 coll, 25 compl |
+
+gate10 is too small to measure scaling past N≈4 — 10 rollouts over 16 workers measures
+latency, not throughput — so the knee is read off ctrl60: **N=16 beats N=8 by 1% and the
+GPU is already at 85%, so the knee is N=8.** DESIGN.md predicted the knee near N=4 and
+600-730 rollouts/h; the knee came later and the ceiling lower.
+
+## Step 3: batch delay sweep, and why batching is not the default
+
+ctrl60, N=8, B=4. Acceptance is 29 collisions and completions in {25, 26}.
+
+| D (ms) | rollouts/h | collisions | completions | Tier B | diagonal | collision flips | max Δclearance |
+|---|---|---|---|---|---|---|---|
+| 1 | 623.5 | 30 | 24 | **FAIL** | 50/60 | 5 | 5.33 cm |
+| 5 | 621.7 | 30 | 24 | **FAIL** | 54/60 | 3 | 5.23 cm |
+| 10 | 623.5 | 29 | 26 | passes aggregate | 53/60 | **4** | 5.48 cm |
+| 20 | 618.1 | 29 | 24 | **FAIL** | 53/60 | 4 | 5.37 cm |
+
+D barely moves throughput (618-624 rollouts/h) and does not fix correctness. **D = 10 ms
+passes the aggregate acceptance by cancellation, not by being right**: it still flips four
+collision verdicts (oa3 inits 0, 1, 6 and oa5 init 6) and they happen to net to zero. That
+is precisely why the per-start transition matrix was asked for — the aggregate count can
+pass while individual starts are wrong.
+
+So B=4 buys **+15%** throughput for 3-5 wrong collision verdicts out of 60 and clearance
+errors up to 5.5 cm. **Default: B=1.**
+
+## Step 3: Tier B at the accepted configuration
+
+ctrl60, N=8, B=1, D=0 — and N=16 for comparison:
+
+| | collisions | completions | transition matrix | collision flips | completion flips | max Δclearance |
+|---|---|---|---|---|---|---|
+| M2 reference | 29 | 25 | — | — | — | — |
+| **N=8, B=1** | **29** | **25** | 60/60 diagonal | **0** | **0** | 0.1437 cm |
+| N=16, B=1 | 29 | 25 | 60/60 diagonal | **0** | **0** | **0.0000 cm** |
+
+The transition matrix is perfectly diagonal at both: (0,0)→(0,0) 11, (0,1)→(0,1) 20,
+(1,0)→(1,0) 24, (1,1)→(1,1) 5. At N=16 the 60-start run is **bit-identical** to M2's
+single-process run, including oa6_L1 init 6 — the start that flipped between M0 and M2.
+
+## Per-request overhead, and what M3b would be compared against
+
+Worker-side round trip, decomposed with the server's own reported timings:
+
+| | N=8, B=1 | N=8, B=4, D=10 |
+|---|---|---|
+| round trip (worker side) | 1014.7 ms (p95 1198.3) | 794.7 ms (p95 983.5) |
+| server queue wait | 803.8 ms | 289.6 ms |
+| GPU forward | 184.7 ms | 473.2 ms |
+| **transport + server preprocessing** | **26.2 ms (2.6%)** | **32.0 ms (4.0%)** |
+
+The queue wait dominates because the GPU is saturated: eight workers share one card, so a
+request waits behind others' forwards. That is the intended state — it is what 85% GPU
+utilisation means — and it does not affect results, because each worker blocks and the
+environment does not advance while it waits.
+
+**M3a's serving overhead is 26 ms per request**, of which ~22 ms is the server's CPU
+preprocessing (crop, normalise, tokenise) and the remainder the ZeroMQ round trip for a
+393 KB request. That is the number a Triton comparison would be made against.
+
+## Step 4: M3b could not be run here
+
+Triton for Linux x86_64 ships only as a container image, and this account cannot run
+containers: no `tritonserver` binary; `/usr/bin/docker` exists but `/var/run/docker.sock`
+is `root:docker` mode 660 and this account's only group is `vchandr2`; no podman,
+singularity, apptainer, nerdctl or enroot; PyPI's `tritonserver` is a 1.5 KB
+`0.0.1.dev0` placeholder. The model repository entry and Python backend are written and
+complete in `fastvla/server/triton/` — same `BatchedPolicy`, `max_batch_size 4`,
+`dynamic_batching` with `max_queue_delay_microseconds 10000` — so the comparison is one
+`docker run` away once container access exists, which is a prerequisite of M5 anyway.
+
+Recorded now so it is a prediction and not a later rationalisation: Triton's dynamic
+batcher is a better implementation of a mechanism these measurements show is not the
+bottleneck (1.27x at best, flat past B=4, and it breaks per-start verdicts). Its value to
+this project is the packaging, metrics and model-repository story in M5.
+
+## Where M3 leaves the harness
+
+| | M0 | M2 | M3 (N=8, B=1) |
+|---|---|---|---|
+| rollouts/hour | 71.2 | 166.5 | **542.1** |
+| vs previous | — | 2.34x | **3.26x** |
+| vs M0 | — | 2.34x | **7.6x** |
+| GPU 1 utilisation | 9.9% | 26.1% | **85.0%** |
+| collisions / completions | 29 / 26 | 29 / 25 | 29 / 25 |
+
+The GPU is now the bottleneck at 85% utilisation and 6 forwards/s, so the next gain has to
+come from the forward itself — which is M4, and which the M2 handoff already flagged as
+having crossed the audit's 30%-of-step threshold.

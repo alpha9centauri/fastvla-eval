@@ -1,0 +1,41 @@
+{
+  "delay2_n8b4_d10": {
+    "n_workers": 8,
+    "round_trip_ms": 794.7179690123855,
+    "queue_wait_ms": 289.6035518690387,
+    "forward_ms": 473.1574263971888,
+    "transport_plus_prep_ms": 31.956990746158137,
+    "p95_round_trip_ms": 983.5205970623065,
+    "requests": 2016
+  },
+  "ctrl60_n8b1": {
+    "n_workers": 8,
+    "round_trip_ms": null,
+    "queue_wait_ms": 799.0727268116749,
+    "forward_ms": null,
+    "transport_plus_prep_ms": null,
+    "p95_round_trip_ms": null,
+    "requests": 2040
+  },
+  "ctrl60_n16b1": {
+    "n_workers": 16,
+    "round_trip_ms": null,
+    "queue_wait_ms": 2203.105610306985,
+    "forward_ms": null,
+    "transport_plus_prep_ms": null,
+    "p95_round_trip_ms": null,
+    "requests": 2040
+  },
+  "overhead_n8b1": {
+    "n_workers": 8,
+    "round_trip_ms": 1014.6739242331647,
+    "queue_wait_ms": 803.7557473679224,
+    "forward_ms": 184.70119304940866,
+    "transport_plus_prep_ms": 26.21698381583362,
+    "p95_round_trip_ms": 1198.2752384850755,
+    "requests": 2040,
+    "collisions": 29,
+    "completions": 25,
+    "rollouts_per_hour": 542.0652287975942
+  }
+}
