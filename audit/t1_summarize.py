@@ -6,6 +6,8 @@ inputs. Anything else means the audit is invalid.
 
 Env: LOG (the run log), DMON (nvidia-smi dmon samples), OUT
 """
+
+import contextlib
 import json
 import os
 import re
@@ -18,13 +20,13 @@ DMON = os.environ.get("DMON", "")
 OUT = os.environ["OUT"]
 
 rows = []
-for line in open(LOG, errors="replace"):
-    if line.startswith("[ROLLOUT] {"):
-        try:
-            rows.append(json.loads(line[len("[ROLLOUT] "):]))
-        except json.JSONDecodeError:
-            pass
-txt = open(LOG, errors="replace").read()
+with open(LOG, errors="replace") as fh:
+    for line in fh:
+        if line.startswith("[ROLLOUT] {"):
+            with contextlib.suppress(json.JSONDecodeError):
+                rows.append(json.loads(line[len("[ROLLOUT] ") :]))
+with open(LOG, errors="replace") as fh:
+    txt = fh.read()
 
 m = re.search(r"\[INFO\] done in (\d+)s", txt)
 rollout_wall = int(m.group(1)) if m else None
@@ -32,7 +34,8 @@ rollout_wall = int(m.group(1)) if m else None
 wrapper = None
 for p in ("DONE", "FAILED"):
     if os.path.exists(p):
-        wrapper = open(p).read().strip()
+        with open(p) as fh:
+            wrapper = fh.read().strip()
         mm = re.search(r"wall=(\d+)h(\d+)m(\d+)s", wrapper)
         if mm:
             total_wall = int(mm.group(1)) * 3600 + int(mm.group(2)) * 60 + int(mm.group(3))
@@ -47,9 +50,12 @@ steps = np.array([int(r.get("steps", 0)) for r in rows], dtype=np.int64)
 
 res = dict(
     tag="MEASURED",
-    log=LOG, n_rollouts=n,
-    collisions=coll, completions=comp,
-    reference_collisions=29, reference_completions_allowed=[25, 26],
+    log=LOG,
+    n_rollouts=n,
+    collisions=coll,
+    completions=comp,
+    reference_collisions=29,
+    reference_completions_allowed=[25, 26],
     total_steps=int(steps.sum()),
     steps_mean=float(steps.mean()) if n else None,
     steps_min=int(steps.min()) if n else None,
@@ -71,18 +77,20 @@ if total_wall:
 if DMON and os.path.exists(DMON):
     sm = {0: [], 1: []}
     mem = {0: [], 1: []}
-    for line in open(DMON, errors="replace"):
-        if line.lstrip().startswith("#"):
-            continue
-        f = line.split()
-        if len(f) < 6:
-            continue
-        try:
-            gpu = int(f[1]); sm_v = int(f[2]); mem_v = int(f[3])
-        except ValueError:
-            continue
-        if gpu in sm:
-            sm[gpu].append(sm_v); mem[gpu].append(mem_v)
+    with open(DMON, errors="replace") as fh:
+        for line in fh:
+            if line.lstrip().startswith("#"):
+                continue
+            f = line.split()
+            if len(f) < 6:
+                continue
+            try:
+                gpu, sm_v, mem_v = int(f[1]), int(f[2]), int(f[3])
+            except ValueError:
+                continue
+            if gpu in sm:
+                sm[gpu].append(sm_v)
+                mem[gpu].append(mem_v)
     for g in (0, 1):
         if sm[g]:
             a = np.array(sm[g])
@@ -101,14 +109,22 @@ for r in rows:
     d["completions"] += bool(r.get("completion"))
     d["steps"] += int(r.get("steps", 0))
 res["per_task"] = per_task
-res["per_start"] = [dict(tag=r["tag"], init=r["init_idx"], collision=bool(r["collision"]),
-                         completion=bool(r["completion"]), steps=int(r["steps"]),
-                         min_clearance_cm=r.get("min_clearance_cm"))
-                    for r in rows]
+res["per_start"] = [
+    dict(
+        tag=r["tag"],
+        init=r["init_idx"],
+        collision=bool(r["collision"]),
+        completion=bool(r["completion"]),
+        steps=int(r["steps"]),
+        min_clearance_cm=r.get("min_clearance_cm"),
+    )
+    for r in rows
+]
 
-valid = (n == 60 and coll == 29 and comp in (25, 26))
+valid = n == 60 and coll == 29 and comp in (25, 26)
 res["VALID"] = bool(valid)
-json.dump(res, open(OUT + ".json", "w"), indent=2)
+with open(OUT + ".json", "w") as fh:
+    json.dump(res, fh, indent=2)
 np.savez_compressed(OUT + ".npz", steps=steps)
 
 for k, v in res.items():
@@ -117,8 +133,11 @@ for k, v in res.items():
 print(f"[T1] per task: {json.dumps(per_task)}")
 print(f"[T1] -> {OUT}.json")
 if not valid:
-    print(f"[T1] INVALID: got {n} rollouts, {coll} collisions, {comp} completions; "
-          f"need 60, 29, 25 or 26. STOP.", flush=True)
+    print(
+        f"[T1] INVALID: got {n} rollouts, {coll} collisions, {comp} completions; "
+        f"need 60, 29, 25 or 26. STOP.",
+        flush=True,
+    )
     sys.exit(3)
 print("[T1] VALID: matches the GPU 1 reference.", flush=True)
 print("T1 SUMMARY DONE", flush=True)

@@ -18,6 +18,7 @@ worth a number.
 
 Env: ACTIONS_NPZ, OUT, [N_CALLS=1000, CLEARANCE_EVERY=25, DISTMAX_LIST=0.5,0.1,0.05]
 """
+
 import json
 import os
 import random
@@ -28,16 +29,14 @@ DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
 for p in ("/data_new/vchandr2", "/data_new/vchandr2/openvla-oft", DISP):
     sys.path.insert(0, p)
 
-import rollout_bootstrap  # noqa: F401
-
-import numpy as np
-from libero.libero import benchmark, get_libero_path
-from libero.libero.envs import OffScreenRenderEnv
-
 import convex_distance as cd
 import geom_shift
+import numpy as np
 import physics_safety as ps
+import rollout_bootstrap  # noqa: F401
 from experiments.robot.libero.libero_utils import get_libero_dummy_action
+from libero.libero import benchmark, get_libero_path
+from libero.libero.envs import OffScreenRenderEnv
 from physics_safety import SafetyMonitor, unwrap_domain
 
 ACTIONS_NPZ = os.environ["ACTIONS_NPZ"]
@@ -47,19 +46,21 @@ CLEARANCE_EVERY = int(os.environ.get("CLEARANCE_EVERY", "25"))
 DISTMAX_LIST = [float(x) for x in os.environ.get("DISTMAX_LIST", "0.5,0.1,0.05").split(",")]
 SEED, WAIT, RES = 7, 10, 256
 
-TASKS = [dict(suite="obstacle_avoidance", level=0, lid=0, tag="oa1"),
-         dict(suite="obstacle_avoidance", level=0, lid=1, tag="oa2"),
-         dict(suite="obstacle_avoidance", level=0, lid=2, tag="oa3"),
-         dict(suite="obstacle_avoidance", level=0, lid=3, tag="oa4"),
-         dict(suite="obstacle_avoidance", level=0, lid=4, tag="oa5"),
-         dict(suite="obstacle_avoidance", level=1, lid=0, tag="oa6_L1")]
+TASKS = [
+    dict(suite="obstacle_avoidance", level=0, lid=0, tag="oa1"),
+    dict(suite="obstacle_avoidance", level=0, lid=1, tag="oa2"),
+    dict(suite="obstacle_avoidance", level=0, lid=2, tag="oa3"),
+    dict(suite="obstacle_avoidance", level=0, lid=3, tag="oa4"),
+    dict(suite="obstacle_avoidance", level=0, lid=4, tag="oa5"),
+    dict(suite="obstacle_avoidance", level=1, lid=0, tag="oa6_L1"),
+]
 BY_TAG = {t["tag"]: t for t in TASKS}
 
 # ---- instrumentation: count exact pair evaluations, time each clearance call ----------
 STATE = dict(pairs=0)
 _orig_distance = cd.DistanceEngine.distance
 _orig_uc = ps.SafetyMonitor._update_clearance
-REC = []       # (wall_sec, n_exact_pairs, min_clearance_m)
+REC = []  # (wall_sec, n_exact_pairs, min_clearance_m)
 
 
 def _counting_distance(self, data, g1, g2):
@@ -93,11 +94,14 @@ def replay(tag, ii, acts, distmax, clearance_every, budget):
     ts = bd[spec["suite"]]()
     task = ts.get_task_by_level_id(spec["level"], spec["lid"])
     init = np.asarray(ts.get_task_init_states(spec["level"], spec["lid"]))
-    bddl = os.path.join(get_libero_path("bddl_files"), task.problem_folder,
-                        f"L{spec['level']}", task.bddl_file)
+    bddl = os.path.join(
+        get_libero_path("bddl_files"), task.problem_folder, f"L{spec['level']}", task.bddl_file
+    )
     seed = SEED + ii
     random.seed(seed)
-    np.random.seed(seed)
+    # Legacy global seeding on purpose: rollout_openvla_disp.py seeds exactly this way
+    # (line 341), and the replay must reproduce its scene setup bit for bit.
+    np.random.seed(seed)  # noqa: NPY002
     env = OffScreenRenderEnv(bddl_file_name=bddl, camera_heights=RES, camera_widths=RES)
     env.seed(seed)
     env.reset()
@@ -138,29 +142,37 @@ for distmax in DISTMAX_LIST:
         got += n
         pieces[tag] = pc
         used.append(dict(key=k, calls=n, steps=int(len(a))))
-        print(f"[T4] distmax={distmax} {k}: {n} clearance calls "
-              f"({got}/{N_CALLS})", flush=True)
+        print(f"[T4] distmax={distmax} {k}: {n} clearance calls ({got}/{N_CALLS})", flush=True)
     A = np.array(REC, dtype=np.float64)
     ms = A[:, 0] * 1000.0
     pr = A[:, 1]
     results[f"distmax_{distmax}"] = dict(
-        distmax=distmax, clearance_every=CLEARANCE_EVERY, n_calls=int(len(A)),
-        ms_per_call_mean=float(ms.mean()), ms_per_call_p50=float(np.percentile(ms, 50)),
-        ms_per_call_p95=float(np.percentile(ms, 95)), ms_per_call_max=float(ms.max()),
+        distmax=distmax,
+        clearance_every=CLEARANCE_EVERY,
+        n_calls=int(len(A)),
+        ms_per_call_mean=float(ms.mean()),
+        ms_per_call_p50=float(np.percentile(ms, 50)),
+        ms_per_call_p95=float(np.percentile(ms, 95)),
+        ms_per_call_max=float(ms.max()),
         exact_pairs_per_call_mean=float(pr.mean()),
         exact_pairs_per_call_p95=float(np.percentile(pr, 95)),
         exact_pairs_per_call_max=int(pr.max()),
         us_per_exact_pair=(float(1e6 * A[:, 0].sum() / pr.sum()) if pr.sum() > 0 else None),
-        obstacle_hull_pieces=pieces, rollouts_used=used,
-        ms_per_control_step=float(ms.mean() * 2.0),   # substep 1 and substep 25
+        obstacle_hull_pieces=pieces,
+        rollouts_used=used,
+        ms_per_control_step=float(ms.mean() * 2.0),  # substep 1 and substep 25
     )
     np.savez_compressed(f"{OUT}_distmax{distmax}.npz", calls=A)
     r = results[f"distmax_{distmax}"]
-    print(f"[T4] distmax={distmax}: {r['n_calls']} calls, "
-          f"mean {r['ms_per_call_mean']:.2f} ms, p95 {r['ms_per_call_p95']:.2f} ms, "
-          f"{r['exact_pairs_per_call_mean']:.1f} exact pairs/call, "
-          f"{r['us_per_exact_pair']:.0f} us/pair", flush=True)
+    print(
+        f"[T4] distmax={distmax}: {r['n_calls']} calls, "
+        f"mean {r['ms_per_call_mean']:.2f} ms, p95 {r['ms_per_call_p95']:.2f} ms, "
+        f"{r['exact_pairs_per_call_mean']:.1f} exact pairs/call, "
+        f"{r['us_per_exact_pair']:.0f} us/pair",
+        flush=True,
+    )
 
-json.dump(results, open(OUT + ".json", "w"), indent=2)
+with open(OUT + ".json", "w") as fh:
+    json.dump(results, fh, indent=2)
 print(f"[T4] -> {OUT}.json")
 print("T4 LABELER DONE", flush=True)

@@ -6,7 +6,7 @@ the script and the artifact it came from.
 
 Env: OUT (default ../AUDIT.md is NOT used; writes audit/AUDIT.md)
 """
-import glob
+
 import json
 import os
 from datetime import datetime
@@ -21,7 +21,7 @@ def load(p):
     try:
         with open(os.path.join(A, p)) as f:
             return json.load(f)
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         return None
 
 
@@ -67,19 +67,29 @@ W("")
 meta = (t2 or {}).get("meta", {})
 W("| field | value |")
 W("|---|---|")
-W(f"| card | {meta.get('device_name', 'n/a')} (GPU 1 of 2; GPU 0 belongs to another user and was not touched) |")
+W(
+    f"| card | {meta.get('device_name', 'n/a')} (GPU 1 of 2; GPU 0 belongs to another user and was not touched) |"
+)
 _drv = "n/a"
 if meta.get("nvidia_smi"):
-    _drv = (meta["nvidia_smi"].splitlines()[0].split(",")[-1].strip()
-            + " (2 x RTX A5000, 24564 MiB each)")
+    _drv = (
+        meta["nvidia_smi"].splitlines()[0].split(",")[-1].strip()
+        + " (2 x RTX A5000, 24564 MiB each)"
+    )
 W(f"| nvidia driver | {_drv} |")
-W(f"| torch | {meta.get('torch', 'n/a')} (cuda {meta.get('cuda', 'n/a')}, cudnn {meta.get('cudnn', 'n/a')}) |")
+W(
+    f"| torch | {meta.get('torch', 'n/a')} (cuda {meta.get('cuda', 'n/a')}, cudnn {meta.get('cudnn', 'n/a')}) |"
+)
 W(f"| numpy | {meta.get('numpy', 'n/a')} |")
-W("| conda env | `libero-vla` (python 3.10.20) — every rollout; `libero-vla-finetune` for the pandas-only trace analysis |")
+W(
+    "| conda env | `libero-vla` (python 3.10.20) — every rollout; `libero-vla-finetune` for the pandas-only trace analysis |"
+)
 W(f"| driver | `rollout_openvla_disp.py` md5 `{meta.get('driver_md5', 'n/a')}`, unmodified |")
 W("| checkpoint | `…--headinit--17500_chkpt` (15 G), loaded merged-direct |")
 W("| profilers | nsys 2023.1.2.43, ncu 2023.1.0.0, torch.profiler (torch 2.2.0) — all present |")
-W("| `kernel.perf_event_paranoid` | 3 — so `ncu` CPU sampling and some metric sets need elevation that is unavailable. GPU kernel metrics and `nsys` CUDA/OSRT tracing work; nsys was run with `--sample=none --backtrace=none`. |")
+W(
+    "| `kernel.perf_event_paranoid` | 3 — so `ncu` CPU sampling and some metric sets need elevation that is unavailable. GPU kernel metrics and `nsys` CUDA/OSRT tracing work; nsys was run with `--sample=none --backtrace=none`. |"
+)
 W("")
 W("Two documented deviations from the handoff's pasted reference command, both in")
 W("`t1_e2e.sh`: `OUTDIR` points at `audit/t1_out` so no reference file is touched, and")
@@ -102,17 +112,29 @@ if t1:
     W(f"| **collisions** | **{t1['collisions']}/60** (reference 29/60) |")
     W(f"| **completions** | **{t1['completions']}/60** (reference 25 or 26) |")
     W(f"| validity gate | {'**PASS**' if t1['VALID'] else '**FAIL**'} |")
-    W(f"| wall-clock, rollout loop | {f(t1.get('rollout_loop_wall_sec'), 0)} s = {f((t1.get('rollout_loop_wall_sec') or 0) / 3600.0)} h |")
-    W(f"| wall-clock, incl. model load | {f(t1.get('wrapper_total_wall_sec'), 0)} s (startup {f(t1.get('model_load_and_startup_sec'), 0)} s) |")
-    W(f"| **rollouts per hour** | **{f(t1.get('rollouts_per_hour_loop'))}** (loop only); {f(t1.get('rollouts_per_hour_incl_startup'))} incl. startup |")
+    W(
+        f"| wall-clock, rollout loop | {f(t1.get('rollout_loop_wall_sec'), 0)} s = {f((t1.get('rollout_loop_wall_sec') or 0) / 3600.0)} h |"
+    )
+    W(
+        f"| wall-clock, incl. model load | {f(t1.get('wrapper_total_wall_sec'), 0)} s (startup {f(t1.get('model_load_and_startup_sec'), 0)} s) |"
+    )
+    W(
+        f"| **rollouts per hour** | **{f(t1.get('rollouts_per_hour_loop'))}** (loop only); {f(t1.get('rollouts_per_hour_incl_startup'))} incl. startup |"
+    )
     W(f"| seconds per rollout | {f(t1.get('sec_per_rollout_loop'), 1)} |")
-    W(f"| total control steps | {t1['total_steps']} (mean {f(t1.get('steps_mean'), 1)}/rollout, {t1.get('n_at_300_cap')} hit the 300 cap) |")
+    W(
+        f"| total control steps | {t1['total_steps']} (mean {f(t1.get('steps_mean'), 1)}/rollout, {t1.get('n_at_300_cap')} hit the 300 cap) |"
+    )
     W(f"| **control steps per second** | **{f(t1.get('steps_per_sec_loop'))}** |")
     W(f"| ms per control step | {f(t1.get('ms_per_step_loop'), 1)} |")
     if "gpu1_sm_util_pct_mean" in t1:
-        W(f"| **GPU 1 SM utilisation** | **mean {f(t1['gpu1_sm_util_pct_mean'], 1)}%**, p50 {f(t1.get('gpu1_sm_util_pct_p50'), 1)}%, p95 {f(t1.get('gpu1_sm_util_pct_p95'), 1)}% over {t1.get('gpu1_n_samples')} 1 Hz samples |")
+        W(
+            f"| **GPU 1 SM utilisation** | **mean {f(t1['gpu1_sm_util_pct_mean'], 1)}%**, p50 {f(t1.get('gpu1_sm_util_pct_p50'), 1)}%, p95 {f(t1.get('gpu1_sm_util_pct_p95'), 1)}% over {t1.get('gpu1_n_samples')} 1 Hz samples |"
+        )
     if "gpu0_sm_util_pct_mean" in t1:
-        W(f"| GPU 0 SM utilisation during the run | mean {f(t1['gpu0_sm_util_pct_mean'], 1)}% — not ours, sampled only to show it was left alone |")
+        W(
+            f"| GPU 0 SM utilisation during the run | mean {f(t1['gpu0_sm_util_pct_mean'], 1)}% — not ours, sampled only to show it was left alone |"
+        )
     W("")
     W("Per task:")
     W("")
@@ -138,7 +160,7 @@ W("")
 npz = os.path.join(A, "arrays/t2_alltasks.npz")
 if t2 and os.path.exists(npz):
     z = np.load(npz, allow_pickle=True)
-    comp = [str(c) for c in z["components"]]
+    comp = [str(c) for c in z["components"]]  # noqa: F841 (kept for idx below)
     per = z["per_step"]
     n = len(per)
     idx = {c: i for i, c in enumerate(comp)}
@@ -153,25 +175,33 @@ if t2 and os.path.exists(npz):
     tot = accounted.sum()
     calls = t2.get("calls", {})
     n_fwd = calls.get("forward", 0)
-    W(f"{n} control steps over {t2['meta']['env'].get('SMOKE_INITS')} rollouts. "
-      f"Accounted wall-clock {f(tot, 1)} s = {f(1000 * tot / n, 1)} ms per control step.")
+    W(
+        f"{n} control steps over {t2['meta']['env'].get('SMOKE_INITS')} rollouts. "
+        f"Accounted wall-clock {f(tot, 1)} s = {f(1000 * tot / n, 1)} ms per control step."
+    )
     W("")
     W("| component | ms/step mean | ms/step p95 | share of step | calls |")
     W("|---|---|---|---|---|")
-    rows = [("MuJoCo physics (`sim.step` x25 substeps)", sim, calls.get("sim")),
-            ("camera rendering (2 x 256x256)", render, calls.get("render")),
-            ("SafetyMonitor total (contacts + clearance)", mon, calls.get("monitor")),
-            ("&nbsp;&nbsp;of which GJK clearance", clr, calls.get("clearance")),
-            ("OSC controller + obs assembly (derived)", derived, None),
-            ("obs preprocessing (`prepare_observation`)", prep, calls.get("prep")),
-            ("**policy forward (`get_action`)**", fwd, n_fwd),
-            ("`process_action`", proc, calls.get("proc"))]
+    rows = [
+        ("MuJoCo physics (`sim.step` x25 substeps)", sim, calls.get("sim")),
+        ("camera rendering (2 x 256x256)", render, calls.get("render")),
+        ("SafetyMonitor total (contacts + clearance)", mon, calls.get("monitor")),
+        ("&nbsp;&nbsp;of which GJK clearance", clr, calls.get("clearance")),
+        ("OSC controller + obs assembly (derived)", derived, None),
+        ("obs preprocessing (`prepare_observation`)", prep, calls.get("prep")),
+        ("**policy forward (`get_action`)**", fwd, n_fwd),
+        ("`process_action`", proc, calls.get("proc")),
+    ]
     for name, v, c in rows:
         share = 100.0 * v.sum() / tot if tot else 0.0
-        W(f"| {name} | {f(1000 * v.mean())} | {f(1000 * np.percentile(v, 95))} | "
-          f"{f(share, 1)}% | {c if c is not None else 'derived'} |")
-    W(f"| **total (`env.step` + prep + forward + process)** | **{f(1000 * accounted.mean())}** | "
-      f"{f(1000 * np.percentile(accounted, 95))} | 100% | |")
+        W(
+            f"| {name} | {f(1000 * v.mean())} | {f(1000 * np.percentile(v, 95))} | "
+            f"{f(share, 1)}% | {c if c is not None else 'derived'} |"
+        )
+    W(
+        f"| **total (`env.step` + prep + forward + process)** | **{f(1000 * accounted.mean())}** | "
+        f"{f(1000 * np.percentile(accounted, 95))} | 100% | |"
+    )
     W("")
     if n_fwd:
         amort = fwd.sum() / n
@@ -182,18 +212,24 @@ if t2 and os.path.exists(npz):
         W("")
     P = z["pairs_per_clearance_call"]
     if len(P):
-        W(f"Hull pairs evaluated exactly per clearance call: mean {f(P.mean(), 1)}, "
-          f"p95 {f(np.percentile(P, 95), 0)}, max {P.max()}, over {len(P)} calls.")
+        W(
+            f"Hull pairs evaluated exactly per clearance call: mean {f(P.mean(), 1)}, "
+            f"p95 {f(np.percentile(P, 95), 0)}, max {P.max()}, over {len(P)} calls."
+        )
         W("")
     if t2tot:
-        W(f"GPU side, `torch.profiler` over a 12-forward window "
-          f"(`t2_run.sh torch 1`, `arrays/t2_torch_torchprof_cuda.txt`, chrome trace saved): "
-          f"self CUDA {f(t2tot['self_cuda_us_total'] / 1000.0, 1)} ms vs self CPU "
-          f"{f(t2tot['self_cpu_us_total'] / 1000.0, 1)} ms across {t2tot['n_events']} op types. "
-          f"CUDA activity tracing inflates CPU time, so the table above is from the timers-only run.")
+        W(
+            f"GPU side, `torch.profiler` over a 12-forward window "
+            f"(`t2_run.sh torch 1`, `arrays/t2_torch_torchprof_cuda.txt`, chrome trace saved): "
+            f"self CUDA {f(t2tot['self_cuda_us_total'] / 1000.0, 1)} ms vs self CPU "
+            f"{f(t2tot['self_cpu_us_total'] / 1000.0, 1)} ms across {t2tot['n_events']} op types. "
+            f"CUDA activity tracing inflates CPU time, so the table above is from the timers-only run."
+        )
         W("")
-    W("`cProfile` over one rollout is saved as `arrays/t2_cprofile.prof` "
-      "(+ `_cprofile.txt`, cumulative and tottime views) for the Python-level call counts.")
+    W(
+        "`cProfile` over one rollout is saved as `arrays/t2_cprofile.prof` "
+        "(+ `_cprofile.txt`, cumulative and tottime views) for the Python-level call counts."
+    )
 else:
     W("_not yet run_")
 W("")
@@ -213,7 +249,9 @@ if t3:
     W(f"| **GPU busy** | **{f(t3.get('gpu_busy_pct'), 1)}%** ({f(t3.get('gpu_busy_sec'))} s) |")
     W(f"| **GPU idle** | **{f(t3.get('gpu_idle_pct'), 1)}%** ({f(t3.get('gpu_idle_sec'))} s) |")
     W(f"| idle gaps | {t3.get('n_gaps')} |")
-    W(f"| gap length mean / p50 / p95 / max | {f(t3.get('gap_ms_mean'))} / {f(t3.get('gap_ms_p50'))} / {f(t3.get('gap_ms_p95'))} / {f(t3.get('gap_ms_max'))} ms |")
+    W(
+        f"| gap length mean / p50 / p95 / max | {f(t3.get('gap_ms_mean'))} / {f(t3.get('gap_ms_p50'))} / {f(t3.get('gap_ms_p95'))} / {f(t3.get('gap_ms_max'))} ms |"
+    )
     W("")
     W("Most of those 86k gaps are micro-holes between consecutive kernels inside one forward")
     W("(p50 1.2 us), which is not the question. The macro gaps — windows where the device has")
@@ -222,17 +260,25 @@ if t3:
     W("| macro gap threshold | count | total | mean | p50 | max | share of window |")
     W("|---|---|---|---|---|---|---|")
     for lab, thr in (("macro10", "> 10 ms"), ("macro50", "> 50 ms")):
-        W(f"| {thr} | {t3.get(lab + '_n')} | {f(t3.get(lab + '_total_sec'), 1)} s | "
-          f"{f(t3.get(lab + '_ms_mean'), 0)} ms | {f(t3.get(lab + '_ms_p50'), 0)} ms | "
-          f"{f(t3.get(lab + '_ms_max'), 0)} ms | {f(t3.get(lab + '_pct_of_window'), 1)}% |")
-    W(f"| > 50 ms, excluding the one startup gap | {t3.get('macro50_excl_largest_n')} | | "
-      f"{f(t3.get('macro50_excl_largest_ms_mean'), 0)} ms | "
-      f"{f(t3.get('macro50_excl_largest_ms_p50'), 0)} ms | "
-      f"{f(t3.get('macro50_excl_largest_ms_max'), 0)} ms | |")
+        W(
+            f"| {thr} | {t3.get(lab + '_n')} | {f(t3.get(lab + '_total_sec'), 1)} s | "
+            f"{f(t3.get(lab + '_ms_mean'), 0)} ms | {f(t3.get(lab + '_ms_p50'), 0)} ms | "
+            f"{f(t3.get(lab + '_ms_max'), 0)} ms | {f(t3.get(lab + '_pct_of_window'), 1)}% |"
+        )
+    W(
+        f"| > 50 ms, excluding the one startup gap | {t3.get('macro50_excl_largest_n')} | | "
+        f"{f(t3.get('macro50_excl_largest_ms_mean'), 0)} ms | "
+        f"{f(t3.get('macro50_excl_largest_ms_p50'), 0)} ms | "
+        f"{f(t3.get('macro50_excl_largest_ms_max'), 0)} ms | |"
+    )
     W("")
-    W(f"**Answer to the plan's question.** Yes, and by a lot. The GPU is idle")
-    W(f"{f(t3.get('gpu_idle_pct'), 1)}% of the traced window, and {f(t3.get('macro50_pct_of_window'), 1)}% of it sits in just")
-    W(f"{t3.get('macro50_n')} gaps averaging {f(t3.get('macro50_ms_mean'), 0)} ms each. That count is not a coincidence:")
+    W("**Answer to the plan's question.** Yes, and by a lot. The GPU is idle")
+    W(
+        f"{f(t3.get('gpu_idle_pct'), 1)}% of the traced window, and {f(t3.get('macro50_pct_of_window'), 1)}% of it sits in just"
+    )
+    W(
+        f"{t3.get('macro50_n')} gaps averaging {f(t3.get('macro50_ms_mean'), 0)} ms each. That count is not a coincidence:"
+    )
     W("a 300-step rollout re-plans every 8 steps, so there are 300/8 = 37 forward passes and")
     W("therefore 37 windows in which the process is stepping MuJoCo and running the GJK labeler")
     W("with nothing resident on the device. The gap length is the independent check — 8 control")
@@ -251,14 +297,18 @@ W("involved. `distmax` 0.5 is the production cutoff (`physics_safety.DEFAULT_DIS
 W("the tighter values test the plan's claim that a wide cutoff defeats the pruning.")
 W("")
 if t4:
-    W("| distmax (m) | calls | ms/call mean | ms/call p95 | exact hull pairs/call mean | us per exact pair | ms per control step |")
+    W(
+        "| distmax (m) | calls | ms/call mean | ms/call p95 | exact hull pairs/call mean | us per exact pair | ms per control step |"
+    )
     W("|---|---|---|---|---|---|---|")
     for k in sorted(t4, key=lambda x: -t4[x]["distmax"]):
         d = t4[k]
         prod = " **(production)**" if abs(d["distmax"] - 0.5) < 1e-9 else ""
-        W(f"| {d['distmax']}{prod} | {d['n_calls']} | {f(d['ms_per_call_mean'])} | "
-          f"{f(d['ms_per_call_p95'])} | {f(d['exact_pairs_per_call_mean'], 1)} | "
-          f"{f(d['us_per_exact_pair'], 0)} | {f(d['ms_per_control_step'])} |")
+        W(
+            f"| {d['distmax']}{prod} | {d['n_calls']} | {f(d['ms_per_call_mean'])} | "
+            f"{f(d['ms_per_call_p95'])} | {f(d['exact_pairs_per_call_mean'], 1)} | "
+            f"{f(d['us_per_exact_pair'], 0)} | {f(d['ms_per_control_step'])} |"
+        )
     W("")
     pieces = next(iter(t4.values())).get("obstacle_hull_pieces", {})
     if pieces:
@@ -280,11 +330,19 @@ W("")
 if t5:
     W("| metric | value |")
     W("|---|---|")
-    W(f"| recipe | batch 1 x grad-accum 8 (effective {t5['effective_batch']}), lr 5e-5, LoRA r32/a16 |")
-    W(f"| s/iteration, median of {t5['n_sit_samples']} tqdm samples | {f(t5.get('sec_per_it_p50'))} |")
-    W(f"| s/iteration from total wall | {f(t5.get('sec_per_it_from_wall'))} ({t5['final_progress']['step']} steps in {t5['final_progress']['elapsed_sec']} s) |")
+    W(
+        f"| recipe | batch 1 x grad-accum 8 (effective {t5['effective_batch']}), lr 5e-5, LoRA r32/a16 |"
+    )
+    W(
+        f"| s/iteration, median of {t5['n_sit_samples']} tqdm samples | {f(t5.get('sec_per_it_p50'))} |"
+    )
+    W(
+        f"| s/iteration from total wall | {f(t5.get('sec_per_it_from_wall'))} ({t5['final_progress']['step']} steps in {t5['final_progress']['elapsed_sec']} s) |"
+    )
     W(f"| **samples/s (median)** | **{f(t5.get('samples_per_sec_p50'))}** |")
-    W(f"| samples/s (from total wall, includes checkpoint saves) | {f(t5.get('samples_per_sec_from_wall'))} |")
+    W(
+        f"| samples/s (from total wall, includes checkpoint saves) | {f(t5.get('samples_per_sec_from_wall'))} |"
+    )
     W(f"| 200 steps would take | {f((t5.get('steps_200_projected_sec') or 0) / 60.0, 1)} min |")
     W("| GPU utilisation during training | **NOT MEASURED** |")
     W("")
@@ -310,23 +368,31 @@ W("")
 W("| quantity | method A | method B |")
 W("|---|---|---|")
 if t1 and t3:
-    W(f"| GPU utilisation during eval | `nvidia-smi dmon`, 1 Hz over the full 60-start run: "
-      f"**{f(t1.get('gpu1_sm_util_pct_mean'), 1)}%** | nsys kernel intervals over one rollout: "
-      f"**{f(t3.get('gpu_busy_pct'), 1)}%** |")
+    W(
+        f"| GPU utilisation during eval | `nvidia-smi dmon`, 1 Hz over the full 60-start run: "
+        f"**{f(t1.get('gpu1_sm_util_pct_mean'), 1)}%** | nsys kernel intervals over one rollout: "
+        f"**{f(t3.get('gpu_busy_pct'), 1)}%** |"
+    )
 if t3 and t2 and os.path.exists(npz):
-    W(f"| time between forward passes | nsys macro gap mean: "
-      f"**{f(t3.get('macro50_ms_mean'), 0)} ms** | 8 control steps x Table 2's per-step total: "
-      f"**{f(8 * 1000 * accounted.mean(), 0)} ms** |")
+    W(
+        f"| time between forward passes | nsys macro gap mean: "
+        f"**{f(t3.get('macro50_ms_mean'), 0)} ms** | 8 control steps x Table 2's per-step total: "
+        f"**{f(8 * 1000 * accounted.mean(), 0)} ms** |"
+    )
 if t4 and t2 and os.path.exists(npz):
     k05 = next((v for v in t4.values() if abs(v["distmax"] - 0.5) < 1e-9), None)
     if k05:
-        W(f"| GJK clearance cost per control step | Table 4 replay, 2 calls x "
-          f"{f(k05['ms_per_call_mean'])} ms: **{f(k05['ms_per_control_step'], 1)} ms** | "
-          f"Table 2 in-loop timer: **{f(1000 * clr.mean())} ms** |")
+        W(
+            f"| GJK clearance cost per control step | Table 4 replay, 2 calls x "
+            f"{f(k05['ms_per_call_mean'])} ms: **{f(k05['ms_per_control_step'], 1)} ms** | "
+            f"Table 2 in-loop timer: **{f(1000 * clr.mean())} ms** |"
+        )
 if t1 and t2 and os.path.exists(npz):
-    W(f"| per-control-step wall-clock | Table 1, uninstrumented, 15935 steps: "
-      f"**{f(t1.get('ms_per_step_loop'), 1)} ms** | Table 2, instrumented, 6 tasks: "
-      f"**{f(1000 * accounted.mean(), 1)} ms** (+{f(100 * (accounted.mean() * 1000 / t1['ms_per_step_loop'] - 1), 1)}% instrumentation) |")
+    W(
+        f"| per-control-step wall-clock | Table 1, uninstrumented, 15935 steps: "
+        f"**{f(t1.get('ms_per_step_loop'), 1)} ms** | Table 2, instrumented, 6 tasks: "
+        f"**{f(1000 * accounted.mean(), 1)} ms** (+{f(100 * (accounted.mean() * 1000 / t1['ms_per_step_loop'] - 1), 1)}% instrumentation) |"
+    )
 W("")
 
 # ---------------------------------------------------------------- decision --------
@@ -340,18 +406,22 @@ if t2 and os.path.exists(npz):
     W("simulator plus labeler dominate, M3 is the big win and M4 is small; if the forward")
     W("dominates, reverse the order of 3 and 4.*")
     W("")
-    W("**Evidence.** The policy forward is "
-      f"**{f(fwd_share, 1)}%** of step time amortised ({f(1000 * fwd.sum() / max(1, n_fwd), 0)} ms per call, once per")
+    W(
+        "**Evidence.** The policy forward is "
+        f"**{f(fwd_share, 1)}%** of step time amortised ({f(1000 * fwd.sum() / max(1, n_fwd), 0)} ms per call, once per"
+    )
     W(f"8-step chunk). The simulator plus labeler are **{f(sim_lab_share, 1)}%**, of which the")
-    W(f"SafetyMonitor alone is **{f(lab_share, 1)}%**. The GPU is idle "
-      f"{f((t3 or {}).get('gpu_idle_pct'), 1)}% of the time.")
+    W(
+        f"SafetyMonitor alone is **{f(lab_share, 1)}%**. The GPU is idle "
+        f"{f((t3 or {}).get('gpu_idle_pct'), 1)}% of the time."
+    )
     W("")
-    W(f"**Decision: keep the plan's order — M2, then M3, then M4.** The forward is far below the")
+    W("**Decision: keep the plan's order — M2, then M3, then M4.** The forward is far below the")
     W("30% threshold, so M4 cannot be the big win: even making the forward free would remove")
     W(f"only {f(fwd_share, 1)}% of step time. M3 keeps its place ahead of M4.")
     W("")
     W("**One correction to the plan's framing.** The plan calls M2 a 3-4 day warm-up and M3 the")
-    W(f"big win. The measurement says M2 is the biggest single win available: the labeler is")
+    W("big win. The measurement says M2 is the biggest single win available: the labeler is")
     W(f"{f(lab_share, 1)}% of step time on its own, and it is pure CPU Python. cProfile over one")
     W("rollout (`arrays/t2_cprofile_cprofile.txt`) puts the whole cost in two functions —")
     W("`convex_distance._closest_on_simplex` at 269,650 calls and 15.1 s of self time, and")
@@ -365,7 +435,9 @@ if t2 and os.path.exists(npz):
     W("   `sim.step`, so it fires per MuJoCo substep; with `clearance_every=25` and 25 substeps")
     W("   per control step, clearance is computed on substep 1 and substep 25. Any speedup claim")
     W("   must use that factor of 2.")
-    W("2. **Pruning already works; the cutoff is what costs.** Table 4's sweep shows the exact-pair")
+    W(
+        "2. **Pruning already works; the cutoff is what costs.** Table 4's sweep shows the exact-pair"
+    )
     W("   count falling from 101.1 per call at the production `distmax=0.5` to **zero** at 0.05,")
     W("   where every candidate is pruned before any exact GJK call — and yet the call still costs")
     W("   24.19 ms. So roughly 24 ms of the 64 ms is the per-actor union-hull GJK and the")
@@ -382,38 +454,50 @@ W("")
 W("| plan's figure (section) | plan said | measured | verdict |")
 W("|---|---|---|---|")
 if t1:
-    W(f"| 60 starts for one arm, wall-clock (3.4) | \"on the order of 1-2 hours on GPU 1\" | "
-      f"**{f((t1.get('rollout_loop_wall_sec') or 0) / 60.0, 0)} min** ({f(t1.get('rollouts_per_hour_loop'), 1)} rollouts/h) | "
-      "faster than estimated; the low end was right |")
+    W(
+        f'| 60 starts for one arm, wall-clock (3.4) | "on the order of 1-2 hours on GPU 1" | '
+        f"**{f((t1.get('rollout_loop_wall_sec') or 0) / 60.0, 0)} min** ({f(t1.get('rollouts_per_hour_loop'), 1)} rollouts/h) | "
+        "faster than estimated; the low end was right |"
+    )
 if t2 and os.path.exists(npz) and t4:
     k05 = next((v for v in t4.values() if abs(v["distmax"] - 0.5) < 1e-9), None)
-    W(f"| labeler cost per step (3.3) | \"about 543 ms per step with a wide cutoff\", "
-      "explicitly NOT independently measured | "
-      f"**{f(1000 * clr.mean())} ms/step** in-loop, **{f(k05['ms_per_control_step'], 1)} ms/step** on replay | "
-      f"the real figure is ~{f(543.0 / (1000 * clr.mean()), 1)}x smaller than the plan's number |")
-    W(f"| per-step split (3.4) | \"the split is NOT measured\" | "
-      f"labeler {f(100 * mon.sum() / tot, 1)}%, forward {f(100 * fwd.sum() / tot, 1)}%, "
-      f"controller+obs {f(100 * derived.sum() / tot, 1)}%, prep {f(100 * prep.sum() / tot, 1)}%, "
-      f"physics {f(100 * sim.sum() / tot, 1)}%, render {f(100 * render.sum() / tot, 1)}% | measured, Table 2 |")
-    W(f"| forward latency (10) | \"7B at ~50-100 ms per call is plausible\" | "
-      f"**{f(1000 * fwd.sum() / max(1, n_fwd), 0)} ms per call** at batch 1 | "
-      "2-4x slower than the guess; two 256x256 images plus a ~57-token action span |")
+    W(
+        f'| labeler cost per step (3.3) | "about 543 ms per step with a wide cutoff", '
+        "explicitly NOT independently measured | "
+        f"**{f(1000 * clr.mean())} ms/step** in-loop, **{f(k05['ms_per_control_step'], 1)} ms/step** on replay | "
+        f"the real figure is ~{f(543.0 / (1000 * clr.mean()), 1)}x smaller than the plan's number |"
+    )
+    W(
+        f'| per-step split (3.4) | "the split is NOT measured" | '
+        f"labeler {f(100 * mon.sum() / tot, 1)}%, forward {f(100 * fwd.sum() / tot, 1)}%, "
+        f"controller+obs {f(100 * derived.sum() / tot, 1)}%, prep {f(100 * prep.sum() / tot, 1)}%, "
+        f"physics {f(100 * sim.sum() / tot, 1)}%, render {f(100 * render.sum() / tot, 1)}% | measured, Table 2 |"
+    )
+    W(
+        f'| forward latency (10) | "7B at ~50-100 ms per call is plausible" | '
+        f"**{f(1000 * fwd.sum() / max(1, n_fwd), 0)} ms per call** at batch 1 | "
+        "2-4x slower than the guess; two 256x256 images plus a ~57-token action span |"
+    )
 if t4:
     pc = next(iter(t4.values())).get("obstacle_hull_pieces", {})
     if pc.get("oa1"):
-        W(f"| oa1 obstacle hull pieces (3.3) | \"the oa1 bottle is 244 hull pieces\" | "
-          f"**{pc['oa1']}** collision geoms across the declared obstacle | close; 244 was about right |")
+        W(
+            f'| oa1 obstacle hull pieces (3.3) | "the oa1 bottle is 244 hull pieces" | '
+            f"**{pc['oa1']}** collision geoms across the declared obstacle | close; 244 was about right |"
+        )
 if t5:
-    W(f"| fine-tune iteration time (4.5) | \"~4.8 s/it at effective batch 8\" | "
-      f"**{f(t5.get('sec_per_it_p50'))} s/it** median, {f(t5.get('sec_per_it_from_wall'))} s/it from total wall | "
-      "the estimate was accurate |")
+    W(
+        f'| fine-tune iteration time (4.5) | "~4.8 s/it at effective batch 8" | '
+        f"**{f(t5.get('sec_per_it_p50'))} s/it** median, {f(t5.get('sec_per_it_from_wall'))} s/it from total wall | "
+        "the estimate was accurate |"
+    )
 W("")
 W("Two the audit does **not** settle, and why:")
 W("")
 W("- **Rendering looks too cheap.** 1.21 ms/step for two 256x256 camera renders is suspiciously")
 W("  low. `MjSim.render` is timed, but robosuite may be doing part of the work elsewhere in")
 W("  `_get_observations`, which would land in the derived controller/obs row (17.86 ms/step)")
-W("  instead. Before M3 leans on \"rendering is free\", that row should be split properly.")
+W('  instead. Before M3 leans on "rendering is free", that row should be split properly.')
 W("  Flagged rather than claimed.")
 W("- **Training GPU utilisation**, for the reason in Table 5.")
 W("")

@@ -7,6 +7,7 @@ on the device.
 
 Env: CSV (an nsys cuda_gpu_trace csv), OUT
 """
+
 import glob
 import json
 import os
@@ -60,7 +61,9 @@ gaps = M[1:, 0] - M[:-1, 1]
 gaps = gaps[gaps > 0]
 
 res = dict(
-    source_csv=CSV, n_kernel_rows=int(len(s)), n_busy_intervals=int(len(M)),
+    source_csv=CSV,
+    n_kernel_rows=int(len(s)),
+    n_busy_intervals=int(len(M)),
     traced_window_sec=window / 1e9,
     gpu_busy_sec=busy / 1e9,
     gpu_busy_pct=100.0 * busy / window if window > 0 else None,
@@ -99,7 +102,8 @@ if len(g50) > 1:
     res["macro50_excl_largest_ms_p50"] = float(np.percentile(g, 50) / 1e6)
     res["macro50_excl_largest_ms_max"] = float(g.max() / 1e6)
 np.savez_compressed(OUT + ".npz", gap_ns=gaps, busy_intervals=M)
-json.dump(res, open(OUT + ".json", "w"), indent=2)
+with open(OUT + ".json", "w") as fh:
+    json.dump(res, fh, indent=2)
 for k, v in res.items():
     print(f"[T3] {k}: {v}")
 print("T3 GAPS DONE", flush=True)

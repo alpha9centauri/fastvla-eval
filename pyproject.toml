@@ -12,14 +12,34 @@ requires-python = ">=3.10"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-extend-exclude = ["audit/t1_out", "audit/traces"]
+# audit/run_with_alert.py is a verbatim copy of research code (see its header and
+# audit/PROVENANCE.txt). It is excluded so no formatter or fixer can touch it; its md5 is
+# checked by tests/test_wrapper_copy_verbatim.py.
+extend-exclude = ["audit/t1_out", "audit/traces", "audit/run_with_alert.py"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RET", "PTH", "NPY"]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RET", "NPY"]
 ignore = [
   "E501",    # line length is enforced by the formatter
   "B008",    # function call in default arg: common and deliberate in configs
+  "C408",    # dict(a=1) over {"a": 1}: the research code this interoperates with uses the
+             # call form throughout (e.g. the driver's TASKS list), and matching it matters
+             # more than the micro-optimisation.
 ]
+
+# PTH (pathlib-over-os.path) is deliberately not selected. Every module here mirrors or
+# calls into research code that uses os.path, and the audit scripts are read side by side
+# with it; switching idiom inside the seam would make the diff harder to follow than the
+# rule is worth.
+
+[tool.ruff.lint.per-file-ignores]
+# These scripts must mutate sys.path and import `rollout_bootstrap` before anything that
+# pulls in openvla_utils -- the stub shim is what keeps TensorFlow out of inference. The
+# import order is a hard requirement from PROJECT_HANDOFF.md, not a style slip.
+"audit/t2_breakdown.py" = ["E402"]
+"audit/t4_labeler.py" = ["E402"]
+"bench/*.py" = ["E402"]
+"fastvla/labeler/bench_stages.py" = ["E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["fastvla"]

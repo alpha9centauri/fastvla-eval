@@ -14,19 +14,20 @@ says not to start without a second card.
 
 Env: LOG, OUT
 """
+
 import json
 import os
 import re
 
 import numpy as np
 
-LOG = os.environ.get(
-    "LOG", "/data_new/vchandr2/vla-safety-interp/src/displacement/ft_liftonly.log")
+LOG = os.environ.get("LOG", "/data_new/vchandr2/vla-safety-interp/src/displacement/ft_liftonly.log")
 OUT = os.environ["OUT"]
 BATCH, ACCUM = 1, 8
 EFFECTIVE_BATCH = BATCH * ACCUM
 
-txt = open(LOG, errors="replace").read()
+with open(LOG, errors="replace") as fh:
+    txt = fh.read()
 sit = np.array([float(m) for m in re.findall(r"([0-9.]+)s/it", txt)], dtype=np.float64)
 its = np.array([float(m) for m in re.findall(r"([0-9.]+)it/s", txt)], dtype=np.float64)
 if len(its):
@@ -36,14 +37,13 @@ prog = re.findall(r"(\d+)/(\d+) \[(\d+):(\d{2}):(\d{2})<", txt)
 final = None
 if prog:
     step, total, h, m, s = prog[-1]
-    final = dict(step=int(step), total=int(total),
-                 elapsed_sec=int(h) * 3600 + int(m) * 60 + int(s))
+    final = dict(step=int(step), total=int(total), elapsed_sec=int(h) * 3600 + int(m) * 60 + int(s))
 
 res = dict(
     source_log=LOG,
     tag="ESTIMATE (from an existing complete run's log, not re-measured by this audit)",
     recipe="finetune_headinit.py, batch_size 1 x grad_accumulation_steps 8, lr 5e-5, "
-           "LoRA r32 a16, 2 images + proprio, libero_safety_oa1_mix TFDS",
+    "LoRA r32 a16, 2 images + proprio, libero_safety_oa1_mix TFDS",
     effective_batch=EFFECTIVE_BATCH,
     n_sit_samples=int(len(sit)),
     sec_per_it_mean=float(sit.mean()) if len(sit) else None,
@@ -64,7 +64,8 @@ if final and final["step"]:
     res["steps_200_projected_sec"] = 200 * wall_per_it
 
 np.savez_compressed(OUT + ".npz", sec_per_it=sit)
-json.dump(res, open(OUT + ".json", "w"), indent=2)
+with open(OUT + ".json", "w") as fh:
+    json.dump(res, fh, indent=2)
 for k, v in res.items():
     if k not in ("source_log", "recipe"):
         print(f"[T5] {k}: {v}")

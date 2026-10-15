@@ -1,4 +1,4 @@
-"""Per-component timers for the existing rollout driver, applied by monkeypatch.
+r"""Per-component timers for the existing rollout driver, applied by monkeypatch.
 
 The driver (`rollout_openvla_disp.py`) is a regression reference and must not be edited
 or copied, so nothing here touches it. Instead the functions and methods it calls are
@@ -25,15 +25,16 @@ Buckets are cut at each prepare_observation call, which is the first thing the d
 does in a control-step iteration. The WAIT=10 dummy steps run before the first
 prepare_observation and land in a "warmup" bucket that the summary drops.
 """
+
 import json
 import time
 from collections import Counter, defaultdict
 
-STEPS = []            # one dict per control step: component -> seconds
-CALLS = Counter()      # component -> number of calls
-PAIRS = []             # hull pairs per _update_clearance call
+STEPS = []  # one dict per control step: component -> seconds
+CALLS = Counter()  # component -> number of calls
+PAIRS = []  # hull pairs per _update_clearance call
 _cur = {"b": None}
-_prof = {"p": None}    # optional torch.profiler handle, stepped on each forward
+_prof = {"p": None}  # optional torch.profiler handle, stepped on each forward
 
 
 def _bucket():
@@ -70,6 +71,7 @@ def _timed(name, fn, new_bucket=False, count_pairs=False):
         finally:
             b[name] += time.perf_counter() - t0
             CALLS[name] += 1
+
     return wrapper
 
 
@@ -81,11 +83,11 @@ def install(count_pairs=True):
     the clean per-step breakdown is taken with it off. Pair counts come from a separate
     run with it on.
     """
-    import robosuite.utils.binding_utils as bu
-    from experiments.robot.libero import run_libero_eval as rle
-    from experiments.robot import robot_utils as ru
-    import physics_safety as ps
     import convex_distance as cd
+    import physics_safety as ps
+    import robosuite.utils.binding_utils as bu
+    from experiments.robot import robot_utils as ru
+    from experiments.robot.libero import run_libero_eval as rle
     from libero.libero.envs import OffScreenRenderEnv
 
     patched = {}
@@ -109,6 +111,7 @@ def install(count_pairs=True):
             p = _prof["p"]
             if p is not None:
                 p.step()
+
     ru.get_action = get_action
     patched["get_action"] = "experiments.robot.robot_utils"
 
@@ -137,6 +140,7 @@ def install(count_pairs=True):
             b["clearance"] += time.perf_counter() - t0
             CALLS["clearance"] += 1
             PAIRS.append(CALLS["gjk_pair"] - n0)
+
     ps.SafetyMonitor._update_clearance = _update_clearance
     patched["SafetyMonitor._update_clearance"] = "physics_safety"
 
@@ -153,13 +157,26 @@ def install(count_pairs=True):
 def save(path, meta):
     flush()
     import numpy as np
+
     keys = sorted({k for s in STEPS for k in s} - {"_warmup"})
     real = [s for s in STEPS if "_warmup" not in s]
     arr = np.array([[s.get(k, 0.0) for k in keys] for s in real], dtype=np.float64)
-    np.savez_compressed(path + ".npz", components=np.array(keys), per_step=arr,
-                        pairs_per_clearance_call=np.array(PAIRS, dtype=np.int64))
+    np.savez_compressed(
+        path + ".npz",
+        components=np.array(keys),
+        per_step=arr,
+        pairs_per_clearance_call=np.array(PAIRS, dtype=np.int64),
+    )
     with open(path + ".json", "w") as f:
-        json.dump(dict(meta=meta, components=keys, calls=dict(CALLS),
-                       n_control_steps=len(real), n_warmup_buckets=len(STEPS) - len(real)),
-                  f, indent=2)
+        json.dump(
+            dict(
+                meta=meta,
+                components=keys,
+                calls=dict(CALLS),
+                n_control_steps=len(real),
+                n_warmup_buckets=len(STEPS) - len(real),
+            ),
+            f,
+            indent=2,
+        )
     return keys, arr
