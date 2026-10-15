@@ -12,7 +12,10 @@ Deliberately-empty package markers are listed in ALLOWED_EMPTY.
 """
 
 import os
+import shutil
 import subprocess
+
+import pytest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -22,10 +25,24 @@ ALLOWED_EMPTY = set()
 
 
 def tracked_files():
-    out = subprocess.run(
-        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
-    ).stdout
-    return [f for f in out.splitlines() if f]
+    """Tracked files per git.
+
+    Skips only when git is genuinely unavailable -- no binary, or no repository, as in the
+    GPU image which installs no git. An unexpected git FAILURE is raised, not skipped: a
+    guard that swallowed any non-zero exit here would have hidden a real image bug, where
+    /opt/fastvla was root-owned and `git ls-files` returned 128 with "detected dubious
+    ownership". That is the sort of thing this test exists to surface.
+    """
+    if shutil.which("git") is None:
+        pytest.skip("git binary not available (e.g. inside the GPU image)")
+    if not os.path.isdir(os.path.join(ROOT, ".git")):
+        pytest.skip("no .git directory (repository not in the build context)")
+    r = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=False)
+    if r.returncode != 0:
+        raise AssertionError(
+            f"git ls-files failed in {ROOT} (exit {r.returncode}): {r.stderr.strip()}"
+        )
+    return [f for f in r.stdout.splitlines() if f]
 
 
 def test_no_empty_tracked_sources():

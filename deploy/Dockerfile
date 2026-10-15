@@ -52,8 +52,20 @@ RUN python3 -m pip install --no-cache-dir \
 
 # Non-root. UID 1000 so a bind-mounted results directory stays writable by the host user.
 RUN groupadd -g 1000 fastvla && useradd -m -u 1000 -g 1000 fastvla
+
+# Create and chown the workdir BEFORE copying into it. `WORKDIR` creates the directory as
+# root, and `COPY --chown` only changes the ownership of the copied contents, not of the
+# directory itself -- so /opt/fastvla stayed root-owned while the container runs as uid
+# 1000. That made `git ls-files` fail with "detected dubious ownership" (exit 128) and
+# pytest unable to write its cache. Both showed up only when the suite ran inside the
+# image.
+RUN mkdir -p /opt/fastvla && chown fastvla:fastvla /opt/fastvla
 WORKDIR /opt/fastvla
 COPY --chown=fastvla:fastvla . /opt/fastvla
+
+# No `git config --system safe.directory` here, unlike the CPU image: this image installs
+# no git, so that line would fail the build with "git: not found". The chown above is the
+# fix that matters; tests/test_no_empty_sources.py skips in this image for want of git.
 
 # Build the C++ labeler IN the image, so the artefact matches the image's toolchain
 # rather than the host's. -O3 -fopenmp, and deliberately no -march=native: M2 measured

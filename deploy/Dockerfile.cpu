@@ -27,8 +27,21 @@ RUN pip install --no-cache-dir \
       ruff==${RUFF_VERSION}
 
 RUN groupadd -g 1000 fastvla && useradd -m -u 1000 -g 1000 fastvla
+
+# Create and chown the workdir BEFORE copying into it. `WORKDIR` creates the directory as
+# root, and `COPY --chown` only changes the ownership of the copied contents, not of the
+# directory itself -- so /opt/fastvla stayed root-owned while the container runs as uid
+# 1000. That made `git ls-files` fail with "detected dubious ownership" (exit 128) and
+# pytest unable to write its cache. Both showed up only when the suite ran inside the
+# image.
+RUN mkdir -p /opt/fastvla && chown fastvla:fastvla /opt/fastvla
 WORKDIR /opt/fastvla
 COPY --chown=fastvla:fastvla . /opt/fastvla
+
+# Belt and braces: if the image is run as some other user (docker run --user 0), the
+# ownership check would fire again. --system applies to every user, and is set here while
+# still root.
+RUN git config --system --add safe.directory /opt/fastvla
 USER fastvla
 
 # Build the labeler and prove it imports, in the image.
