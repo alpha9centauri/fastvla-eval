@@ -1,0 +1,5 @@
+# displacement test, started 2026-10-15 10:23:03
+# cmd: bash /data_new/vchandr2/fastvla-eval/bench/incontainer_run.sh
+[INCONTAINER] image: /home/vchandr2/images/tritonserver_23.07-py3.sif
+[RUN] m5_incontainer_n8: 60 rollouts, N=8, B=1, D=0.0 ms, parity=False
+server exited early with 1; see logs/server.log

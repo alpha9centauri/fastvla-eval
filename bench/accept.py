@@ -20,8 +20,10 @@ import sys
 
 import numpy as np
 
-ROOT = "/data_new/vchandr2/fastvla-eval"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# bench/runs/ is not committed, so a fresh clone uses the exported reference rows instead.
 REFERENCE = os.path.join(ROOT, "bench/runs/ctrl60_n16b1/merged.json")
+REFERENCE_EXPORT = os.path.join(ROOT, "bench/out/reference_ctrl60.json")
 
 
 def load_rows(path):
@@ -30,9 +32,16 @@ def load_rows(path):
     return m, {(r["tag"], r["init_idx"]): r for r in m["rows"]}
 
 
+def load_reference():
+    path = REFERENCE if os.path.exists(REFERENCE) else REFERENCE_EXPORT
+    if not os.path.exists(path):
+        raise SystemExit(f"no acceptance reference: tried {REFERENCE} and {REFERENCE_EXPORT}")
+    return load_rows(path)
+
+
 def check(run_dir, label=None):
     label = label or os.path.basename(run_dir.rstrip("/"))
-    _ref_m, ref = load_rows(REFERENCE)
+    _ref_m, ref = load_reference()
     m, got = load_rows(os.path.join(run_dir, "merged.json"))
     keys = sorted(ref, key=lambda k: (k[0], k[1]))
     missing = [k for k in keys if k not in got]

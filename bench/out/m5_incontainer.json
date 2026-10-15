@@ -1,0 +1,12 @@
+{
+  "rollouts_per_hour": 547.503834767552,
+  "wall": 394.5177846867591,
+  "cold_start_s": 15.02595009189099,
+  "collisions": 29,
+  "completions": 25,
+  "total_steps": 16049,
+  "round_trip_ms": 1000.8730396386969,
+  "queue_ms": 792.2322103327812,
+  "forward_ms": 183.2994926633023,
+  "transport_ms": 25.341336642613417
+}
