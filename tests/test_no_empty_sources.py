@@ -10,6 +10,7 @@ pytest noticed; `audit/t2_breakdown.py` stayed empty until a run produced no out
 
 Deliberately-empty package markers are listed in ALLOWED_EMPTY.
 """
+
 import os
 import subprocess
 
@@ -19,8 +20,9 @@ ALLOWED_EMPTY = {"fastvla/__init__.py"}
 
 
 def tracked_files():
-    out = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True,
-                         check=True).stdout
+    out = subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout
     return [f for f in out.splitlines() if f]
 
 
@@ -46,8 +48,9 @@ def test_key_scripts_have_plausible_size():
         "fastvla/labeler/src/gjk.hpp": 5000,
         "fastvla/labeler/src/labeler.hpp": 6000,
     }
-    small = {f: os.path.getsize(os.path.join(ROOT, f))
-             for f, m in minimums.items()
-             if os.path.exists(os.path.join(ROOT, f))
-             and os.path.getsize(os.path.join(ROOT, f)) < m}
+    small = {
+        f: os.path.getsize(os.path.join(ROOT, f))
+        for f, m in minimums.items()
+        if os.path.exists(os.path.join(ROOT, f)) and os.path.getsize(os.path.join(ROOT, f)) < m
+    }
     assert not small, f"suspiciously small: {small}"

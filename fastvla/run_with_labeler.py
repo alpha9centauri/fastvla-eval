@@ -15,14 +15,19 @@ from the research tree.
 Env: TARGET (script to run), LABELER, [LABELER_LEVEL, LABELER_THREADS,
      REDIRECT_WRITE="<basename>:<dest path>"], plus whatever the target reads.
 """
+
 import builtins
 import os
 import runpy
 import sys
 
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
-for p in ("/data_new/vchandr2", "/data_new/vchandr2/openvla-oft", DISP,
-          os.path.dirname(os.path.dirname(os.path.abspath(__file__)))):
+for p in (
+    "/data_new/vchandr2",
+    "/data_new/vchandr2/openvla-oft",
+    DISP,
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+):
     sys.path.insert(0, p)
 
 import rollout_bootstrap  # noqa: F401, E402
@@ -31,8 +36,11 @@ from fastvla.labeler import patch  # noqa: E402
 
 TARGET = os.environ["TARGET"]
 level = patch.install()
-print(f"[LABELER] LABELER={os.environ.get('LABELER', 'python')} level={level} "
-      f"threads={os.environ.get('LABELER_THREADS', '1')} target={TARGET}", flush=True)
+print(
+    f"[LABELER] LABELER={os.environ.get('LABELER', 'python')} level={level} "
+    f"threads={os.environ.get('LABELER_THREADS', '1')} target={TARGET}",
+    flush=True,
+)
 
 _redirect = os.environ.get("REDIRECT_WRITE", "")
 if _redirect:
@@ -40,8 +48,11 @@ if _redirect:
     _real_open = builtins.open
 
     def _open(file, mode="r", *a, **kw):
-        if isinstance(file, (str, os.PathLike)) and "w" in str(mode) \
-                and os.path.basename(str(file)) == _base:
+        if (
+            isinstance(file, (str, os.PathLike))
+            and "w" in str(mode)
+            and os.path.basename(str(file)) == _base
+        ):
             print(f"[LABELER] redirecting write {file} -> {_dest}", flush=True)
             os.makedirs(os.path.dirname(_dest) or ".", exist_ok=True)
             return _real_open(_dest, mode, *a, **kw)
