@@ -72,56 +72,56 @@ def build():
         rows.append(f"| {metric} | {before} | {after} | {how} | `{artefact_commit(artefact)}` |")
 
     row(
-        "rollouts per hour, 60-start eval, 1 GPU",
+        "rollouts/hour, 60-start eval, one RTX A5000",
         "71.2 (M0, single process)",
         f"**{fmt(t1['rollouts_per_hour'] if t1 else None)}**",
         "`bench/bench_all.sh` → `bench/out/m4_t1_summary.json`",
         "bench/out/m4_t1_summary.json",
     )
     row(
-        "ms per control step, per worker",
+        "ms per control step, per worker (8 workers sharing one GPU)",
         "190.3 (M0, one process)",
         fmt((t1 or {}).get("ms_per_control_step")),
-        "wall x N_workers / total steps; above M0 because 8 workers contend",
+        "wall x N_workers / total steps; higher than M0 because 8 workers contend for one GPU",
         "bench/out/m4_t1_summary.json",
     )
     row(
-        "GPU utilisation during eval",
+        "GPU 1 SM utilisation during the eval",
         "9.9% (M0)",
         f"{fmt((t1 or {}).get('gpu1_sm_mean'))}%",
         "`nvidia-smi dmon -s um`, 1 Hz → `bench/parse_dmon.py`",
         "bench/out/m4_t1_summary.json",
     )
     row(
-        "clearance labeler, ms per call",
+        "clearance labeler, ms per call (fires twice per control step)",
         fmt((lab_py or {}).get("ms_per_call_mean"), 2),
         f"**{fmt((lab_cpp or {}).get('ms_per_call_mean'), 3)}**",
         "`bench/call_run.sh` → `bench/out/m2_call_*.json`",
         "bench/out/m2_call_omp_t1.json",
     )
     row(
-        "clearance labeler, µs per hull pair",
+        "clearance labeler, µs per exact hull pair",
         "634",
         "5.7",
         "same, exact pairs counted per call",
         "bench/out/m2_call_omp_t1.json",
     )
     row(
-        "contact scan, ms per control step",
+        "MuJoCo contact scan, ms per control step",
         "8.19",
         "**2.25**",
         "`audit/t2_run.sh` CONTACTS=0 vs 1, identical instrumentation",
         "audit/arrays/t2_alltasks_c0on.json",
     )
     row(
-        "policy forward, ms per call (B=1)",
+        "policy forward, ms per call, batch 1 (bf16, 2 cameras + proprio, 8-step chunk)",
         "—",
         fmt((fwd or {}).get("timing", {}).get("forward_ms_mean"), 2),
         "`bench/fwd_run.sh time baseline`",
         "bench/out/m4_fwd_time_base.json",
     )
     row(
-        "forward phases: LLM / vision",
+        "forward split: 7B language model / vision backbone",
         "—",
         (
             f"{fmt((fwd or {}).get('timing', {}).get('phases_ms', {}).get('language_model', {}).get('mean'), 1)}"
@@ -132,7 +132,7 @@ def build():
     )
     if t1:
         row(
-            "per-request: queue / forward / transport",
+            "per request: queue wait / GPU forward / transport+prep, at 8 workers",
             "—",
             f"{fmt(t1.get('queue_wait_ms'))} / {fmt(t1.get('forward_ms'))} / {fmt(t1.get('transport_plus_prep_ms'))} ms",
             "worker round trip minus server-reported parts",
@@ -140,22 +140,22 @@ def build():
         )
     if tri:
         row(
-            "serving layer: ZeroMQ vs Triton 23.07",
+            "serving layer: our ZeroMQ server vs Triton 23.07, same model",
             f"{fmt(tri['zeromq']['rollouts_per_hour'])} roll/h",
             f"{fmt(tri['triton']['rollouts_per_hour'])} roll/h",
-            "`bench/triton_serve.sh` + `POLICY_TRANSPORT=triton`",
+            "6% slower: service time +16 ms because `prepare_request` runs inside `execute`; its transport is cheaper, 3 vs 26 ms (`fastvla/server/DESIGN.md`)",
             "bench/out/m3b_comparison.json",
         )
     if inc:
         row(
-            "in-container (Apptainer) 60-start",
+            "same eval inside Apptainer (unprivileged, --nv)",
             f"{fmt((t1 or {}).get('rollouts_per_hour'))} roll/h (host)",
             f"**{fmt(inc['rollouts_per_hour'])} roll/h**",
             "`bench/incontainer_run.sh`",
             "bench/out/m5_incontainer.json",
         )
         row(
-            "cold start, server start → READY",
+            "cold start, server launch → first request served",
             "—",
             f"{fmt(inc.get('cold_start_s'))} s",
             "same run, image pull excluded",
@@ -163,21 +163,21 @@ def build():
         )
     if acc:
         row(
-            "correctness: collisions / completions",
+            "correctness: collisions / completions on the 60 fixed starts",
             "29 / 26 (M0 reference)",
             f"**{acc['collisions']} / {acc['completions']}**",
             "`bench/accept.py` (requires 29, and 25 or 26)",
             "bench/out/m4_accept_M4_T1.json",
         )
         row(
-            "correctness: per-start collision flips",
+            "correctness: per-start collision-verdict flips vs the reference",
             "—",
             f"**{len(acc['collision_flips'])}**",
-            "same, against the M3 N=16 reference",
+            "same; the run-to-run floor is 0 collision flips (`fastvla/monitor/EVAL.md` section 7)",
             "bench/out/m4_accept_M4_T1.json",
         )
         row(
-            "correctness: max per-start clearance difference",
+            "correctness: largest per-start min-clearance difference vs the reference",
             "—",
             f"{fmt(acc.get('max_clearance_diff_cm'), 4)} cm",
             "same",
@@ -185,7 +185,7 @@ def build():
         )
     if stages:
         row(
-            "labeler stage split (python): union-hull GJK / exact pairs",
+            "labeler stages (python): union-hull GJK reject / exact pair GJK",
             "—",
             (
                 f"{fmt(stages['stages']['s3_union_hull_gjk']['ms_mean'], 1)}"

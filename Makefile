@@ -5,12 +5,14 @@ RUFF ?= ruff
 PYTEST ?= pytest
 PY ?= python3
 
-.PHONY: help lint format test bench bench-quick bench-table bench-check container-libs
+.PHONY: help lint format test labeler accept bench bench-quick bench-table bench-check container-libs
 
 help:
 	@echo "lint    - ruff check + format check"
 	@echo "format  - ruff format (writes)"
 	@echo "test    - pytest"
+	@echo "labeler - build the C++ GJK labeler in place"
+	@echo "accept  - the 60-start acceptance gate on a run: make accept RUN=<run_id>"
 	@echo "bench         - reproduce every number in the README table (~25 min, GPU 1)"
 	@echo "bench-quick   - the end-to-end rows only (~8 min)"
 	@echo "bench-table   - re-render the README table from bench/out artefacts"
@@ -35,6 +37,14 @@ test:
 	  exit 1; \
 	fi
 	$(PYTEST)
+
+labeler:
+	bash fastvla/labeler/build.sh
+
+# The gate every change has to pass. RUN is a directory name under bench/runs.
+accept:
+	@test -n "$(RUN)" || { echo "usage: make accept RUN=<run_id>"; exit 2; }
+	$(PY) bench/accept.py $(RUN)
 
 bench:
 	bash bench/bench_all.sh

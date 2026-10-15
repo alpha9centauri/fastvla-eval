@@ -65,7 +65,9 @@ Apptainer mounts SquashFS through FUSE rather than a setuid helper:
   mount images without setuid.
 - `newuidmap`/`newgidmap` are absent. Apptainer in unprivileged mode does not
   need them (it maps only the single calling UID). Rootless Docker *does*
-  need them, so rootless Docker is not an option here despite the subuid and
+  need them -- "You must install `newuidmap` and `newgidmap` on the host"
+  (https://docs.docker.com/engine/security/rootless/) -- so rootless Docker is
+  not an option here despite the subuid and
   subgid entries existing.
 - `/sys/fs/cgroup` is tmpfs, i.e. cgroup v1. Apptainer does not require
   cgroup v2 for plain `exec`/`run`; it only matters for resource limits.
@@ -118,11 +120,29 @@ converting OCI layers as a non-root user and does not affect the result.
 
 ## 4. Why 23.07 and not something newer
 
-From NVIDIA's framework support matrix:
+Each row below is the "Release X is based on CUDA Y, which requires NVIDIA
+Driver release Z or later" sentence from that release's own Triton release
+notes, read at
+https://archive.docs.nvidia.com/deeplearning/triton-inference-server/release-notes/rel-23-0N.html
+(the live framework support matrix now lists only 25.xx and 26.xx, so the 23.x
+rows come from the archive):
 
-- 23.03, 23.04       CUDA 12.1.0  -> requires driver >= 530
+- 23.03, 23.04        CUDA 12.1.0 -> requires driver >= 530
 - 23.05, 23.06, 23.07 CUDA 12.1.1 -> requires driver >= 530
-- 23.08, 23.09       CUDA 12.2.1  -> requires driver >= 535
+- 23.08, 23.09        CUDA 12.2.1 -> requires driver >= 535
+
+The 23.07 row is also confirmed from the pulled image itself, which does not
+depend on any documentation being accurate:
+
+    $ apptainer exec ~/images/tritonserver_23.07-py3.sif \
+        bash -c 'dpkg -l | grep -E "cuda-cudart-12-1|cuda-compat-12-1"'
+    ii  cuda-compat-12-1   530.30.02-1   CUDA Compatibility Platform
+    ii  cuda-cudart-12-1   12.1.105-1    CUDA Runtime native Libraries
+
+cudart 12.1.105 is CUDA 12.1.1 (12.1.0 ships 12.1.55), and the bundled
+compatibility package is pinned at exactly this host's driver, 530.30.02.
+`/opt/tritonserver/TRITON_VERSION` reads 2.36.0, the server version for the
+23.07 release.
 
 This host has driver 530.30.02, so **23.07 is the newest usable tag** and the
 CUDA 12.1 inside it matches the driver exactly. Anything 23.08 or later needs

@@ -1,10 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "fastvla-eval"
-version = "0.0.0"
+version = "0.1.0"
 description = "Fast, correct closed-loop evaluation harness for VLA policies on LIBERO-Safety"
 authors = [{ name = "Varun Chandra", email = "alpha9centauri@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.10"
+license = { file = "LICENSE" }
+keywords = ["vla", "robotics", "evaluation", "libero", "openvla", "benchmark"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# Deliberately no runtime dependencies. The harness runs inside the environment that
+# already holds the policy, LIBERO-Safety, MuJoCo and torch (see audit/AUDIT.md); pinning
+# them here would invite pip to resolve a second, different stack underneath a measurement.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "ruff==0.17.0"]
+
+[project.urls]
+Homepage = "https://github.com/alpha9centauri/fastvla-eval"
+Benchmarks = "https://github.com/alpha9centauri/fastvla-eval#benchmark"
+
+[tool.setuptools.packages.find]
+# Only the library. bench/, audit/, tests/ and deploy/ are run from a checkout, not
+# installed, and without this setuptools refuses to guess between them.
+include = ["fastvla*"]
+
+[tool.setuptools.package-data]
+"fastvla.labeler" = ["*.so"]
 
 # Python version tracks the libero-vla conda env (3.10.20), which runs every
 # rollout and therefore every parity comparison.

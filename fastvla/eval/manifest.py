@@ -144,6 +144,9 @@ MANIFESTS = {
     # training uses inits 10-49, test uses 0-9, so no scene appears in both.
     "train_unshifted": lambda: unshifted(range(10, 50)),
     "test_unshifted": lambda: unshifted(range(0, 10)),
+    # six rollouts, one per task, init 0: the smallest set that contains a clean
+    # completion, used to regenerate the README clip (docs/media/rollout.gif).
+    "demo6": lambda: unshifted(range(0, 1)),
 }
 
 

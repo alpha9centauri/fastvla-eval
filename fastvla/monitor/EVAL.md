@@ -33,6 +33,10 @@ clearance difference 0.0000 cm, at 539.3 rollouts/hour
 | test, unshifted | `test_unshifted` (inits 0-9) | 60 | 2040 | 60 |
 | test, intrusion-5 | `intr5` | 48 | 1787 | 48 |
 
+Research-tree paths in this document (`out/...`, `out_instruct/...`, `docs/RESULTS.md`)
+are relative to `/data_new/vchandr2/vla-safety-interp/src/displacement`, the `DISP`
+directory the harness imports from -- not to the repository root.
+
 The split is by scene and the sets are disjoint; the fit asserts it. `test_unshifted` is
 byte-identical to `ctrl60`, the acceptance set, so the false-alarm numbers below and the
 parity check in section 6 are measured on the same 60 starts.

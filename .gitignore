@@ -85,3 +85,4 @@ audit/logs/
 # already excluded by the *.so rule in the Python section.
 bench/runs/
 bench/triton_libs/
+.ruff_cache/
