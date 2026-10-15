@@ -35,6 +35,7 @@ import rollout_bootstrap  # noqa: F401, E402
 import zmq  # noqa: E402
 
 from fastvla.server import metrics as MET  # noqa: E402
+from fastvla.monitor.monitor import RuntimeMonitor  # noqa: E402
 from fastvla.server import protocol as P  # noqa: E402
 
 ENDPOINT = os.environ["ENDPOINT"]
@@ -51,6 +52,18 @@ CKPT = os.environ.get("CKPT", f"/data_new/vchandr2/runs/{BASE}--17500_chkpt")
 
 if PARITY and MAX_BATCH != 1:
     raise SystemExit("PARITY=1 requires MAX_BATCH=1 (DESIGN.md section 3)")
+MONITOR = os.environ.get("MONITOR", "off")
+MONITOR_PROBE = os.environ.get("MONITOR_PROBE", "") or None
+MONITOR_THRESHOLD = os.environ.get("MONITOR_THRESHOLD", "") or None
+
+if MONITOR not in ("off", "log", "stop"):
+    raise SystemExit(f"MONITOR must be off, log or stop; got {MONITOR!r}")
+if MONITOR != "off" and MAX_BATCH != 1:
+    raise SystemExit(
+        f"MONITOR={MONITOR} requires MAX_BATCH=1: the monitor reads the activation captured "
+        "at the on-policy probe's site, which indexes batch element 0 (assumption B2), so "
+        "at batch > 1 every request would be scored on the first one's hidden state."
+    )
 if os.environ.get("PROBE", "0") == "1" and not PARITY:
     raise SystemExit(
         "PROBE=1 is refused outside parity mode: the driver's probe hook indexes "
@@ -58,17 +71,21 @@ if os.environ.get("PROBE", "0") == "1" and not PARITY:
         "would silently return batch element 0 for every request. See DESIGN.md section 5."
     )
 
+CAPTURE_ACTIVATIONS = os.environ.get("CAPTURE_ACTIVATIONS", "0") == "1"
 METRICS_PORT = int(os.environ.get("METRICS_PORT", "9400"))
 METRICS = MET.Metrics()
 
 STATS = dict(
+    capture_ms=[],
     forwards=0,
     requests=0,
     batch_hist={},
     forward_ms=[],
     queue_wait_ms=[],
     prep_ms=[],
+    monitor_ms=[],
     max_batch=MAX_BATCH,
+    monitor=MONITOR,
     batch_delay_ms=BATCH_DELAY_MS,
     parity=PARITY,
     endpoint=ENDPOINT,
@@ -164,6 +181,28 @@ def build_policy():
                 raise SystemExit(f"unknown SERVER_OPTS entry {o!r}")
             print(f"[SERVER] applied {applied[-1]} in {_t.perf_counter() - t0:.1f} s", flush=True)
     STATS["server_opts"] = applied
+
+    # M7b: activation capture at the on-policy probe's site. Batch 1 only -- the hook
+    # indexes h[0, ...] (assumption B2), so at batch > 1 it would hand every request the
+    # first one's hidden state.
+    pol.capture = None
+    pol.monitor = RuntimeMonitor(MONITOR, MONITOR_PROBE, MONITOR_THRESHOLD)
+    if CAPTURE_ACTIVATIONS or pol.monitor.enabled:
+        from fastvla.monitor.capture import ActivationCapture
+
+        pol.capture = ActivationCapture(model, MAX_BATCH)
+        print(
+            f"[SERVER] activation capture ON at the probe site "
+            f"(post-final-norm, {pol.capture.__class__.__module__}); "
+            f"shipped to the worker: {CAPTURE_ACTIVATIONS}",
+            flush=True,
+        )
+    if pol.monitor.enabled:
+        print(
+            f"[SERVER] MONITOR={MONITOR}, probe {pol.monitor.probe_path}, "
+            f"threshold {pol.monitor.threshold:+.4f}",
+            flush=True,
+        )
     print(
         f"[SERVER] policy loaded, torch {torch.__version__}, "
         f"B<={MAX_BATCH}, D={BATCH_DELAY_MS} ms, parity={PARITY}",
@@ -271,6 +310,10 @@ def main():
             t0 = time.perf_counter()
             chunks = pol.forward([b[2] for b in batch])
             fms = 1000 * (time.perf_counter() - t0)
+            # the hook has already run inside the forward; take() is a dict read
+            tcap0 = time.perf_counter()
+            activation = pol.capture.take() if pol.capture is not None else None
+            STATS["capture_ms"].append(1000 * (time.perf_counter() - tcap0))
             STATS["forwards"] += 1
             STATS["requests"] += len(batch)
             STATS["forward_ms"].append(fms)
@@ -279,10 +322,30 @@ def main():
             STATS["batch_hist"][k] = STATS["batch_hist"].get(k, 0) + 1
             METRICS.observe_forward(len(batch), fms / 1000.0, [w / 1000.0 for w in waits])
             METRICS.set_queue_depth(work.qsize())
+            # The monitor runs here, between the forward and the reply, so `stop` brakes
+            # the very chunk whose activation raised the alarm -- no one-chunk delay.
+            mon_score, mon_held = None, False
+            if pol.monitor.enabled and activation is not None:
+                tm0 = time.perf_counter()
+                mon_score, mon_held = pol.monitor.observe(batch[0][1]["rollout_key"], activation)
+                METRICS.observe_monitor(
+                    mon_score, mon_score >= pol.monitor.threshold, len(pol.monitor.latched)
+                )
+                dt = 1000 * (time.perf_counter() - tm0)
+                STATS["monitor_ms"].append(dt)
+                pol.monitor.score_ms.append(dt)
             for (ident, header, _prep, _t), chunk, w in zip(batch, chunks, waits, strict=True):
                 h = dict(header)
                 h.update(server_batch_size=len(batch), queue_wait_ms=w, forward_ms=fms)
-                replies.put((ident, P.pack_response(h, chunk)))
+                if mon_score is not None:
+                    h.update(monitor_score=mon_score, monitor_held=bool(mon_held))
+                if mon_held:
+                    chunk = pol.monitor.hold(chunk)
+                # The activation is shipped only when a collection run asked for it: the
+                # monitor reads it here in the server, so MONITOR=log pays no 8 KB frame.
+                replies.put(
+                    (ident, P.pack_response(h, chunk, activation if CAPTURE_ACTIVATIONS else None))
+                )
 
     rt = threading.Thread(target=receiver, daemon=True)
     ft = threading.Thread(target=forward_loop, daemon=True)
@@ -319,7 +382,26 @@ def main():
             f"prep {STATS['summary']['prep_ms_mean']:.1f} ms",
             flush=True,
         )
-    for k in ("forward_ms", "queue_wait_ms", "prep_ms"):
+    STATS["monitor_summary"] = pol.monitor.summary()
+    if STATS["monitor_ms"]:
+        mm = np.array(STATS["monitor_ms"])
+        STATS.setdefault("summary", {})["monitor_ms_mean"] = float(mm.mean())
+        print(
+            f"[SERVER] monitor {MONITOR}: {STATS['monitor_summary']['alarms']}/"
+            f"{STATS['monitor_summary']['scored']} alarms "
+            f"({STATS['monitor_summary']['alarm_rate']:.3f}), "
+            f"{STATS['monitor_summary']['latched_rollouts']} rollouts held, "
+            f"{mm.mean():.4f} ms per forward",
+            flush=True,
+        )
+    if STATS["capture_ms"]:
+        cm = np.array(STATS["capture_ms"])
+        STATS.setdefault("summary", {})["capture_ms_mean"] = float(cm.mean())
+        print(
+            f"[SERVER] activation capture {cm.mean():.4f} ms/forward over {len(cm)} forwards",
+            flush=True,
+        )
+    for k in ("forward_ms", "queue_wait_ms", "prep_ms", "capture_ms"):
         STATS[k] = STATS[k][:5000]
     if STATS_OUT:
         with open(STATS_OUT, "w") as fh:

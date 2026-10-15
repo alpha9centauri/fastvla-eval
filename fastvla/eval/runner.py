@@ -79,6 +79,10 @@ def main():
         cudnn_benchmark=os.environ.get("CUDNN_BENCHMARK", "0"),
         torch_deterministic=os.environ.get("TORCH_DETERMINISTIC", "0"),
         server_opts=os.environ.get("SERVER_OPTS", ""),
+        capture_activations=os.environ.get("CAPTURE_ACTIVATIONS", "0"),
+        monitor=os.environ.get("MONITOR", "off"),
+        monitor_probe=os.environ.get("MONITOR_PROBE", ""),
+        monitor_threshold=os.environ.get("MONITOR_THRESHOLD", ""),
         contacts=os.environ.get("CONTACTS", "1"),
         per_worker=[len(s) for s in slices],
     )
@@ -113,6 +117,10 @@ def main():
         CUDNN_BENCHMARK=os.environ.get("CUDNN_BENCHMARK", "0"),
         TORCH_DETERMINISTIC=os.environ.get("TORCH_DETERMINISTIC", "0"),
         SERVER_OPTS=os.environ.get("SERVER_OPTS", ""),
+        CAPTURE_ACTIVATIONS=os.environ.get("CAPTURE_ACTIVATIONS", "0"),
+        MONITOR=os.environ.get("MONITOR", "off"),
+        MONITOR_PROBE=os.environ.get("MONITOR_PROBE", ""),
+        MONITOR_THRESHOLD=os.environ.get("MONITOR_THRESHOLD", ""),
         STATS_OUT=os.path.join(run_dir, "server_stats.json"),
     )
     # these handles must outlive the block: they are the subprocesses' stdout for the

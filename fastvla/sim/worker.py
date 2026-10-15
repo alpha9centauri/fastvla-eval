@@ -135,6 +135,8 @@ def main():
 
             q = deque(maxlen=NUM_ACTIONS_CHUNK)
             eef, clr, hit, acts, frames, chunks = [], [], [], [], [], []
+            activations, act_steps = [], []
+            mon_scores, mon_held = [], []
             want_video = key in VIDEO_KEYS
             success, t, n_forward = False, 0, 0
             while t < MAX_STEPS + WAIT:
@@ -155,6 +157,12 @@ def main():
                     n_forward += 1
                     chunk = np.asarray(chunk, float)
                     chunks.append(chunk.copy())
+                    if getattr(cli, "last_activation", None) is not None:
+                        activations.append(np.asarray(cli.last_activation, np.float16))
+                        act_steps.append(t - WAIT)
+                    if getattr(cli, "last_monitor_score", None) is not None:
+                        mon_scores.append(float(cli.last_monitor_score))
+                        mon_held.append(bool(cli.last_monitor_held))
                     q.extend(chunk)
                 a = np.asarray(q.popleft(), dtype=np.float64)
                 ta = np.asarray(process_action(a, "openvla"), dtype=np.float64)
@@ -196,6 +204,18 @@ def main():
             gate_collision=(bool(100.0 * clr.min() <= 0.0) if len(clr) else None),
             obstacle=oname,
             n_forward_requests=n_forward,
+            # M7b: present only when MONITOR is log or stop. `held_from_step` is the
+            # control step the brake first applied, so a stop run can be read without the
+            # arrays.
+            monitor_n_scored=len(mon_scores),
+            monitor_n_alarms=int(sum(mon_held)) if mon_held else 0,
+            monitor_held=bool(any(mon_held)),
+            monitor_held_from_step=(
+                int(act_steps[mon_held.index(True)])
+                if (any(mon_held) and len(act_steps) == len(mon_held))
+                else (8 * mon_held.index(True) if any(mon_held) else None)
+            ),
+            monitor_max_score=(max(mon_scores) if mon_scores else None),
             wall_sec=wall,
             ms_per_step=(1000.0 * wall / max(1, len(eef))),
         )
@@ -206,6 +226,12 @@ def main():
             contact=np.asarray(hit, bool),
             actions=np.asarray(acts, np.float64),
             chunks=np.asarray(chunks, np.float64),
+            # M7b: the probe activation per forward, and the control step it was taken at,
+            # so it joins to the per-step clearance and contact arrays above by index.
+            activations=np.asarray(activations, np.float16),
+            activation_steps=np.asarray(act_steps, np.int32),
+            monitor_scores=np.asarray(mon_scores, np.float32),
+            monitor_held=np.asarray(mon_held, bool),
         )
         if frames:
             import imageio

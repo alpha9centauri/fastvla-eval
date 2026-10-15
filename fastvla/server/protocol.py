@@ -64,17 +64,31 @@ def unpack_request(frames):
     return header, full, wrist, state
 
 
-def pack_response(header, actions):
+def pack_response(header, actions, activation=None):
+    """Response frames; a third frame carries the probe activation when captured.
+
+    float16, 4096-d = 8 KB, against a 301 KB request -- small enough that collection runs
+    at the same rate as a normal run, which step 1 measures rather than assumes.
+    """
     actions = np.ascontiguousarray(actions, dtype=ACT_DTYPE)
     h = dict(header)
     h["action_shape"] = list(actions.shape)
-    return [json.dumps(h).encode(), actions.tobytes()]
+    frames = [None, actions.tobytes()]
+    if activation is not None:
+        act = np.ascontiguousarray(activation, dtype=np.float16)
+        h["activation_dim"] = int(act.size)
+        frames.append(act.tobytes())
+    frames[0] = json.dumps(h).encode()
+    return frames
 
 
 def unpack_response(frames):
     header = json.loads(frames[0].decode())
     actions = np.frombuffer(frames[1], dtype=ACT_DTYPE).reshape(header["action_shape"])
-    return header, actions
+    activation = None
+    if header.get("activation_dim") and len(frames) > 2:
+        activation = np.frombuffer(frames[2], dtype=np.float16).reshape(header["activation_dim"])
+    return header, actions, activation
 
 
 def pack_hello(worker_id, run_id, n_rollouts):

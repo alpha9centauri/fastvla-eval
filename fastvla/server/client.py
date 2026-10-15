@@ -19,6 +19,9 @@ class PolicyClient:
         self.n_requests = 0
         self.batch_sizes = []
         self.queue_waits = []
+        self.last_activation = None  # probe activation from the most recent reply
+        self.last_monitor_score = None  # monitor score from the most recent reply, if any
+        self.last_monitor_held = False
         self.round_trips = []  # wall time of get_chunk, worker side
         self.server_forwards = []  # the forward the server reported for this request
 
@@ -46,7 +49,8 @@ class PolicyClient:
             raise TimeoutError(
                 f"no reply within {self.timeout_ms} ms for {rollout_key} step {policy_step}"
             )
-        header, actions = P.unpack_response(self.sock.recv_multipart())
+        header, actions, activation = P.unpack_response(self.sock.recv_multipart())
+        self.last_activation = activation
         want = P.make_request_id(self.worker_id, rollout_key, policy_step)
         if header.get("request_id") != want:
             # A crossed reply would present as policy nondeterminism, which on this
@@ -57,6 +61,8 @@ class PolicyClient:
         self.batch_sizes.append(header.get("server_batch_size", 0))
         self.queue_waits.append(header.get("queue_wait_ms", 0.0))
         self.server_forwards.append(header.get("forward_ms", 0.0))
+        self.last_monitor_score = header.get("monitor_score")
+        self.last_monitor_held = bool(header.get("monitor_held", False))
         return actions
 
     def close(self):

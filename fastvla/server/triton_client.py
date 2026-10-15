@@ -24,6 +24,9 @@ class TritonPolicyClient:
         self.n_requests = 0
         self.batch_sizes = []
         self.queue_waits = []
+        self.last_activation = None  # Triton path does not carry activations
+        self.last_monitor_score = None  # nor the monitor score: M7b is the ZeroMQ path
+        self.last_monitor_held = False
         self.round_trips = []
         self.server_forwards = []
 

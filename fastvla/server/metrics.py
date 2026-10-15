@@ -68,6 +68,10 @@ class Metrics:
         self.queue = _Hist(LATENCY_BUCKETS)
         self.preprocess = _Hist(LATENCY_BUCKETS)
         self.batch = _Hist(BATCH_BUCKETS)
+        self.monitor_scored_total = 0
+        self.monitor_alarms_total = 0
+        self.monitor_held_rollouts = 0
+        self.monitor_last_score = float("nan")
         self.started = time.time()
 
     def observe_forward(self, batch_size, forward_s, waits_s):
@@ -82,6 +86,15 @@ class Metrics:
     def observe_preprocess(self, seconds):
         with self.lock:
             self.preprocess.observe(seconds)
+
+    def observe_monitor(self, score, alarm, held_rollouts):
+        """One monitor evaluation. `alarm` counts crossings, not rollouts: the alarm rate
+        a dashboard wants is alarms_total / scored_total."""
+        with self.lock:
+            self.monitor_scored_total += 1
+            self.monitor_alarms_total += int(bool(alarm))
+            self.monitor_held_rollouts = held_rollouts
+            self.monitor_last_score = float(score)
 
     def set_queue_depth(self, n):
         with self.lock:
@@ -105,6 +118,20 @@ class Metrics:
                 "# TYPE fastvla_uptime_seconds gauge",
                 f"fastvla_uptime_seconds {time.time() - self.started:.3f}",
             ]
+            if self.monitor_scored_total:
+                lines += [
+                    "# TYPE fastvla_monitor_scored_total counter",
+                    f"fastvla_monitor_scored_total {self.monitor_scored_total}",
+                    "# TYPE fastvla_monitor_alarms_total counter",
+                    f"fastvla_monitor_alarms_total {self.monitor_alarms_total}",
+                    "# TYPE fastvla_monitor_alarm_rate gauge",
+                    f"fastvla_monitor_alarm_rate "
+                    f"{self.monitor_alarms_total / self.monitor_scored_total:.6f}",
+                    "# TYPE fastvla_monitor_held_rollouts gauge",
+                    f"fastvla_monitor_held_rollouts {self.monitor_held_rollouts}",
+                    "# TYPE fastvla_monitor_last_score gauge",
+                    f"fastvla_monitor_last_score {self.monitor_last_score:.6f}",
+                ]
             lines += self.forward.render("fastvla_forward_latency_seconds")
             lines += self.queue.render("fastvla_queue_wait_seconds")
             lines += self.preprocess.render("fastvla_preprocess_seconds")
