@@ -3,7 +3,7 @@
 # Reference: 10/10 collisions, 0.00 cm min clearance on every start, 3/10 completions on
 # starts {4, 6, 9}; exit 0 on match, 3 otherwise.
 set -euo pipefail
-ROOT=/data_new/vchandr2/fastvla-eval
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 D=/data_new/vchandr2/vla-safety-interp/src/displacement
 CKPT=/data_new/vchandr2/runs/openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt
 cd "$D"

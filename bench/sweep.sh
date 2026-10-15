@@ -2,7 +2,7 @@
 # One sweep point: start a dmon sampler, run the manifest, stop the sampler.
 # usage: sweep.sh <manifest> <N> <B> <D> <tag>
 set -euo pipefail
-ROOT=/data_new/vchandr2/fastvla-eval
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 A=$ROOT/audit
 MAN=$1; N=$2; B=$3; D=$4; TAG=$5
 mkdir -p "$A/logs"

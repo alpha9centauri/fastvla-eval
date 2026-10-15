@@ -3,7 +3,7 @@
 # a pattern like "triton_serve.sh" also matches the command line of whatever is doing
 # the killing, which has twice taken out the caller instead of the server.
 set -uo pipefail
-ROOT=/data_new/vchandr2/fastvla-eval
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PIDFILE=$ROOT/bench/out/triton_serve.pid
 if [ -f "$PIDFILE" ]; then
   P=$(cat "$PIDFILE")

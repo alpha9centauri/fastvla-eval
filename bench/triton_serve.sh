@@ -10,7 +10,7 @@
 # Non-default ports, since someone else may run Triton on this box.
 set -euo pipefail
 export PATH=$HOME/apptainer/bin:$PATH
-ROOT=/data_new/vchandr2/fastvla-eval
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SIF=${SIF:-$HOME/images/tritonserver_23.07-py3.sif}
 ENVROOT=/data_new/vchandr2/miniconda3/envs/libero-vla
 BASE="openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit"

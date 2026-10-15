@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # M2 step 3: C++ vs Python parity on the 1000 saved states from audit Table 4.
 set -euo pipefail
-ROOT=/data_new/vchandr2/fastvla-eval
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 exec env CUDA_VISIBLE_DEVICES=1 MUJOCO_GL=egl MUJOCO_EGL_DEVICE_ID=1 \
   PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python \

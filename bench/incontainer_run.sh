@@ -16,7 +16,7 @@
 # runner already times; image pull is excluded because the SIF is already local.
 set -euo pipefail
 export PATH=$HOME/apptainer/bin:$PATH
-ROOT=/data_new/vchandr2/fastvla-eval
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SIF=${SIF:-$HOME/images/tritonserver_23.07-py3.sif}
 ENVROOT=/data_new/vchandr2/miniconda3/envs/libero-vla
 SP=$ENVROOT/lib/python3.10/site-packages

@@ -24,7 +24,9 @@ import sys
 import time
 import uuid
 
-ROOT = "/data_new/vchandr2/fastvla-eval"
+# Derived, not hardcoded, so a fresh clone runs against itself rather than
+# against whatever repo happens to live at an absolute path.
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PY = "/data_new/vchandr2/miniconda3/envs/libero-vla/bin/python"
 
 RUN_ROOT = os.environ.get("RUN_ROOT", os.path.join(ROOT, "bench", "runs"))

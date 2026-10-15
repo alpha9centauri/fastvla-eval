@@ -2,7 +2,7 @@
 # Table 2 driver. usage: t2_run.sh <timers|torch|cprofile> <n_rollouts>
 set -euo pipefail
 MODE_IN="${1:?mode}"; NROLL="${2:?n rollouts}"
-A=/data_new/vchandr2/fastvla-eval/audit
+A="$(cd "$(dirname "$0")" && pwd)"
 cd "$A"
 exec env \
   CUDA_VISIBLE_DEVICES=1 MUJOCO_GL=egl MUJOCO_EGL_DEVICE_ID=1 \

@@ -3,7 +3,7 @@
 # summary is computed from. perf_event_paranoid is 3 on this box, so CPU sampling and
 # backtraces are off; CUDA/OSRT tracing works. ncu is used only for GPU kernel metrics.
 set -euo pipefail
-A=/data_new/vchandr2/fastvla-eval/audit
+A="$(cd "$(dirname "$0")" && pwd)"
 cd "$A"
 OUT="$A/traces/t3_rollout"
 env CUDA_VISIBLE_DEVICES=1 MUJOCO_GL=egl MUJOCO_EGL_DEVICE_ID=1 \

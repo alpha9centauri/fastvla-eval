@@ -16,7 +16,7 @@ exec env \
   CUDA_VISIBLE_DEVICES=1 MUJOCO_GL=egl MUJOCO_EGL_DEVICE_ID=1 \
   PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python \
   PYTHONPATH=/data_new/vchandr2/rollout_stubs \
-  OUTDIR=/data_new/vchandr2/fastvla-eval/audit/t1_out \
+  OUTDIR=$ROOT/audit/t1_out \
   STEP=17500 N_INIT=10 PROBE=0 WRITE_BASELINE=0 STEER_K=0 \
   INSTR_MODE=I0 OFFSETS=0 ARMS= USE_FEASIBLE=0 \
   ROWS_JSON=rows_I0_ctrl.json CLAMPS_JSON=clamps_I0_ctrl.json \

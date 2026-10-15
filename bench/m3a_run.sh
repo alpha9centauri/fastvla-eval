@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # usage: m3a_run.sh <manifest> <N> <B> <D_ms> [extra env already exported]
 set -euo pipefail
-ROOT=/data_new/vchandr2/fastvla-eval
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 exec env MANIFEST="$1" N_WORKERS="$2" MAX_BATCH="$3" BATCH_DELAY_MS="$4" \
   RUN_ROOT="$ROOT/bench/runs" \

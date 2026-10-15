@@ -2,7 +2,7 @@
 # M2 step 6: the 60-start Table 1 run through the selected labeler. Identical to
 # audit/t1_e2e.sh except for OUTDIR and the labeler flag.
 set -euo pipefail
-ROOT=/data_new/vchandr2/fastvla-eval
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 D=/data_new/vchandr2/vla-safety-interp/src/displacement
 TAG="${4:-cpp}"
 cd "$D"

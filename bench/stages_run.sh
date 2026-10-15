@@ -2,7 +2,7 @@
 # M2 step 1: per-stage breakdown of the Python labeler, on the same saved states
 # Table 4 used (audit/t1_out/actions_I0_ctrl.npz, distmax 0.5, clearance_every 25).
 set -euo pipefail
-ROOT=/data_new/vchandr2/fastvla-eval
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 exec env CUDA_VISIBLE_DEVICES=1 MUJOCO_GL=egl MUJOCO_EGL_DEVICE_ID=1 \
   PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python \
