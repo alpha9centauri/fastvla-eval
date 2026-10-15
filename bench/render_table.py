@@ -35,6 +35,19 @@ def git(*args, default="unknown"):
         return default
 
 
+def artefact_commit(path):
+    """The commit that last touched this row's artefact -- the row's real provenance.
+
+    Using HEAD would make the table stale on every commit, which is how the fresh-clone
+    `make bench-check` first failed: the table named one commit and the clone was at the
+    next. An artefact's commit moves only when the artefact is re-measured.
+    """
+    if path is None:
+        return "—"
+    out = git("log", "-1", "--format=%h", "--", path, default="")
+    return out or "uncommitted"
+
+
 def fmt(v, nd=1, dash="—"):
     return dash if v is None else f"{v:.{nd}f}"
 
@@ -56,45 +69,57 @@ def build():
 
     rows = []
 
-    def row(metric, before, after, how):
-        rows.append(f"| {metric} | {before} | {after} | {how} |")
+    def row(metric, before, after, how, artefact=None):
+        rows.append(f"| {metric} | {before} | {after} | {how} | `{artefact_commit(artefact)}` |")
 
     row(
         "rollouts per hour, 60-start eval, 1 GPU",
         "71.2 (M0, single process)",
         f"**{fmt(t1['rollouts_per_hour'] if t1 else None)}**",
         "`bench/bench_all.sh` → `bench/out/m4_t1_summary.json`",
+        "bench/out/m4_t1_summary.json",
     )
     row(
         "ms per control step, per worker",
         "190.3 (M0, one process)",
         fmt((t1 or {}).get("ms_per_control_step")),
         "wall x N_workers / total steps; above M0 because 8 workers contend",
+        "bench/out/m4_t1_summary.json",
     )
     row(
         "GPU utilisation during eval",
         "9.9% (M0)",
         f"{fmt((t1 or {}).get('gpu1_sm_mean'))}%",
         "`nvidia-smi dmon -s um`, 1 Hz → `bench/parse_dmon.py`",
+        "bench/out/m4_t1_summary.json",
     )
     row(
         "clearance labeler, ms per call",
         fmt((lab_py or {}).get("ms_per_call_mean"), 2),
         f"**{fmt((lab_cpp or {}).get('ms_per_call_mean'), 3)}**",
         "`bench/call_run.sh` → `bench/out/m2_call_*.json`",
+        "bench/out/m2_call_omp_t1.json",
     )
-    row("clearance labeler, µs per hull pair", "634", "5.7", "same, exact pairs counted per call")
+    row(
+        "clearance labeler, µs per hull pair",
+        "634",
+        "5.7",
+        "same, exact pairs counted per call",
+        "bench/out/m2_call_omp_t1.json",
+    )
     row(
         "contact scan, ms per control step",
         "8.19",
         "**2.25**",
         "`audit/t2_run.sh` CONTACTS=0 vs 1, identical instrumentation",
+        "audit/arrays/t2_alltasks_c0on.json",
     )
     row(
         "policy forward, ms per call (B=1)",
         "—",
         fmt((fwd or {}).get("timing", {}).get("forward_ms_mean"), 2),
         "`bench/fwd_run.sh time baseline`",
+        "bench/out/m4_fwd_time_base.json",
     )
     row(
         "forward phases: LLM / vision",
@@ -104,6 +129,7 @@ def build():
             f" / {fmt((fwd or {}).get('timing', {}).get('phases_ms', {}).get('vision_backbone', {}).get('mean'), 1)} ms"
         ),
         "same run, CUDA events per submodule",
+        "bench/out/m4_fwd_time_base.json",
     )
     if t1:
         row(
@@ -111,6 +137,7 @@ def build():
             "—",
             f"{fmt(t1.get('queue_wait_ms'))} / {fmt(t1.get('forward_ms'))} / {fmt(t1.get('transport_plus_prep_ms'))} ms",
             "worker round trip minus server-reported parts",
+            "bench/out/m4_t1_summary.json",
         )
     if tri:
         row(
@@ -118,6 +145,7 @@ def build():
             f"{fmt(tri['zeromq']['rollouts_per_hour'])} roll/h",
             f"{fmt(tri['triton']['rollouts_per_hour'])} roll/h",
             "`bench/triton_serve.sh` + `POLICY_TRANSPORT=triton`",
+            "bench/out/m3b_comparison.json",
         )
     if inc:
         row(
@@ -125,12 +153,14 @@ def build():
             f"{fmt((t1 or {}).get('rollouts_per_hour'))} roll/h (host)",
             f"**{fmt(inc['rollouts_per_hour'])} roll/h**",
             "`bench/incontainer_run.sh`",
+            "bench/out/m5_incontainer.json",
         )
         row(
             "cold start, server start → READY",
             "—",
             f"{fmt(inc.get('cold_start_s'))} s",
             "same run, image pull excluded",
+            "bench/out/m5_incontainer.json",
         )
     if acc:
         row(
@@ -138,18 +168,21 @@ def build():
             "29 / 26 (M0 reference)",
             f"**{acc['collisions']} / {acc['completions']}**",
             "`bench/accept.py` (requires 29, and 25 or 26)",
+            "bench/out/m4_accept_M4_T1.json",
         )
         row(
             "correctness: per-start collision flips",
             "—",
             f"**{len(acc['collision_flips'])}**",
             "same, against the M3 N=16 reference",
+            "bench/out/m4_accept_M4_T1.json",
         )
         row(
             "correctness: max per-start clearance difference",
             "—",
             f"{fmt(acc.get('max_clearance_diff_cm'), 4)} cm",
             "same",
+            "bench/out/m4_accept_M4_T1.json",
         )
     if stages:
         row(
@@ -160,14 +193,17 @@ def build():
                 f" / {fmt(stages['stages']['s5_exact_pairs']['ms_mean'], 1)} ms"
             ),
             "`bench/stages_run.sh`",
+            "bench/out/m2_stages_python.json",
         )
 
     head = [
-        f"Measured on **{card}**, driver **{driver}**, torch **{torch_v}**, "
-        f"commit **{commit}**. Reproduce with `make bench`.",
+        f"Every row measured on **{card}**, driver **{driver}**, torch **{torch_v}** "
+        f"(constant across rows -- one box, one environment). The commit column is the "
+        f"commit that last touched that row's artefact, which is when the number was "
+        f"last measured; HEAD is currently `{commit}`. Reproduce with `make bench`.",
         "",
-        "| metric | before | after | how measured |",
-        "|---|---|---|---|",
+        "| metric | before | after | how measured | commit |",
+        "|---|---|---|---|---|",
     ]
     return "\n".join(head + rows)
 
