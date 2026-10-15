@@ -36,6 +36,9 @@ import torch
 
 EMPTY_TOKEN_ID = 29871
 _PATCHED = {"done": False}
+# M4 switches read by the patched _regression_or_discrete_prediction below.
+SKIP_LM_HEAD = {"on": False}
+CUDA_GRAPHS = {"on": False, "store": {}, "pool": None}
 
 
 def assert_uniform_prompt_length(prepared):
@@ -79,7 +82,62 @@ def append_empty_token(input_ids, attention_mask):
     return torch.cat([input_ids, tok], dim=1), torch.cat([attention_mask, one], dim=1)
 
 
-def install_reshape_patch(model):
+def _run_trunk_graphed(trunk, embeds, attn):
+    """Replay a captured CUDA graph for this sequence length, capturing on first sight."""
+    import torch
+
+    key = (int(embeds.shape[0]), int(embeds.shape[1]))
+    store = CUDA_GRAPHS["store"]
+    entry = store.get(key)
+
+    def _eager():
+        return trunk(
+            input_ids=None,
+            attention_mask=attn,
+            position_ids=None,
+            past_key_values=None,
+            inputs_embeds=embeds,
+            use_cache=False,
+            output_attentions=False,
+            output_hidden_states=False,
+            return_dict=True,
+        ).last_hidden_state
+
+    if entry is None:
+        # one eager call to settle the allocator, then capture against static buffers
+        out = _eager()
+        se = embeds.clone()
+        sa = attn.clone()
+        g = torch.cuda.CUDAGraph()
+        torch.cuda.synchronize()
+        try:
+            with torch.cuda.graph(g, pool=CUDA_GRAPHS["pool"]):
+                so = trunk(
+                    input_ids=None,
+                    attention_mask=sa,
+                    position_ids=None,
+                    past_key_values=None,
+                    inputs_embeds=se,
+                    use_cache=False,
+                    output_attentions=False,
+                    output_hidden_states=False,
+                    return_dict=True,
+                ).last_hidden_state
+            store[key] = dict(graph=g, embeds=se, attn=sa, out=so)
+        except Exception as e:  # capture can fail; fall back and say so once
+            store[key] = dict(graph=None, error=f"{type(e).__name__}: {e}")
+            print(f"[GRAPH] capture failed for {key}: {e}; running eagerly", flush=True)
+        return out
+
+    if entry.get("graph") is None:
+        return _eager()
+    entry["embeds"].copy_(embeds)
+    entry["attn"].copy_(attn)
+    entry["graph"].replay()
+    return entry["out"].clone()
+
+
+def install_reshape_patch(model, force=False):
     """Rebind _regression_or_discrete_prediction with a batch-shaped final reshape.
 
     Copied from prismatic/extern/hf/modeling_prismatic.py lines 877-942 with exactly one
@@ -87,7 +145,7 @@ def install_reshape_patch(model):
     the middle of the function and there is no hook around it; the research file itself
     must not be edited.
     """
-    if _PATCHED["done"]:
+    if _PATCHED["done"] and not force:
         return
     from prismatic.vla.constants import ACTION_DIM, NUM_ACTIONS_CHUNK
 
@@ -107,19 +165,41 @@ def install_reshape_patch(model):
         multimodal_embeddings, multimodal_attention_mask = self._build_multimodal_attention(
             input_embeddings, projected_patch_embeddings, attention_mask
         )
-        language_model_output = self.language_model(
-            input_ids=None,
-            attention_mask=multimodal_attention_mask,
-            position_ids=None,
-            past_key_values=None,
-            inputs_embeds=multimodal_embeddings,
-            labels=None,
-            use_cache=None,
-            output_attentions=False,
-            output_hidden_states=True,
-            return_dict=True,
-        )
-        last_hidden_states = language_model_output.hidden_states[-1]
+        if SKIP_LM_HEAD["on"]:
+            # The regression path uses only the final hidden state; LlamaForCausalLM
+            # would also run lm_head over every position and we would discard it.
+            trunk = self.language_model.model
+            if CUDA_GRAPHS["on"]:
+                last_hidden_states = _run_trunk_graphed(
+                    trunk, multimodal_embeddings, multimodal_attention_mask
+                )
+            else:
+                last_hidden_states = trunk(
+                    input_ids=None,
+                    attention_mask=multimodal_attention_mask,
+                    position_ids=None,
+                    past_key_values=None,
+                    inputs_embeds=multimodal_embeddings,
+                    use_cache=False,
+                    output_attentions=False,
+                    output_hidden_states=False,
+                    return_dict=True,
+                ).last_hidden_state
+            language_model_output = None
+        else:
+            language_model_output = self.language_model(
+                input_ids=None,
+                attention_mask=multimodal_attention_mask,
+                position_ids=None,
+                past_key_values=None,
+                inputs_embeds=multimodal_embeddings,
+                labels=None,
+                use_cache=None,
+                output_attentions=False,
+                output_hidden_states=True,
+                return_dict=True,
+            )
+            last_hidden_states = language_model_output.hidden_states[-1]
         actions_hidden_states = last_hidden_states[
             :,
             NUM_PATCHES + NUM_PROMPT_TOKENS : NUM_PATCHES

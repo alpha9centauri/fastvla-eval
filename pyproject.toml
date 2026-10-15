@@ -47,6 +47,13 @@ ignore = [
 "fastvla/labeler/bench_call.py" = ["E402", "I001"]
 "fastvla/labeler/bench_contacts.py" = ["E402", "I001"]
 "fastvla/run_with_labeler.py" = ["E402", "I001"]
+"bench/capture_requests.py" = ["E402", "I001"]
+"fastvla/server/bench_forward.py" = ["E402", "I001"]
+"fastvla/server/probe_batching.py" = ["E402", "I001"]
+"fastvla/server/probe_batched_parity.py" = ["E402", "I001"]
+"fastvla/server/probe_mixed_batch.py" = ["E402", "I001"]
+"fastvla/server/server.py" = ["E402", "I001"]
+"fastvla/sim/worker.py" = ["E402", "I001"]
 "bench/*.py" = ["E402"]
 
 [tool.ruff.lint.isort]

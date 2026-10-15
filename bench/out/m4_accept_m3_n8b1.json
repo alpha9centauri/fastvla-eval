@@ -1,0 +1,52 @@
+{
+  "label": "m3_n8b1",
+  "run_dir": "/data_new/vchandr2/fastvla-eval/bench/runs/ctrl60_n8b1",
+  "n_rows": 60,
+  "missing": [],
+  "collisions": 29,
+  "completions": 25,
+  "rollouts_per_hour": 539.3490412713751,
+  "wall_sec": 400.48277362436056,
+  "total_steps": 16048,
+  "collision_flips": [],
+  "completion_flips": [],
+  "n_diagonal": 60,
+  "n_compared": 60,
+  "max_clearance_diff_cm": 0.14369999999999994,
+  "mean_clearance_diff_cm": 0.0025099999999999975,
+  "bit_identical": false,
+  "config": {
+    "run_id": "ctrl60_n8b1",
+    "manifest": "ctrl60",
+    "n_rollouts": 60,
+    "n_workers": 8,
+    "max_batch": 1,
+    "batch_delay_ms": 0.0,
+    "parity": false,
+    "endpoint": "ipc:///tmp/fastvla_ctrl60_n8b1.sock",
+    "labeler": "cpp",
+    "contacts": "1",
+    "per_worker": [
+      8,
+      8,
+      8,
+      8,
+      7,
+      7,
+      7,
+      7
+    ]
+  },
+  "server": {
+    "forwards": 2040,
+    "requests": 2040,
+    "mean_batch": 1.0,
+    "forward_ms_mean": 185.47813145206402,
+    "forward_ms_p95": 199.65557022951543,
+    "queue_wait_ms_mean": 797.5149898739604,
+    "queue_wait_ms_p95": 1004.7648967709392,
+    "prep_ms_mean": 22.595024857597025,
+    "requests_per_s_gpu": 5.391471178684187
+  },
+  "PASS": true
+}

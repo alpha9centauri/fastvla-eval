@@ -1,0 +1,26 @@
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+void cutlass::Kernel<cutlass_80_tensorop_bf16_s16816...         0.00%       0.000us         0.00%       0.000us       0.000us        5.444s        72.67%        5.444s     329.965us         16500  
+                                               aten::mm         2.43%     222.244ms         3.65%     332.946ms      29.595us        5.168s        68.98%        5.326s     473.464us         11250  
+                                            aten::addmm         5.24%     478.710ms         6.81%     621.857ms      29.825us     797.929ms        10.65%     905.868ms      43.447us         20850  
+                                       cudaLaunchKernel         9.21%     840.502ms         9.21%     840.502ms       6.071us     476.137ms         6.36%     476.137ms       3.439us        138450  
+ampere_bf16_s16816gemm_bf16_128x64_ldg8_relu_f2f_sta...         0.00%       0.000us         0.00%       0.000us       0.000us     407.315ms         5.44%     407.315ms      39.933us         10200  
+                                              aten::mul         2.41%     220.035ms         3.63%     330.947ms      16.928us     389.593ms         5.20%     458.473ms      23.451us         19550  
+                         aten::_flash_attention_forward         1.65%     150.695ms         3.85%     351.382ms      52.445us     242.615ms         3.24%     316.532ms      47.244us          6700  
+                                            aten::copy_         1.63%     149.226ms        46.39%        4.234s     236.531us     226.740ms         3.03%     291.202ms      16.268us         17900  
+void at::native::elementwise_kernel<128, 4, at::nati...         0.00%       0.000us         0.00%       0.000us       0.000us     207.327ms         2.77%     207.327ms      14.348us         14450  
+                                              aten::add         2.52%     230.459ms         3.80%     347.165ms      17.229us     191.422ms         2.56%     257.198ms      12.764us         20150  
+void pytorch_flash::flash_fwd_kernel<pytorch_flash::...         0.00%       0.000us         0.00%       0.000us       0.000us     164.797ms         2.20%     164.797ms     102.998us          1600  
+void at::native::elementwise_kernel<128, 4, at::nati...         0.00%       0.000us         0.00%       0.000us       0.000us     112.640ms         1.50%     112.640ms      12.516us          9000  
+                                              aten::cat         4.35%     396.892ms         4.71%     429.768ms      76.065us     104.026ms         1.39%     123.823ms      21.916us          5650  
+                                              aten::pow         0.47%      43.104ms         0.67%      61.182ms      18.825us      98.515ms         1.31%     107.470ms      33.068us          3250  
+void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us      98.515ms         1.31%      98.515ms      30.312us          3250  
+void at::native::unrolled_elementwise_kernel<at::nat...         0.00%       0.000us         0.00%       0.000us       0.000us      98.031ms         1.31%      98.031ms      19.804us          4950  
+void at::native::(anonymous namespace)::CatArrayBatc...         0.00%       0.000us         0.00%       0.000us       0.000us      94.885ms         1.27%      94.885ms      29.652us          3200  
+void at::native::unrolled_elementwise_kernel<at::nat...         0.00%       0.000us         0.00%       0.000us       0.000us      91.647ms         1.22%      91.647ms      14.209us          6450  
+void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us      91.495ms         1.22%      91.495ms      57.184us          1600  
+void at::native::elementwise_kernel<128, 2, at::nati...         0.00%       0.000us         0.00%       0.000us       0.000us      90.274ms         1.20%      90.274ms      27.777us          3250  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 9.127s
+Self CUDA time total: 7.492s

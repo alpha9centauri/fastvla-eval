@@ -1,0 +1,170 @@
+{
+  "ctrl60_n16b1": {
+    "n_samples": 407,
+    "gpu1_sm_mean": 86.57739557739558,
+    "gpu1_sm_p50": 94.0,
+    "gpu1_sm_p95": 96.0,
+    "gpu1_mem_mean": 38.64127764127764,
+    "gpu0_sm_mean": 0.0
+  },
+  "ctrl60_n8b1": {
+    "n_samples": 412,
+    "gpu1_sm_mean": 84.95631067961165,
+    "gpu1_sm_p50": 94.0,
+    "gpu1_sm_p95": 96.0,
+    "gpu1_mem_mean": 38.25,
+    "gpu0_sm_mean": 0.0
+  },
+  "delay2_n8b4_d10": {
+    "n_samples": 358,
+    "gpu1_sm_mean": 85.35195530726257,
+    "gpu1_sm_p50": 98.0,
+    "gpu1_sm_p95": 100.0,
+    "gpu1_mem_mean": 34.24301675977654,
+    "gpu0_sm_mean": 0.0
+  },
+  "delay2_n8b4_d1": {
+    "n_samples": 359,
+    "gpu1_sm_mean": 85.45403899721448,
+    "gpu1_sm_p50": 97.0,
+    "gpu1_sm_p95": 100.0,
+    "gpu1_mem_mean": 34.571030640668525,
+    "gpu0_sm_mean": 0.0
+  },
+  "delay2_n8b4_d20": {
+    "n_samples": 361,
+    "gpu1_sm_mean": 85.0803324099723,
+    "gpu1_sm_p50": 97.0,
+    "gpu1_sm_p95": 100.0,
+    "gpu1_mem_mean": 34.01939058171745,
+    "gpu0_sm_mean": 0.0
+  },
+  "delay2_n8b4_d5": {
+    "n_samples": 359,
+    "gpu1_sm_mean": 86.06406685236769,
+    "gpu1_sm_p50": 97.0,
+    "gpu1_sm_p95": 100.0,
+    "gpu1_mem_mean": 34.40389972144847,
+    "gpu0_sm_mean": 0.0
+  },
+  "delay_n8b4_d10": {
+    "n_samples": 9,
+    "gpu1_sm_mean": 0.0,
+    "gpu1_sm_p50": 0.0,
+    "gpu1_sm_p95": 0.0,
+    "gpu1_mem_mean": 0.0,
+    "gpu0_sm_mean": 0.0
+  },
+  "delay_n8b4_d1": {
+    "n_samples": 488,
+    "gpu1_sm_mean": 6.995901639344262,
+    "gpu1_sm_p50": 0.0,
+    "gpu1_sm_p95": 96.64999999999998,
+    "gpu1_mem_mean": 2.692622950819672,
+    "gpu0_sm_mean": 0.0
+  },
+  "delay_n8b4_d20": {
+    "n_samples": 2,
+    "gpu1_sm_mean": 0.0,
+    "gpu1_sm_p50": 0.0,
+    "gpu1_sm_p95": 0.0,
+    "gpu1_mem_mean": 0.0,
+    "gpu0_sm_mean": 0.0
+  },
+  "delay_n8b4_d5": {
+    "n_samples": 368,
+    "gpu1_sm_mean": 9.442934782608695,
+    "gpu1_sm_p50": 0.0,
+    "gpu1_sm_p95": 96.64999999999998,
+    "gpu1_mem_mean": 3.6630434782608696,
+    "gpu0_sm_mean": 0.0
+  },
+  "m4_compile_n8b1": {
+    "n_samples": 484,
+    "gpu1_sm_mean": 67.22107438016529,
+    "gpu1_sm_p50": 91.0,
+    "gpu1_sm_p95": 95.0,
+    "gpu1_mem_mean": 27.621900826446282,
+    "gpu0_sm_mean": 0.0
+  },
+  "m4_t1_n8b1": {
+    "n_samples": 408,
+    "gpu1_sm_mean": 85.43137254901961,
+    "gpu1_sm_p50": 94.0,
+    "gpu1_sm_p95": 96.0,
+    "gpu1_mem_mean": 38.747549019607845,
+    "gpu0_sm_mean": 0.0
+  },
+  "m4s0_det_n8b1": {
+    "n_samples": 427,
+    "gpu1_sm_mean": 82.77049180327869,
+    "gpu1_sm_p50": 92.0,
+    "gpu1_sm_p95": 94.0,
+    "gpu1_mem_mean": 37.9367681498829,
+    "gpu0_sm_mean": 0.0
+  },
+  "overhead_n8b1": {
+    "n_samples": 410,
+    "gpu1_sm_mean": 85.44390243902438,
+    "gpu1_sm_p50": 94.0,
+    "gpu1_sm_p95": 96.0,
+    "gpu1_mem_mean": 38.51951219512195,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n16b1": {
+    "n_samples": 99,
+    "gpu1_sm_mean": 59.93939393939394,
+    "gpu1_sm_p50": 90.0,
+    "gpu1_sm_p95": 95.0,
+    "gpu1_mem_mean": 26.606060606060606,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n1": {
+    "n_samples": 326,
+    "gpu1_sm_mean": 17.561349693251532,
+    "gpu1_sm_p50": 1.0,
+    "gpu1_sm_p95": 76.0,
+    "gpu1_mem_mean": 8.294478527607362,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n2": {
+    "n_samples": 186,
+    "gpu1_sm_mean": 31.731182795698924,
+    "gpu1_sm_p50": 22.0,
+    "gpu1_sm_p95": 83.75,
+    "gpu1_mem_mean": 14.440860215053764,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n4": {
+    "n_samples": 137,
+    "gpu1_sm_mean": 43.97080291970803,
+    "gpu1_sm_p50": 43.0,
+    "gpu1_sm_p95": 91.0,
+    "gpu1_mem_mean": 19.474452554744527,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n4b1": {
+    "n_samples": 125,
+    "gpu1_sm_mean": 46.464,
+    "gpu1_sm_p50": 40.0,
+    "gpu1_sm_p95": 94.0,
+    "gpu1_mem_mean": 20.968,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n8": {
+    "n_samples": 456,
+    "gpu1_sm_mean": 1.3596491228070176,
+    "gpu1_sm_p50": 0.0,
+    "gpu1_sm_p95": 0.0,
+    "gpu1_mem_mean": 0.17763157894736842,
+    "gpu0_sm_mean": 0.0
+  },
+  "sweep_n8b1": {
+    "n_samples": 120,
+    "gpu1_sm_mean": 50.575,
+    "gpu1_sm_p50": 63.0,
+    "gpu1_sm_p95": 95.0,
+    "gpu1_mem_mean": 22.45,
+    "gpu0_sm_mean": 0.0
+  }
+}

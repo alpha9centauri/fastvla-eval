@@ -72,6 +72,37 @@ STATS = dict(
 )
 
 
+def configure_determinism():
+    """M4 step 0: pin cuDNN kernel selection, optionally all deterministic algorithms.
+
+    M3 found the N=8 run matched the M2 reference on every verdict but differed by up to
+    0.1437 cm in reported clearance, while the N=16 run was bit-identical. The suspected
+    cause is cuDNN autotuning picking different kernels run to run (the handoff attributes
+    the oa6_L1 coin flip to the same thing). benchmark=False removes the autotune, so the
+    same algorithm is chosen every time.
+
+    CUDNN_BENCHMARK=0 (default here) disables autotuning.
+    TORCH_DETERMINISTIC=1 additionally asks torch for deterministic algorithms; warn_only
+    so an op without a deterministic implementation degrades to a warning rather than
+    killing the server mid-run.
+    """
+    import torch
+
+    bench = os.environ.get("CUDNN_BENCHMARK", "0") == "1"
+    det = os.environ.get("TORCH_DETERMINISTIC", "0") == "1"
+    torch.backends.cudnn.benchmark = bench
+    torch.backends.cudnn.deterministic = not bench
+    if det:
+        torch.use_deterministic_algorithms(True, warn_only=True)
+    print(
+        f"[SERVER] cudnn.benchmark={torch.backends.cudnn.benchmark} "
+        f"cudnn.deterministic={torch.backends.cudnn.deterministic} "
+        f"use_deterministic_algorithms={det}",
+        flush=True,
+    )
+    return dict(cudnn_benchmark=bench, cudnn_deterministic=not bench, deterministic_algorithms=det)
+
+
 def build_policy():
     import torch
     from experiments.robot.libero.run_libero_eval import GenerateConfig
@@ -104,6 +135,31 @@ def build_policy():
     proc = get_processor(cfg)
     cfg.unnorm_key = "libero_safety"
     pol = BatchedPolicy(cfg, model, proc, ah, pp)
+
+    # M4: forward optimisations, each switchable so a run records exactly what it used.
+    opts = [o for o in os.environ.get("SERVER_OPTS", "").split("+") if o]
+    applied = []
+    if opts:
+        import time as _t
+
+        from fastvla.server import optimisations as O
+
+        for o in opts:
+            t0 = _t.perf_counter()
+            if o == "pretok":
+                applied.append(O.enable_prompt_cache(pol))
+            elif o == "compile_default":
+                applied.append(O.enable_compile(pol, mode="default"))
+            elif o == "compile_reduce":
+                applied.append(O.enable_compile(pol, mode="reduce-overhead"))
+            elif o == "cudagraph":
+                applied.append(O.enable_cuda_graphs(pol))
+            elif o == "gpu_preproc":
+                applied.append(O.enable_gpu_preprocessing(pol))
+            else:
+                raise SystemExit(f"unknown SERVER_OPTS entry {o!r}")
+            print(f"[SERVER] applied {applied[-1]} in {_t.perf_counter() - t0:.1f} s", flush=True)
+    STATS["server_opts"] = applied
     print(
         f"[SERVER] policy loaded, torch {torch.__version__}, "
         f"B<={MAX_BATCH}, D={BATCH_DELAY_MS} ms, parity={PARITY}",
@@ -113,6 +169,7 @@ def build_policy():
 
 
 def main():
+    STATS["determinism"] = configure_determinism()
     pol = build_policy()
     ctx = zmq.Context(io_threads=2)
     sock = ctx.socket(zmq.ROUTER)

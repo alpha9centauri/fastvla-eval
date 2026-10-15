@@ -67,6 +67,9 @@ def main():
         parity=PARITY,
         endpoint=endpoint,
         labeler=os.environ.get("LABELER", "cpp"),
+        cudnn_benchmark=os.environ.get("CUDNN_BENCHMARK", "0"),
+        torch_deterministic=os.environ.get("TORCH_DETERMINISTIC", "0"),
+        server_opts=os.environ.get("SERVER_OPTS", ""),
         contacts=os.environ.get("CONTACTS", "1"),
         per_worker=[len(s) for s in slices],
     )
@@ -98,6 +101,9 @@ def main():
         MAX_BATCH=str(MAX_BATCH),
         BATCH_DELAY_MS=str(BATCH_DELAY_MS),
         PARITY="1" if PARITY else "0",
+        CUDNN_BENCHMARK=os.environ.get("CUDNN_BENCHMARK", "0"),
+        TORCH_DETERMINISTIC=os.environ.get("TORCH_DETERMINISTIC", "0"),
+        SERVER_OPTS=os.environ.get("SERVER_OPTS", ""),
         STATS_OUT=os.path.join(run_dir, "server_stats.json"),
     )
     # these handles must outlive the block: they are the subprocesses' stdout for the

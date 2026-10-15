@@ -1,0 +1,24 @@
+{
+  "label": "M4_T1",
+  "rollouts_per_hour": 544.7910204079758,
+  "wall_sec": 396.4823058908805,
+  "collisions": 29,
+  "completions": 25,
+  "total_steps": 16040,
+  "ms_per_control_step": 197.74678598048905,
+  "gpu1_sm_mean": 85.4,
+  "requests": 2039,
+  "round_trip_ms": 1008.2067742812194,
+  "queue_wait_ms": 798.1086937481828,
+  "forward_ms": 184.2417020864178,
+  "transport_plus_prep_ms": 25.856378446618876,
+  "p95_round_trip_ms": 1196.8515806889627,
+  "server_forward_ms_mean": 184.26195444843387,
+  "server_prep_ms_mean": 21.155660452212466,
+  "server_opts": [],
+  "determinism": {
+    "cudnn_benchmark": false,
+    "cudnn_deterministic": true,
+    "deterministic_algorithms": false
+  }
+}

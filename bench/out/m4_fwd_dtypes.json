@@ -1,0 +1,55 @@
+{
+  "variant": "baseline",
+  "mode": "dtypes",
+  "n_requests": 50,
+  "applied": [],
+  "torch": "2.2.0+cu121",
+  "fixture": "/data_new/vchandr2/fastvla-eval/bench/out/m4_requests.npz",
+  "dtypes": {
+    "vision_backbone": {
+      "param_tensors_by_dtype": {
+        "torch.bfloat16": 685
+      },
+      "params_by_dtype": {
+        "torch.bfloat16": 730911680
+      },
+      "total_params": 730911680
+    },
+    "language_model": {
+      "param_tensors_by_dtype": {
+        "torch.bfloat16": 291
+      },
+      "params_by_dtype": {
+        "torch.bfloat16": 6738939904
+      },
+      "total_params": 6738939904
+    },
+    "projector": {
+      "param_tensors_by_dtype": {
+        "torch.bfloat16": 6
+      },
+      "params_by_dtype": {
+        "torch.bfloat16": 71385600
+      },
+      "total_params": 71385600
+    },
+    "proprio_projector": {
+      "param_tensors_by_dtype": {
+        "torch.bfloat16": 4
+      },
+      "params_by_dtype": {
+        "torch.bfloat16": 16818176
+      },
+      "total_params": 16818176
+    },
+    "action_head": {
+      "param_tensors_by_dtype": {
+        "torch.bfloat16": 16
+      },
+      "params_by_dtype": {
+        "torch.bfloat16": 151117831
+      },
+      "total_params": 151117831
+    }
+  }
+}

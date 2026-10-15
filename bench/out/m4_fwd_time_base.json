@@ -1,0 +1,38 @@
+{
+  "variant": "baseline",
+  "mode": "time",
+  "n_requests": 50,
+  "applied": [],
+  "torch": "2.2.0+cu121",
+  "fixture": "/data_new/vchandr2/fastvla-eval/bench/out/m4_requests.npz",
+  "timing": {
+    "prepare_ms_mean": 11.336824595928192,
+    "prepare_ms_p95": 16.04009177535772,
+    "forward_ms_mean": 167.97084622085094,
+    "forward_ms_p95": 170.0728221796453,
+    "total_ms_mean": 179.30767081677914,
+    "phases_ms": {
+      "vision_backbone": {
+        "mean": 33.94762817382812,
+        "total": 1697.3814086914062,
+        "calls": 50
+      },
+      "projector": {
+        "mean": 0.8434278392791748,
+        "total": 42.17139196395874,
+        "calls": 50
+      },
+      "proprio_projector": {
+        "mean": 0.13680703788995743,
+        "total": 6.840351894497871,
+        "calls": 50
+      },
+      "language_model": {
+        "mean": 130.2174514770508,
+        "total": 6510.872573852539,
+        "calls": 50
+      }
+    },
+    "peak_gpu_gb": 16.077700608
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "variant": "gpu_preproc",
+  "mode": "time",
+  "n_requests": 50,
+  "applied": [
+    "gpu_preproc"
+  ],
+  "torch": "2.2.0+cu121",
+  "fixture": "/data_new/vchandr2/fastvla-eval/bench/out/m4_requests.npz",
+  "timing": {
+    "prepare_ms_mean": 7.748882491141558,
+    "prepare_ms_p95": 7.735013775527477,
+    "forward_ms_mean": 168.29629428684711,
+    "forward_ms_p95": 170.03084542229772,
+    "total_ms_mean": 176.04517677798867,
+    "phases_ms": {
+      "vision_backbone": {
+        "mean": 33.00632591247559,
+        "total": 1650.3162956237793,
+        "calls": 50
+      },
+      "projector": {
+        "mean": 0.8569024002552033,
+        "total": 42.84512001276016,
+        "calls": 50
+      },
+      "proprio_projector": {
+        "mean": 0.13492095857858658,
+        "total": 6.746047928929329,
+        "calls": 50
+      },
+      "language_model": {
+        "mean": 132.16172149658203,
+        "total": 6608.086074829102,
+        "calls": 50
+      }
+    },
+    "peak_gpu_gb": 16.079242752
+  }
+}

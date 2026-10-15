@@ -1,0 +1,64 @@
+{
+  "label": "compile_default",
+  "run_dir": "/data_new/vchandr2/fastvla-eval/bench/runs/m4_compile_n8b1",
+  "n_rows": 60,
+  "missing": [],
+  "collisions": 30,
+  "completions": 23,
+  "rollouts_per_hour": 459.02513159085083,
+  "wall_sec": 470.56247062422335,
+  "total_steps": 16085,
+  "collision_flips": [
+    "oa3_i4",
+    "oa3_i6",
+    "oa3_i7"
+  ],
+  "completion_flips": [
+    "oa2_i5",
+    "oa2_i7",
+    "oa4_i2",
+    "oa6_L1_i6"
+  ],
+  "n_diagonal": 53,
+  "n_compared": 60,
+  "max_clearance_diff_cm": 5.2916,
+  "mean_clearance_diff_cm": 0.4899366666666667,
+  "bit_identical": false,
+  "config": {
+    "run_id": "m4_compile_n8b1",
+    "manifest": "ctrl60",
+    "n_rollouts": 60,
+    "n_workers": 8,
+    "max_batch": 1,
+    "batch_delay_ms": 0.0,
+    "parity": false,
+    "endpoint": "ipc:///tmp/fastvla_m4_compile_n8b1.sock",
+    "labeler": "cpp",
+    "cudnn_benchmark": "0",
+    "torch_deterministic": "0",
+    "server_opts": "compile_default",
+    "contacts": "1",
+    "per_worker": [
+      8,
+      8,
+      8,
+      8,
+      7,
+      7,
+      7,
+      7
+    ]
+  },
+  "server": {
+    "forwards": 2044,
+    "requests": 2044,
+    "mean_batch": 1.0,
+    "forward_ms_mean": 217.6485895776097,
+    "forward_ms_p95": 187.82492456957698,
+    "queue_wait_ms_mean": 1040.7695101629652,
+    "queue_wait_ms_p95": 918.3987876400352,
+    "prep_ms_mean": 21.19679982024892,
+    "requests_per_s_gpu": 4.59456228014479
+  },
+  "PASS": false
+}

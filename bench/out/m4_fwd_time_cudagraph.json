@@ -1,0 +1,36 @@
+{
+  "variant": "cudagraph",
+  "mode": "time",
+  "n_requests": 50,
+  "applied": [
+    "skip_lm_head",
+    "cudagraph:24,28,29,30,32"
+  ],
+  "torch": "2.2.0+cu121",
+  "fixture": "/data_new/vchandr2/fastvla-eval/bench/out/m4_requests.npz",
+  "timing": {
+    "prepare_ms_mean": 13.67208682000637,
+    "prepare_ms_p95": 28.067952115088698,
+    "forward_ms_mean": 173.80991030484438,
+    "forward_ms_p95": 171.2227727752179,
+    "total_ms_mean": 187.48199712485075,
+    "phases_ms": {
+      "vision_backbone": {
+        "mean": 33.76109580993652,
+        "total": 1688.0547904968262,
+        "calls": 50
+      },
+      "projector": {
+        "mean": 0.8553875231742859,
+        "total": 42.769376158714294,
+        "calls": 50
+      },
+      "proprio_projector": {
+        "mean": 0.1363558378815651,
+        "total": 6.817791894078255,
+        "calls": 50
+      }
+    },
+    "peak_gpu_gb": 15.767663616
+  }
+}

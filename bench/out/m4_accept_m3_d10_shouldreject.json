@@ -1,0 +1,61 @@
+{
+  "label": "m3_d10_shouldreject",
+  "run_dir": "/data_new/vchandr2/fastvla-eval/bench/runs/delay2_n8b4_d10",
+  "n_rows": 60,
+  "missing": [],
+  "collisions": 29,
+  "completions": 26,
+  "rollouts_per_hour": 623.5073670355316,
+  "wall_sec": 346.4273421932012,
+  "total_steps": 15880,
+  "collision_flips": [
+    "oa3_i0",
+    "oa3_i1",
+    "oa3_i6",
+    "oa5_i6"
+  ],
+  "completion_flips": [
+    "oa2_i4",
+    "oa2_i7",
+    "oa6_L1_i6"
+  ],
+  "n_diagonal": 53,
+  "n_compared": 60,
+  "max_clearance_diff_cm": 5.478,
+  "mean_clearance_diff_cm": 0.39487666666666665,
+  "bit_identical": false,
+  "config": {
+    "run_id": "delay2_n8b4_d10",
+    "manifest": "ctrl60",
+    "n_rollouts": 60,
+    "n_workers": 8,
+    "max_batch": 4,
+    "batch_delay_ms": 10.0,
+    "parity": false,
+    "endpoint": "ipc:///tmp/fastvla_delay2_n8b4_d10.sock",
+    "labeler": "cpp",
+    "contacts": "1",
+    "per_worker": [
+      8,
+      8,
+      8,
+      8,
+      7,
+      7,
+      7,
+      7
+    ]
+  },
+  "server": {
+    "forwards": 791,
+    "requests": 2016,
+    "mean_batch": 2.5486725663716814,
+    "forward_ms_mean": 398.47388393192654,
+    "forward_ms_p95": 586.0772603191435,
+    "queue_wait_ms_mean": 288.8254705365629,
+    "queue_wait_ms_p95": 625.7565228734165,
+    "prep_ms_mean": 19.416881068739006,
+    "requests_per_s_gpu": 6.39608433361491
+  },
+  "PASS": false
+}

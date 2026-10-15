@@ -1,0 +1,40 @@
+{
+  "variant": "pretok",
+  "mode": "time",
+  "n_requests": 50,
+  "applied": [
+    "pretok"
+  ],
+  "torch": "2.2.0+cu121",
+  "fixture": "/data_new/vchandr2/fastvla-eval/bench/out/m4_requests.npz",
+  "timing": {
+    "prepare_ms_mean": 11.330446172505617,
+    "prepare_ms_p95": 14.794988092035052,
+    "forward_ms_mean": 167.8912360034883,
+    "forward_ms_p95": 170.77851174399257,
+    "total_ms_mean": 179.22168217599392,
+    "phases_ms": {
+      "vision_backbone": {
+        "mean": 33.89552696228027,
+        "total": 1694.7763481140137,
+        "calls": 50
+      },
+      "projector": {
+        "mean": 0.8451494419574738,
+        "total": 42.25747209787369,
+        "calls": 50
+      },
+      "proprio_projector": {
+        "mean": 0.13520767748355866,
+        "total": 6.760383874177933,
+        "calls": 50
+      },
+      "language_model": {
+        "mean": 130.18673095703124,
+        "total": 6509.3365478515625,
+        "calls": 50
+      }
+    },
+    "peak_gpu_gb": 16.077700608
+  }
+}
