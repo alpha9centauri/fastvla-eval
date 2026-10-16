@@ -4,12 +4,12 @@
 
 Two things, one repo:
 
-| | Part 1: the evaluation harness | Part 2: the collision monitor |
-|---|---|---|
-| What it is | A faster, correct test bench for robot AI models | A warning light read from inside the model |
-| Headline | 60-trial test: 51 min to 7 min on one GPU, same verdict on every trial | Predicts contact within the next action chunk at AUROC 0.92, 74 control steps early, for 0.07 ms |
-| Skills | profiling, C++, parallel GPU serving, containers, CI | interpretability, linear probes, detection metrics, safety |
-| Details | [docs/BENCHMARK.md](docs/BENCHMARK.md), [docs/CORRECTNESS.md](docs/CORRECTNESS.md) | [fastvla/monitor/EVAL.md](fastvla/monitor/EVAL.md) |
+| | Part 1: the evaluation harness | Part 2: the collision monitor | Part 3: the post-training pipeline |
+|---|---|---|---|
+| What it is | A faster, correct test bench for robot AI models | A warning light read from inside the model | Teaching the model to lift over the obstacle |
+| Headline | 60-trial test: 51 min to 7 min on one GPU, same verdict on every trial | Predicts contact within the next action chunk at AUROC 0.92, 74 control steps early, for 0.07 ms | Collisions 29 to 21 on the 60-trial test: 12 prevented, 4 created, 5 completions lost |
+| Skills | profiling, C++, parallel GPU serving, containers, CI | interpretability, linear probes, detection metrics, safety | data pipelines, LoRA fine-tuning, mixture design, honest evaluation |
+| Details | [docs/BENCHMARK.md](docs/BENCHMARK.md), [docs/CORRECTNESS.md](docs/CORRECTNESS.md) | [fastvla/monitor/EVAL.md](fastvla/monitor/EVAL.md) | [docs/POSTTRAIN.md](docs/POSTTRAIN.md) |
 
 ## Why this exists
 
@@ -77,6 +77,34 @@ Wired to an automatic stop, on the 60 trials: **18 of 29 collisions prevented, n
 <sub>The same trial run twice; only the monitor setting changed. Left: the arm knocks the bottle over at step 129. Right: the monitor fires and the arm is held from step 128. Closest approach 1.59 cm.</sub>
 
 It stops the arm where it is. It does not steer around the obstacle, and it does not resume. A trial it saves is also a trial it ends.
+
+---
+
+# Part 3: The post-training pipeline
+
+### What I built
+
+- Converted the benchmark from LeRobot parquet and MP4 to RLDS/TFDS: **19,606 trajectories, 3,431,183 transitions**, 278 GB. A parallel builder writes the same total payload to the byte as the single-process one, resharded, cutting a day of wall clock.
+- Generated 99 demonstrations with a planner that lifts over the obstacle, and registered them as a 25/75 mixture with the original data. The generated set is normalised with the **base set's** statistics, not its own; its action range is half as wide, and normalising it separately would have taught two different action languages at once.
+- Continued the LoRA fine-tune of the 7B policy on one 24 GB card: rank 32, alpha 16, lr 5e-5, batch 1 x 8 accumulation, action head and proprio projector warm-started from the base checkpoint, fresh zero-init adapter so step 0 is exactly the base policy. 278,764,295 trainable parameters, 4.83 s/it, 4 h 25 m for 3000 steps, L1 loss 0.0495 to 0.0209.
+- Evaluated the result through Part 1's harness and reported what it actually did, per trial, including the parts that got worse.
+
+### What you get
+
+The post-trained checkpoint against the base, 60 trials, same harness:
+
+| | base | post-trained |
+|---|---|---|
+| collisions | 29 | **21** |
+| completions | 25 | **20** |
+| per trial | — | **12 collisions prevented, 4 created, 8 completions lost, 3 gained** |
+
+Eight fewer collisions, paid for with five completions net. The honest reading is in
+[docs/POSTTRAIN.md](docs/POSTTRAIN.md): on the trials where contact is prevented the arm
+does not stop — it runs longer and clears by 1.5 cm — while the lift the demonstrations
+taught shows up mostly where it was least needed, 22 mm higher on trials that already
+cleared the obstacle. The direction is right; the mechanism is not the one the data was
+designed to teach.
 
 ---
 

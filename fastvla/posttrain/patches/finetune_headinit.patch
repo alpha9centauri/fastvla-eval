@@ -1,0 +1,92 @@
+--- finetune.py	2026-08-11 18:39:11.385569852 -0700
++++ finetune_headinit.py	2026-10-10 07:01:45.224499947 -0700
+@@ -105,6 +105,17 @@
+     # LoRA
+     use_lora: bool = True                            # If True, uses LoRA fine-tuning
+     lora_rank: int = 32                              # Rank of LoRA weight matrix
++    # [HEAD-INIT] Warm-start the action head / proprio projector from the checkpoint at
++    # `vla_path` at step 0. Stock finetune.py loads these ONLY when --resume is set, so a
++    # plain warm-start silently trains a RANDOM action head on top of a pretrained VLA --
++    # which is what the rank-32 baseline run did. This flag loads them without adopting
++    # any other resume semantics (step counter, LR schedule and LoRA all stay fresh).
++    init_heads_from_vla_path: bool = False
++    init_heads_step: int = 300000                    # step suffix of the head ckpts in vla_path
++    # [ALPHA] Stock formula is lora_alpha=min(lora_rank,16), so doubling the rank HALVES the
++    # LoRA scaling alpha/r (0.5 at r32 -> 0.25 at r64) and confounds a rank ablation. Set this
++    # to hold alpha/r fixed. None = stock behaviour.
++    lora_alpha: Optional[int] = None
+     lora_dropout: float = 0.0                        # Dropout applied to LoRA weights
+     merge_lora_during_training: bool = True          # If True, merges LoRA weights and saves result during training
+                                                      #   Note: Merging can be very slow on some machines. If so, set to
+@@ -172,6 +183,8 @@
+         )
+         if cfg.use_lora:
+             run_id += f"+lora-r{cfg.lora_rank}+dropout-{cfg.lora_dropout}"
++            if cfg.lora_alpha is not None:
++                run_id += f"+alpha-{cfg.lora_alpha}"
+         if cfg.image_aug:
+             run_id += "--image_aug"
+         if cfg.run_id_note is not None:
+@@ -258,6 +271,24 @@
+     if cfg.resume:
+         state_dict = load_checkpoint(module_name, cfg.vla_path, cfg.resume_step)
+         module.load_state_dict(state_dict)
++    elif getattr(cfg, "init_heads_from_vla_path", False) and module_name in (
++            "action_head", "proprio_projector"):
++        ckpt = os.path.join(cfg.vla_path, f"{module_name}--{cfg.init_heads_step}_checkpoint.pt")
++        if not os.path.exists(ckpt):
++            raise FileNotFoundError(
++                f"[HEAD-INIT] {module_name} checkpoint not found: {ckpt}. Set --init_heads_step "
++                f"to the step suffix present in {cfg.vla_path}, or pass "
++                f"--init_heads_from_vla_path False to train this head from scratch.")
++        state_dict = load_checkpoint(module_name, cfg.vla_path, cfg.init_heads_step)
++        have = module.state_dict()
++        bad = [k for k in have
++               if k not in state_dict or tuple(have[k].shape) != tuple(state_dict[k].shape)]
++        if bad:
++            raise ValueError(
++                f"[HEAD-INIT] {module_name} checkpoint is incompatible with this config; "
++                f"mismatched/missing keys (first 5): {bad[:5]}. Refusing to partially load a head.")
++        module.load_state_dict(state_dict)
++        print(f"[HEAD-INIT] {module_name}: warm-started from {ckpt}", flush=True)
+ 
+     if to_bf16:
+         module = module.to(torch.bfloat16)
+@@ -846,7 +877,7 @@
+     if cfg.use_lora:
+         lora_config = LoraConfig(
+             r=cfg.lora_rank,
+-            lora_alpha=min(cfg.lora_rank, 16),
++            lora_alpha=(cfg.lora_alpha if cfg.lora_alpha is not None else min(cfg.lora_rank, 16)),
+             lora_dropout=cfg.lora_dropout,
+             target_modules="all-linear",
+             init_lora_weights="gaussian",
+@@ -1141,6 +1172,28 @@
+ 
+             # Stop training when max_steps is reached
+             if log_step == cfg.max_steps:
++                # Save before breaking. The periodic save above requires BOTH a save_freq multiple
++                # and a gradient-accumulation boundary; this break requires only the step count,
++                # so for any max_steps that is a multiple of save_freq the break could fire on a
++                # micro-batch that is not an accumulation boundary and the final checkpoint was
++                # never written. That is what happened to ft_liftonly: 1000 and 2000 exist, 3000
++                # does not. Saving here is unconditional on the boundary and is a no-op if the
++                # periodic save already wrote this step.
++                final_dir = Path(str(run_dir) + f"--{log_step}_chkpt")
++                if not final_dir.exists():
++                    print(f"Max step {cfg.max_steps} reached -- saving final checkpoint first...")
++                    save_training_checkpoint(
++                        cfg=cfg,
++                        run_dir=run_dir,
++                        log_step=log_step,
++                        vla=vla,
++                        processor=processor,
++                        proprio_projector=proprio_projector if cfg.use_proprio else None,
++                        noisy_action_projector=noisy_action_projector if cfg.use_diffusion else None,
++                        action_head=action_head if (cfg.use_l1_regression or cfg.use_diffusion) else None,
++                        train_dataset=train_dataset,
++                        distributed_state=distributed_state,
++                    )
+                 print(f"Max step {cfg.max_steps} reached! Stopping training...")
+                 break
+ 

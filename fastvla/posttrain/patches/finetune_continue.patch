@@ -1,0 +1,52 @@
+--- finetune.py	2026-08-11 18:39:11.385569852 -0700
++++ finetune_continue.py	2026-08-11 19:36:44.744234222 -0700
+@@ -849,10 +849,11 @@
+             lora_alpha=min(cfg.lora_rank, 16),
+             lora_dropout=cfg.lora_dropout,
+             target_modules="all-linear",
+-            init_lora_weights="gaussian",
++            init_lora_weights=True,  # [CONTINUE-FIX] default init => lora_B=0 (identity at start); NOT "gaussian" (that corrupted resume)
+         )
+         vla = get_peft_model(vla, lora_config)
+         vla.print_trainable_parameters()
++        print("[CONTINUE] merged-direct base + TRAINABLE identity LoRA (init_lora_weights=True)", flush=True)
+ 
+     # FiLM setup
+     if cfg.use_film:
+@@ -1028,6 +1029,36 @@
+         "next_actions_l1_loss": deque(maxlen=cfg.grad_accumulation_steps),
+     }
+ 
++    # ===== VALIDATION GATE: 64 forwards on this exact construction, BEFORE training =====
++    import statistics as _st_gate
++    _GATE_N = int(os.environ.get("GATE_N", "64"))
++    _GATE_THRESH = float(os.environ.get("GATE_THRESH", "0.16"))
++    vla.eval(); action_head.eval()
++    if cfg.use_proprio:
++        proprio_projector.eval()
++    _glosses = []
++    print(f"[GATE] running {_GATE_N} forward passes before training...", flush=True)
++    with torch.no_grad():
++        for _gi, _gbatch in enumerate(dataloader):
++            _gl, _gm = run_forward_pass(
++                vla=vla, action_head=action_head, noisy_action_projector=None,
++                proprio_projector=proprio_projector if cfg.use_proprio else None,
++                batch=_gbatch, action_tokenizer=action_tokenizer, device_id=device_id,
++                use_l1_regression=cfg.use_l1_regression, use_diffusion=cfg.use_diffusion,
++                use_proprio=cfg.use_proprio, use_film=cfg.use_film, num_patches=NUM_PATCHES,
++            )
++            _glosses.append(_gm["loss_value"])
++            if len(_glosses) >= _GATE_N:
++                break
++    _gmean = _st_gate.mean(_glosses)
++    print(f"[GATE RESULT] mean={_gmean:.6f} median={_st_gate.median(_glosses):.6f} min={min(_glosses):.6f} max={max(_glosses):.6f} thresh={_GATE_THRESH}", flush=True)
++    if _gmean > _GATE_THRESH:
++        print(f"[GATE] FAILED: mean {_gmean:.4f} > {_GATE_THRESH}; aborting BEFORE training (start not faithful).", flush=True)
++        import sys as _sys
++        _sys.exit(3)
++    print(f"[GATE] PASSED: mean {_gmean:.4f} <= {_GATE_THRESH}; proceeding to continue training.", flush=True)
++    vla.train()
++
+     # Start training
+     with tqdm.tqdm(total=cfg.max_steps, leave=False) as progress:
+         vla.train()

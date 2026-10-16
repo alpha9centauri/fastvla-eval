@@ -1,0 +1,71 @@
+--- /tmp/claude-1020/-data-new-vchandr2-behavior-displacement/53057a70-8db6-450f-9bd6-916f281fabef/scratchpad/configs.py.orig	2026-10-08 21:14:09.122416232 -0700
++++ prismatic/vla/datasets/rlds/oxe/configs.py	2026-10-08 22:01:28.318008342 -0700
+@@ -652,6 +652,26 @@
+         "state_encoding": StateEncoding.POS_EULER,
+         "action_encoding": ActionEncoding.EEF_POS,
+     },
++    # The planner-generated oa1 "lift-only" set. Identical layout to libero_safety -- it is
++    # written by the same converter from the same LeRobot schema -- and registered separately
++    # only so a mixture can oversample it.
++    "libero_safety_oa1_liftonly": {
++        "image_obs_keys": {"primary": "image", "secondary": None, "wrist": "wrist_image"},
++        "depth_obs_keys": {"primary": None, "secondary": None, "wrist": None},
++        "state_obs_keys": ["EEF_state", "gripper_state"],
++        "state_encoding": StateEncoding.POS_EULER,
++        "action_encoding": ActionEncoding.EEF_POS,
++        # Normalise this set with libero_safety's statistics rather than its own. Its action
++        # ranges are about half the originals' -- the scripted executor moves smoothly at a 2 cm
++        # per step cap where humans do not -- and its gripper mean is 0.264 against 0.626, so
++        # per-dataset bounds_q99 would scale the two sets differently and the model would see
++        # systematically smaller normalised actions from this one. The file carries the originals'
++        # action and proprio fields but THIS set's own num_transitions, because
++        # make_interleaved_dataset reads dataset_sizes from that field to balance the mixture.
++        "aux_kwargs": {
++            "dataset_statistics": "/data_new/vchandr2/ft_liftonly_data/oa1_liftonly_shared_stats.json",
++        },
++    },
+     "libero_spatial_no_noops": {
+         "image_obs_keys": {"primary": "image", "secondary": None, "wrist": "wrist_image"},
+         "depth_obs_keys": {"primary": None, "secondary": None, "wrist": None},
+--- /tmp/claude-1020/-data-new-vchandr2-behavior-displacement/53057a70-8db6-450f-9bd6-916f281fabef/scratchpad/mixtures.py.orig	2026-10-08 21:14:09.126416425 -0700
++++ prismatic/vla/datasets/rlds/oxe/mixtures.py	2026-10-08 21:14:09.174418757 -0700
+@@ -9,6 +9,15 @@
+ 
+ # fmt: off
+ OXE_NAMED_MIXTURES: Dict[str, List[Tuple[str, float]]] = {
++    # === LIBERO-Safety + the planner-generated oa1 lift-only set ===
++    # make_interleaved_dataset multiplies these weights by each dataset's transition count when
++    # balance_weights is on, then normalises. libero_safety has 3,431,183 transitions and the oa1
++    # set has 16,954, a ratio of 202.4, so a weight of 67.5 on the small set puts it at
++    # 67.5*16954 / (67.5*16954 + 3431183) = 25.0% of sampled frames.
++    "libero_safety_oa1_mix": [
++        ("libero_safety", 1.0),
++        ("libero_safety_oa1_liftonly", 67.5),
++    ],
+     # === Bridge V2 Dataset ===
+     "bridge": [
+         # ("bridge_oxe", 1.0),                                    # Version of Bridge V2 in Open-X GCP Bucket
+--- /tmp/claude-1020/-data-new-vchandr2-behavior-displacement/53057a70-8db6-450f-9bd6-916f281fabef/scratchpad/transforms.py.orig	2026-10-08 21:14:09.130416620 -0700
++++ prismatic/vla/datasets/rlds/oxe/transforms.py	2026-10-08 21:14:09.174418757 -0700
+@@ -921,6 +921,7 @@
+     "droid_wipe": droid_finetuning_transform,
+     ### LIBERO datasets (modified versions)
+     "libero_safety": libero_dataset_transform,
++    "libero_safety_oa1_liftonly": libero_dataset_transform,
+     "libero_spatial_no_noops": libero_dataset_transform,
+     "libero_object_no_noops": libero_dataset_transform,
+     "libero_goal_no_noops": libero_dataset_transform,
+--- /tmp/claude-1020/-data-new-vchandr2-behavior-displacement/53057a70-8db6-450f-9bd6-916f281fabef/scratchpad/dataset.py.orig	2026-10-08 22:11:30.463746549 -0700
++++ prismatic/vla/datasets/rlds/dataset.py	2026-10-08 22:11:30.483747534 -0700
+@@ -541,6 +541,11 @@
+             if "dataset_frame_transform_kwargs" in dataset_kwargs
+             else {}
+         )
++        # A dataset may carry its own `dataset_statistics` in its kwargs, to normalise it with
++        # another dataset's statistics instead of its own. The size loop above has already
++        # honoured that and stored the result in all_dataset_statistics, which is what this call
++        # passes, so the kwarg would arrive twice and TypeError.
++        dataset_kwargs.pop("dataset_statistics", None)
+         dataset, _ = make_dataset_from_rlds(
+             **dataset_kwargs,
+             train=train,

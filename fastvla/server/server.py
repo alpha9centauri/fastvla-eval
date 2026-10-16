@@ -48,7 +48,10 @@ BASE = (
     "openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0"
     "--image_aug--libero_safety--warmstart-combined--headinit"
 )
-CKPT = os.environ.get("CKPT", f"/data_new/vchandr2/runs/{BASE}--17500_chkpt")
+# `or`, not .get(default): the runner always exports CKPT and exports it EMPTY when no
+# override is wanted, and .get would then return "" rather than falling back. The Triton
+# backend hit this first; see fastvla/server/triton/models/openvla_oft/1/model.py.
+CKPT = os.environ.get("CKPT") or f"/data_new/vchandr2/runs/{BASE}--17500_chkpt"
 
 if PARITY and MAX_BATCH != 1:
     raise SystemExit("PARITY=1 requires MAX_BATCH=1 (DESIGN.md section 3)")

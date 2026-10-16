@@ -1,0 +1,31 @@
+--- /tmp/claude-1020/-data-new-vchandr2-behavior-displacement/53057a70-8db6-450f-9bd6-916f281fabef/scratchpad/finetune_headinit.py.orig	2026-10-10 07:01:45.192498455 -0700
++++ vla-scripts/finetune_headinit.py	2026-10-10 07:01:45.224499947 -0700
+@@ -1172,6 +1172,28 @@
+ 
+             # Stop training when max_steps is reached
+             if log_step == cfg.max_steps:
++                # Save before breaking. The periodic save above requires BOTH a save_freq multiple
++                # and a gradient-accumulation boundary; this break requires only the step count,
++                # so for any max_steps that is a multiple of save_freq the break could fire on a
++                # micro-batch that is not an accumulation boundary and the final checkpoint was
++                # never written. That is what happened to ft_liftonly: 1000 and 2000 exist, 3000
++                # does not. Saving here is unconditional on the boundary and is a no-op if the
++                # periodic save already wrote this step.
++                final_dir = Path(str(run_dir) + f"--{log_step}_chkpt")
++                if not final_dir.exists():
++                    print(f"Max step {cfg.max_steps} reached -- saving final checkpoint first...")
++                    save_training_checkpoint(
++                        cfg=cfg,
++                        run_dir=run_dir,
++                        log_step=log_step,
++                        vla=vla,
++                        processor=processor,
++                        proprio_projector=proprio_projector if cfg.use_proprio else None,
++                        noisy_action_projector=noisy_action_projector if cfg.use_diffusion else None,
++                        action_head=action_head if (cfg.use_l1_regression or cfg.use_diffusion) else None,
++                        train_dataset=train_dataset,
++                        distributed_state=distributed_state,
++                    )
+                 print(f"Max step {cfg.max_steps} reached! Stopping training...")
+                 break
+ 

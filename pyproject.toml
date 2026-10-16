@@ -47,7 +47,18 @@ target-version = "py310"
 # audit/run_with_alert.py is a verbatim copy of research code (see its header and
 # audit/PROVENANCE.txt). It is excluded so no formatter or fixer can touch it; its md5 is
 # checked by tests/test_wrapper_copy_verbatim.py.
-extend-exclude = ["audit/t1_out", "audit/traces", "audit/run_with_alert.py"]
+extend-exclude = [
+  "audit/t1_out",
+  "audit/traces",
+  "audit/run_with_alert.py",
+  # Copied third-party / research scripts. Each carries a header naming its source file
+  # and commit; reformatting them would break the one property that makes them auditable,
+  # which is that they still diff cleanly against the original. Our own files in
+  # fastvla/posttrain/ (config.py, __init__.py) are linted normally.
+  "fastvla/posttrain/convert_lerobot_to_rlds.py",
+  "fastvla/posttrain/build_rlds_parallel.py",
+  "fastvla/posttrain/merge_lora.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RET", "NPY"]
