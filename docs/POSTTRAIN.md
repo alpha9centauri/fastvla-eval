@@ -20,7 +20,7 @@ can open it.
 | trajectories | **19,606** (17,645 train + 1,961 validation) |
 | transitions | **3,431,183** |
 | on disk | 278.7 GB (238.1 train + 40.6 validation) |
-| source episodes dropped | 58, verified black frames; PyAV and ffmpeg agree |
+| source episodes dropped | 58 of 19,664, verified black frames; PyAV and ffmpeg agree (`full_build.log`) |
 
 Counts read from `rlds_full/libero_safety/1.0.0/dataset_info.json` and the
 `dataset_statistics_*.json` beside it. The dropped-episode note is from
@@ -28,11 +28,23 @@ Counts read from `rlds_full/libero_safety/1.0.0/dataset_info.json` and the
 
 ### The parallel build
 
-A single-process build of 3.4 M transitions is a day of wall clock. `build_rlds_parallel.py`
-gives each worker a disjoint slice of episodes and has it serialise straight into its own
-shards, using the builder's own feature spec. One final pass records shard lengths and byte
-counts through TFDS's own `DatasetInfo` writer, which is what makes the result a legitimate
-TFDS build.
+`build_rlds_parallel.py` gives each worker a disjoint slice of episodes and has it
+serialise straight into its own shards, using the builder's own feature spec. One final
+pass records shard lengths and byte counts through TFDS's own `DatasetInfo` writer, which
+is what makes the result a legitimate TFDS build.
+
+Measured on the same 500 episodes, 8 workers against one process:
+
+| build | wall clock | source |
+|---|---|---|
+| single process | **37.96 min** | `rlds500.log`, `Generating splits...: 2/2 [37:57<00:00]` |
+| 8 workers | **7.0 min** | `p500.log`, `build complete in 7.0 min` |
+
+**5.4x.** The full 19,664-episode build took **259.8 min** with 8 workers
+(`full_build.log`), and the same log records the 58 skipped episodes and the resulting
+17,645 + 1,961 = 19,606. At the single-process rate the full build would have been about
+**25 hours** — an extrapolation from the 500-episode run, not a measurement; nobody ran
+the full set single-process.
 
 It writes **the same bytes**, redistributed. Verified here by comparing a single-process
 build against a parallel build of the same input:
