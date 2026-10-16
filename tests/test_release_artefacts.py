@@ -20,8 +20,10 @@ sys.path.insert(0, ROOT)
 DOCS = [
     "README.md",
     "CONTRIBUTING.md",
-    "docs/stories.md",
     "docs/PROVENANCE.md",
+    "docs/BENCHMARK.md",
+    "docs/CORRECTNESS.md",
+    "docs/ARCHITECTURE.md",
     "fastvla/monitor/EVAL.md",
 ]
 MEDIA = (".png", ".gif", ".jpg", ".jpeg", ".svg", ".webp")
@@ -86,14 +88,14 @@ def test_the_default_probe_is_tracked():
     )
 
 
-def test_bench_artefacts_behind_the_readme_table_are_tracked():
+def test_bench_artefacts_behind_the_table_are_tracked():
     """The table claims to be generated from these; a reader has to be able to check."""
     import re as _re
 
-    with open(os.path.join(ROOT, "README.md"), encoding="utf-8") as fh:
+    with open(os.path.join(ROOT, "docs", "BENCHMARK.md"), encoding="utf-8") as fh:
         readme = fh.read()
     cited = set(_re.findall(r"bench/out/[A-Za-z0-9_.\-]+\.json", readme))
-    assert cited, "no bench/out artefacts cited in the README table"
+    assert cited, "no bench/out artefacts cited in docs/BENCHMARK.md"
     t = tracked_files()
     missing = sorted(c for c in cited if c not in t)
-    assert not missing, f"README cites artefacts that are not in the repo: {missing}"
+    assert not missing, f"the table cites artefacts that are not in the repo: {missing}"

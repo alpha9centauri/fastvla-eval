@@ -23,12 +23,13 @@ make accept RUN=my_change
 It must report 29 collisions, completions in {25, 26}, and **zero** collision flips.
 Aggregate counts are not enough: a configuration once passed the totals with four flipped
 verdicts that happened to cancel, which is why the per-start transition matrix is checked.
+`docs/CORRECTNESS.md` is the full account.
 
 ## House rules
 
-- **Every number in a document names the artefact it came from.** The README table is
-  generated from `bench/out/*.json` by `bench/render_table.py`; `make bench-check` fails
-  if the two disagree. Do not hand-edit the table.
+- **Every number in a document names the artefact it came from.** The benchmark table in
+  `docs/BENCHMARK.md` is generated from `bench/out/*.json` by `bench/render_table.py`;
+  `make bench-check` fails if the two disagree. Do not hand-edit the table.
 - **Do not change a measured number, or a bench script's behaviour, to make CI pass.** If
   a test cannot run on the runner, skip it with a named reason.
 - **External facts get verified, not remembered.** URLs, version pins and citations go in

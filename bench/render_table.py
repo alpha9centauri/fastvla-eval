@@ -1,10 +1,10 @@
-"""Render the README benchmark table from the JSON artefacts under bench/out.
+"""Render the benchmark table in docs/BENCHMARK.md from the artefacts under bench/out.
 
 Every cell is read from a file a bench script wrote, so the README cannot drift from what
 was measured. Each row carries its provenance: the script, the card, the driver, torch and
 the commit the measurement was taken at.
 
-usage: render_table.py [--check]   # --check exits 3 if README.md is out of date
+usage: render_table.py [--check]   # --check exits 3 if docs/BENCHMARK.md is stale
 """
 
 import json
@@ -209,20 +209,20 @@ def build():
 
 def main():
     table = build()
-    readme = os.path.join(ROOT, "README.md")
+    readme = os.path.join(ROOT, "docs", "BENCHMARK.md")
     with open(readme) as fh:
         cur = fh.read()
     if START not in cur or END not in cur:
-        print(f"README.md has no {START} / {END} markers", file=sys.stderr)
+        print(f"docs/BENCHMARK.md has no {START} / {END} markers", file=sys.stderr)
         return 3
     pre, rest = cur.split(START, 1)
     _old, post = rest.split(END, 1)
     new = f"{pre}{START}\n{table}\n{END}{post}"
     if "--check" in sys.argv:
         if new != cur:
-            print("README.md benchmark table is out of date; run `make bench-table`")
+            print("docs/BENCHMARK.md is out of date; run `make bench-table`")
             return 3
-        print("README.md benchmark table is up to date")
+        print("docs/BENCHMARK.md is up to date")
         return 0
     with open(readme, "w") as fh:
         fh.write(new)

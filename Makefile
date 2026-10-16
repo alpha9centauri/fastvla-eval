@@ -13,10 +13,10 @@ help:
 	@echo "test    - pytest"
 	@echo "labeler - build the C++ GJK labeler in place"
 	@echo "accept  - the 60-start acceptance gate on a run: make accept RUN=<run_id>"
-	@echo "bench         - reproduce every number in the README table (~25 min, GPU 1)"
+	@echo "bench         - reproduce every number in docs/BENCHMARK.md (~25 min, GPU 1)"
 	@echo "bench-quick   - the end-to-end rows only (~8 min)"
-	@echo "bench-table   - re-render the README table from bench/out artefacts"
-	@echo "bench-check   - fail if the README table is stale"
+	@echo "bench-table   - re-render docs/BENCHMARK.md from bench/out artefacts"
+	@echo "bench-check   - fail if docs/BENCHMARK.md is stale"
 	@echo "container-libs- build the graphics libs the NVIDIA images lack"
 
 lint:
@@ -53,11 +53,11 @@ bench:
 bench-quick:
 	BENCH_QUICK=1 bash bench/bench_all.sh
 
-# Re-render the README table from the artefacts already in bench/out, without re-running.
+# Re-render docs/BENCHMARK.md from the artefacts already in bench/out, without re-running.
 bench-table:
 	$(PY) bench/render_table.py
 
-# Fail if the README table does not match the artefacts.
+# Fail if docs/BENCHMARK.md does not match the artefacts.
 bench-check:
 	$(PY) bench/render_table.py --check
 
