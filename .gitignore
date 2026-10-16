@@ -16,12 +16,16 @@ tfds/
 *.tfrecord-*
 *.parquet
 
-# Videos and rendered output
+# Videos and rendered output. Rollout videos are regenerable from a run and are large,
+# so they stay out -- but the two GIFs the README displays are release artefacts and must
+# be committed, or the README renders a blank box. `git add -A` skips ignored files
+# silently, which is exactly how they were missed the first time.
 videos/
 *.mp4
 *.avi
 *.gif
 *.webm
+!docs/media/*.gif
 
 # Profiles and traces
 traces/
