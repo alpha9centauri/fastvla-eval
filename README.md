@@ -1,26 +1,35 @@
 # FastVLA-Eval
 
-**A fast, trustworthy test bench for robot AI models, with a built-in warning light that predicts a collision before it happens.**
+**7.6x faster evaluation of VLA policies, with a collision monitor built on interpretability of the model's activations.**
 
-## What I built
+Two things, one repo:
 
-- Profiled a 7-billion-parameter robot-control model (OpenVLA-OFT) end to end with Nsight Systems and torch.profiler, and found that 71% of each step was Python geometry code, not the model.
-- Rewrote that geometry (GJK collision distance) in C++17 with pybind11 bindings: 63.6 ms to 0.58 ms per call, 110x faster, matching the Python original to 2e-16 metres over 168,000 calls.
-- Built a policy server that holds one copy of the model on the GPU and serves eight simulator processes in parallel over ZeroMQ. GPU utilisation went from 10% to 85%.
-- Result: the standard 60-trial evaluation went from 51 minutes to 7 minutes on one RTX A5000, 7.6x faster, with the same collision verdict on every trial.
-- Wrote a per-trial correctness gate that every change must pass. Two speed-ups (request batching, torch.compile) were faster but changed 3 to 5 verdicts out of 60, so they were rejected.
-- Added a runtime collision monitor: a linear probe on the model's own activations that predicts contact within the next action chunk at AUROC 0.92, with 74 control steps of warning, for 0.07 ms per call.
-- Packaged it: Docker images built and tested in GitHub Actions, Kubernetes manifests, Prometheus metrics, a Triton Inference Server backend for comparison, Apptainer for running on a shared box without root, and `make bench` that reproduces every number from a fresh clone.
+| | Part 1: the evaluation harness | Part 2: the collision monitor |
+|---|---|---|
+| What it is | A faster, correct test bench for robot AI models | A warning light read from inside the model |
+| Headline | 60-trial test: 51 min to 7 min on one GPU, same verdict on every trial | Predicts contact within the next action chunk at AUROC 0.92, 74 control steps early, for 0.07 ms |
+| Skills | profiling, C++, parallel GPU serving, containers, CI | interpretability, linear probes, detection metrics, safety |
+| Details | [docs/BENCHMARK.md](docs/BENCHMARK.md), [docs/CORRECTNESS.md](docs/CORRECTNESS.md) | [fastvla/monitor/EVAL.md](fastvla/monitor/EVAL.md) |
 
 ## Why this exists
 
-Robots are now driven by large AI models, the same kind that write text. Before anyone trusts one near real objects, it is tested in simulation. You run the task hundreds of times and count how often the arm hits something.
+Robots are now driven by large AI models, the same kind that write text. Before anyone trusts one near real objects, it is tested in simulation: run the task hundreds of times, count how often the arm hits something.
 
-That test used to take most of an hour, and the graphics card sat idle almost the whole time. This tool runs the same test in seven minutes and gives the same answer on every trial. It also watches the model's internal signals and warns you before a crash.
+That test used to take most of an hour, with the GPU idle almost the whole time. Part 1 makes it fast without changing the answer. Part 2 uses what the model already knows, inside its own activations, to warn you before a crash.
 
-## What you get
+---
 
-### 1. A faster test bench
+# Part 1: The evaluation harness
+
+### What I built
+
+- Profiled a 7-billion-parameter robot-control model (OpenVLA-OFT) end to end with Nsight Systems and torch.profiler. 71% of each step was Python geometry code, not the model.
+- Rewrote that geometry (GJK collision distance) in C++17 with pybind11: 63.6 ms to 0.58 ms per call, 110x faster, matching the Python original to 2e-16 m over 168,000 calls.
+- Built a policy server that holds one copy of the model on the GPU and serves eight simulator processes in parallel over ZeroMQ. GPU utilisation 10% to 85%.
+- Result: the standard 60-trial evaluation went from 51 minutes to 7 minutes on one RTX A5000, 7.6x, with the same collision verdict on every trial.
+- Packaged it: Docker images built and tested in GitHub Actions, Kubernetes manifests, Prometheus metrics, a Triton Inference Server backend, Apptainer for shared boxes without root, and `make bench` that reproduces every number from a fresh clone.
+
+### What you get
 
 The standard test is 60 trials. It took **51 minutes**. It now takes **7 minutes**. Every trial still gets the same verdict: hit, or no hit.
 
@@ -33,11 +42,24 @@ The standard test is 60 trials. It took **51 minutes**. It now takes **7 minutes
 
 How: the slow part was not the AI model. It was the code that measures how close the arm is to each obstacle. It ran in Python, twice per step. Rewriting it in C++ made it 110x faster. Then eight simulators run at once, all sharing one copy of the model on one GPU.
 
-Full numbers, each traceable to the file that produced it: **[docs/BENCHMARK.md](docs/BENCHMARK.md)**.
+### How we know the answers did not change
 
-### 2. A warning light
+Every change is checked trial by trial against the original, not on totals. Two speed-ups were faster and were still switched off, because each changed the verdict on 3 to 5 of the 60 trials. Full gates and numbers: [docs/CORRECTNESS.md](docs/CORRECTNESS.md).
 
-The model's internal activations already know how close the arm is to an obstacle. A small linear read of them predicts a collision before it happens, almost for free.
+---
+
+# Part 2: The collision monitor
+
+### What I built
+
+- Trained a linear probe on the model's internal activations (the hidden state at the action-token positions) to read how close the arm is to an obstacle: Spearman 0.87 against the true distance on held-out scenes.
+- Turned it into a runtime monitor inside the server: predicts contact within the next action chunk at AUROC 0.92, fires a median 74 control steps before contact, costs 0.07 ms per model call, changes no verdicts when only logging.
+- Chose the operating point from the recall vs false-alarm curve on training scenes only, with a two-call debounce.
+- Wired it to an automatic stop and measured it per trial: 18 of 29 collisions prevented, none created, 13 tasks left unfinished.
+
+### What you get
+
+The model's activations already know how close the arm is to an obstacle. A small linear read of them predicts a collision before it happens, almost for free.
 
 The model gives actions eight at a time. Those eight are one *chunk*; each one is a *control step*. A full task is about 300 steps.
 
@@ -56,11 +78,7 @@ Wired to an automatic stop, on the 60 trials: **18 of 29 collisions prevented, n
 
 It stops the arm where it is. It does not steer around the obstacle, and it does not resume. A trial it saves is also a trial it ends.
 
-Method and full results: **[fastvla/monitor/EVAL.md](fastvla/monitor/EVAL.md)**.
-
-## How we know the answers did not change
-
-Every change is checked trial by trial against the original, not on totals. Two speed-ups were faster and were still switched off: batching requests, and compiling the model. Each changed the verdict on 3 to 5 of the 60 trials. One of them matched the correct totals while getting four individual trials wrong, which is why the check is per trial. Details: **[docs/CORRECTNESS.md](docs/CORRECTNESS.md)**.
+---
 
 ## Try it
 
@@ -72,7 +90,7 @@ make test                      # 55 checks, no GPU needed, a few seconds
 make bench-quick               # the end-to-end timings, about 8 minutes on a GPU
 ```
 
-Running trials needs a GPU, the simulator and a model checkpoint. None of those are included here. `docs/ARCHITECTURE.md` explains what talks to what.
+Running trials needs a GPU, the simulator and a model checkpoint. None of those are included here. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains what talks to what.
 
 ## Limits
 
