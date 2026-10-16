@@ -175,7 +175,12 @@ def main():
                 clr.append(float(rec["min_clearance"]))
                 hit.append(bool(rec["contact"]))
                 if want_video:
-                    frames.append(np.asarray(obs["agentview_image"], dtype=np.uint8))
+                    # [::-1, ::-1] is the 180-degree rotation libero_utils.get_libero_image
+                    # applies before the policy sees a frame ("to match train
+                    # preprocessing"). MuJoCo hands back the raw buffer, so saving it
+                    # unrotated produced an upside-down video -- which is what the first
+                    # README GIF showed.
+                    frames.append(np.asarray(obs["agentview_image"], dtype=np.uint8)[::-1, ::-1])
                 if dn:
                     success = True
                     break

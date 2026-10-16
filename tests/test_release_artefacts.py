@@ -1,16 +1,22 @@
-"""Every local image a document displays must be committed, or it renders as a blank box.
+"""Files a clone needs must actually be in the clone.
 
-This exists because it happened: `.gitignore` carried a blanket `*.gif`, `git add -A`
-skipped the two README GIFs without a word, and the pushed README showed an empty gap
-where the rollout clip should have been. An ignore rule silently winning over an intended
-add is not visible in `git status`, so it needs a test.
+This exists because it happened twice in one release. `.gitignore` carried a blanket
+`*.gif`, `git add -A` skipped the two README GIFs without a word, and the pushed README
+showed an empty gap where the rollout clip should have been. The same rule for `*.npz`
+had quietly left out the fitted probe -- the file RuntimeMonitor loads by default, so a
+clone could not run MONITOR at all.
+
+An ignore rule beating an intended add is invisible in `git status`: there is nothing to
+report, because nothing was staged. So it needs a test rather than care.
 """
 
 import os
 import re
 import subprocess
+import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
 DOCS = [
     "README.md",
     "CONTRIBUTING.md",
@@ -66,3 +72,28 @@ def test_every_referenced_image_is_tracked_by_git():
     assert not untracked, (
         f"documents display images git is not tracking (a .gitignore rule is winning): {untracked}"
     )
+
+
+def test_the_default_probe_is_tracked():
+    """RuntimeMonitor loads this path when MONITOR is log or stop; a clone needs it."""
+    from fastvla.monitor.monitor import DEFAULT_PROBE
+
+    rel = os.path.relpath(DEFAULT_PROBE, ROOT)
+    assert os.path.exists(DEFAULT_PROBE), f"{rel} is missing"
+    assert rel in tracked_files(), (
+        f"{rel} is not tracked -- a .gitignore rule is winning, and a clone cannot run "
+        f"MONITOR=log or MONITOR=stop"
+    )
+
+
+def test_bench_artefacts_behind_the_readme_table_are_tracked():
+    """The table claims to be generated from these; a reader has to be able to check."""
+    import re as _re
+
+    with open(os.path.join(ROOT, "README.md"), encoding="utf-8") as fh:
+        readme = fh.read()
+    cited = set(_re.findall(r"bench/out/[A-Za-z0-9_.\-]+\.json", readme))
+    assert cited, "no bench/out artefacts cited in the README table"
+    t = tracked_files()
+    missing = sorted(c for c in cited if c not in t)
+    assert not missing, f"README cites artefacts that are not in the repo: {missing}"

@@ -44,6 +44,10 @@ logs/
 # default; add a small one deliberately with `git add -f <path>`.
 *.npz
 *.npy
+# Exception: the fitted probe (88 KB) is what RuntimeMonitor loads by default and what
+# EVAL.md documents as the shipped operating point. Without it in the tree a clone cannot
+# run MONITOR=log or MONITOR=stop at all. tests/test_release_artefacts.py enforces this.
+!bench/out/m7b_probe.npz
 
 # Conda / virtual envs
 envs/
