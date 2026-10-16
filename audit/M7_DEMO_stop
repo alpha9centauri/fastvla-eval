@@ -1,0 +1,11 @@
+# displacement test, started 2026-10-15 20:27:50
+# cmd: bash /data_new/vchandr2/fastvla-eval/bench/m3a_run.sh demo6 6 1 0
+[RUN] m7_demo_stop: 6 rollouts, N=6, B=1, D=0.0 ms, parity=False
+[RUN] server ready in 15.0 s
+[RUN] spawned 6 workers
+[PROGRESS] done=1 total=6
+[PROGRESS] done=2 total=6
+[PROGRESS] done=6 total=6
+[RUN] merged 6/6 rollouts in 54.1 s = 399.4 rollouts/hour; collisions 0, completions 2
+[RUN] -> /data_new/vchandr2/fastvla-eval/bench/runs/m7_demo_stop/merged.json
+RUNNER DONE

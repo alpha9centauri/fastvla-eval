@@ -130,6 +130,20 @@ GitHub API for the repository.
 | `audit/run_with_alert.py` | research tree, verbatim | md5 asserted by `tests/test_wrapper_copy_verbatim.py`; excluded from ruff so no fixer can touch it; provenance in `audit/PROVENANCE.txt` |
 | Machado/Oliveira/Fernandes (2009) CVD matrices and the OKLab conversions in `fastvla/monitor/check_colors.py` | the bundled `dataviz` skill's `scripts/validate_palette.js` | copied verbatim with the source named in the module docstring; the port reproduces that skill's published contrast figure for the status red (4.68) exactly, which is the check that it was transcribed correctly. The 2009 attribution is the skill's, repeated, not independently verified against the paper |
 
+## Figures and clips
+
+| file | what it is | how it was produced |
+|---|---|---|
+| `docs/media/rollout.gif` | one rollout, `oa1` init 0 | run `m7_demo_video2` on GPU 1; ffmpeg, 1.6x, 12 fps |
+| `docs/media/monitor_stop.gif` | `oa3` init 0 with `MONITOR=off` beside `MONITOR=stop` | runs `m7_demo_off` and `m7_demo_stop`, same manifest and flags but the one; `bench/make_monitor_gif.sh`. The captioned steps (contact 129, hold 128) are read from those runs' own records, not chosen by eye |
+| `docs/media/harness.gif` | the 10-start gate running | real session, timestamped to `docs/media/harness_session.txt`, rendered by `bench/render_terminal_gif.py` at 12.5x |
+| `fastvla/monitor/operating_curve.png` | recall against false alarms | `fastvla/monitor/plot_curve.py` from `bench/out/m7b_probe.json` |
+| `fastvla/monitor/alarm_score.png` | alarm score over three rollouts | `fastvla/monitor/plot_monitor.py` |
+
+No frame in any clip is synthesised, re-ordered or composited from different runs. The
+speed-ups are stated in each caption. `tests/test_release_artefacts.py` asserts every one
+of these is committed, after `.gitignore` silently kept two of them out of the first push.
+
 ## Nothing else
 
 Searched for `http`/`https` across every `*.md`, `*.toml`, `*.yml`, `*.py`, `Dockerfile*`
