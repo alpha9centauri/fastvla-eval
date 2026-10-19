@@ -43,25 +43,49 @@ this route.
 | obstacle margin at the terminal | `PLANNER_ACTIVATION_M` 0.04 → 0.02 → 0.01 → 0.005 | **no change at any value** — so not the margin, despite pre_place sitting 2.35 cm from the bottle |
 | `MotionGen.solve_ik` after graph capture | replaced with a dedicated `IKSolver` | real, found and fixed: after `warmup(enable_graph=True)` an ad-hoc `solve_ik` fails with *"changing goal type, cuda graph reset not available"*, which cuRobo surfaces as `IK_FAIL`. Router IK works now; `plan_single`'s internal goal IK still does not |
 | goal Pose built from numpy vs built by cuRobo | mirrored step 1's working call, `compute_kinematics(...).ee_pose.clone()` | **no change** |
+| `update_world` leaves the mesh world wrong | `diag_update_world.py`: same scene loaded two ways, queried through MotionGen's own `world_collision` at the retract configuration | **identical. Hypothesis dead** — see below |
+
+## RULED OUT: `update_world` is not the bug
+
+`diag_update_world.py`, oa1 init 0, 19.26 cm shift, activation 0.04 m. The same 14 scene meshes
+loaded two ways and queried through the very collision checker `plan_single` consults:
+
+```
+  A: MotionGen(empty) then update_world(meshes)   0 penetrating spheres of 61, max +0.00000, 14 meshes
+  B: MotionGen(meshes at construction)            0 penetrating spheres of 61, max +0.00000, 14 meshes
+  VERDICT: SAME -- hypothesis dead
+```
+
+Both hold 14 meshes with correct geometry in the right place — the bottle at base-frame
+x 0.668-0.739, y 0.159-0.229, z 0.149-0.306; the table spanning x 0.16-1.16, y ±0.6 at
+z -0.062..-0.012. The retract configuration is clear of all of it in both. The `[0,0,0,1,0,0,0]`
+mesh poses are correct by construction, not a fault: `world.py` bakes world coordinates into the
+vertices and leaves the pose as identity.
+
+So the world is sane and `update_world` is reliable. There is no need to construct per scene and
+no need to pay the 37 minutes; the one-MotionGen-per-process design stands.
 
 ## The next thing to test, and why
 
-Step 1's feasibility script — which planned 20/20 successfully — built `MotionGen` with a
-**non-empty world at construction** and never called `update_world`. `route.py` builds with an
-empty `WorldConfig()` plus a sized `collision_cache` and then calls `update_world(meshes)` per
-scene, because step 1 also measured 11.3 s of warmup against 0.2 s per plan and rebuilding per
-demo would dominate the run.
+**The attached object.** `world.py` has `carried_mesh()`, which returns the bowl's hull
+re-centred on the grasp point — and `route.py` never calls it. Nothing calls
+`attach_external_objects_to_robot`. So the carried bowl is currently *excluded* from the world (as
+`carried=`) and *not attached* to the arm: the planner plans with no payload at all. The probe
+above confirms the attachment is inactive — 61 real spheres of 65, the 4 `attached_object` slots
+carrying radius <= 0.
 
-So the leading hypothesis is that **`update_world` on a MotionGen constructed with an empty world
-leaves the mesh world wrong** — for instance every mesh at the origin, enveloping the arm — which
-would make every goal look blocked and would explain why the activation distance makes no
-difference at any value. That is directly testable in one run: after `update_world`, query
-`get_collision_distance` at the retract configuration, which is far from everything in these
-scenes. A collision there proves the world is corrupt rather than the goal unreachable.
+Two things to check there, in order:
 
-If that is it, the fix is to construct `MotionGen` with the first scene's real world and then
-`update_world` for subsequent scenes, or to rebuild per scene and accept the 11.3 s (which at ~197
-scenes would add about 37 minutes — tolerable, and measurable either way).
+1. Is the bowl attached at all after the grasp? It must be, or every plan is optimistic about the
+   thing the demos actually have to keep clear.
+2. Is its pose in the right frame? `carried_mesh` re-centres the hull on the grasp point, and the
+   grasp point is an **eef-site** position — the same 9.65 cm tool offset that broke every goal.
+   If the attachment inherits that error the payload hull sits 9.65 cm from where the bowl is.
+
+Note on direction: a missing attachment makes the planner optimistic, which cannot by itself
+explain IK_FAIL. So the attachment is a real defect to fix regardless, but it may not be the cause
+of the current failure, and the next session should hold both possibilities open rather than
+assuming the second test closes the question.
 
 ## Honest note on cost
 
