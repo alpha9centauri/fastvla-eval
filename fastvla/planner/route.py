@@ -52,7 +52,9 @@ from fastvla.planner import world as W   # noqa: E402
 ACTIVATION_M = float(os.environ.get("PLANNER_ACTIVATION_M", "0.04"))
 MAX_ATTEMPTS = int(os.environ.get("PLANNER_MAX_ATTEMPTS", "4"))
 PLAN_TIMEOUT_S = float(os.environ.get("PLANNER_TIMEOUT_S", "8.0"))
-TILT_LIMIT_DEG = float(os.environ.get("PLANNER_TILT_LIMIT_DEG", "20.0"))
+# 45 deg, not 20: the simulated bowl is empty and success is "bowl on plate", so a tipped wrist
+# is not in itself a failure. The tilt is still measured and reported for every demo.
+TILT_LIMIT_DEG = float(os.environ.get("PLANNER_TILT_LIMIT_DEG", "45.0"))
 IK_POS_TOL_M = float(os.environ.get("PLANNER_IK_POS_TOL_M", "0.01"))
 WAYPOINT_STRIDE = int(os.environ.get("PLANNER_WAYPOINT_STRIDE", "3"))
 MESH_CACHE = int(os.environ.get("PLANNER_MESH_CACHE", "64"))
@@ -77,9 +79,10 @@ PAYLOAD_SPHERE_R = float(os.environ.get("PLANNER_PAYLOAD_SPHERE_R", "0.005"))
 # away from the bottle, takes the LOWEST one collision-aware IK accepts, and hands the descent
 # back to dgcore's place primitive and the 2 cm GJK certification, exactly as before.
 HANDOFF_UP_M = [float(x) for x in
-                os.environ.get("PLANNER_HANDOFF_UP_M", "0.08,0.12,0.16").split(",")]
+                os.environ.get("PLANNER_HANDOFF_UP_M",
+                               "0.08,0.12,0.16,0.20,0.24,0.28").split(",")]
 HANDOFF_OUT_M = [float(x) for x in
-                 os.environ.get("PLANNER_HANDOFF_OUT_M", "0.0,0.03,0.06").split(",")]
+                 os.environ.get("PLANNER_HANDOFF_OUT_M", "0.0,0.03,0.06,0.09").split(",")]
 # Below the certification floor there is no route for anyone: that is a scene rejection, not a
 # planner failure, and dgcore already has a name for it.
 CERTIFY_FLOOR_M = 0.02
@@ -417,24 +420,32 @@ def plan_detours_curobo(sg, obstacle, wp, shift=None, ceiling=None):
     away = (away / n) if n > 1e-9 else np.array([1.0, 0.0])
 
     path, dt, why, chosen = None, 0.0, "no_candidate_accepted", None
+    dt_single, n_ik_ok, n_ik_tried, n_plan_tried = 0.0, 0, 0, 0
     for up in HANDOFF_UP_M:
         for out in HANDOFF_OUT_M:
             cand_w = p_place + np.array([away[0] * out, away[1] * out, up])
             cand_b = router.site_to_hand(
                 W.to_base(cand_w.reshape(1, 3), base_p, base_R)[0], quat)
+            n_ik_tried += 1
             q_goal, ik_ok = router.ik_collision_free(cand_b, quat)
             if not ik_ok:
                 why = f"ik_handoff_up{100 * up:.0f}_out{100 * out:.0f}"
                 continue
+            n_ik_ok += 1
+            n_plan_tried += 1
             path, dti, why = router.plan(q0, q_goal)
             dt += dti
             if path is not None:
+                dt_single = dti
                 chosen = dict(up_m=up, out_m=out,
                               world=[round(float(x), 4) for x in cand_w])
                 break
         if path is not None:
             break
-    _STATS.append(dict(stage="plan", seconds=round(dt, 4), ok=path is not None, reason=why,
+    _STATS.append(dict(stage="plan", seconds=round(dt, 4),
+                       seconds_single=round(dt_single, 4), ok=path is not None, reason=why,
+                       n_ik_tried=n_ik_tried, n_ik_accepted=n_ik_ok,
+                       n_plan_calls=n_plan_tried,
                        handoff=chosen, payload_attached=attached))
     if path is None:
         router.detach_payload()
