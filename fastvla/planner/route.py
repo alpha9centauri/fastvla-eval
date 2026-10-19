@@ -56,6 +56,13 @@ TILT_LIMIT_DEG = float(os.environ.get("PLANNER_TILT_LIMIT_DEG", "20.0"))
 IK_POS_TOL_M = float(os.environ.get("PLANNER_IK_POS_TOL_M", "0.01"))
 WAYPOINT_STRIDE = int(os.environ.get("PLANNER_WAYPOINT_STRIDE", "3"))
 MESH_CACHE = int(os.environ.get("PLANNER_MESH_CACHE", "64"))
+# How the carried bowl is turned into attached spheres. cuRobo's default
+# VOXEL_VOLUME_SAMPLE_SURFACE logged "occupancy test failed, assuming cuboid volume" on this bowl
+# and welded a solid 11 x 11 x 5 cm block to the gripper, which refused all 9 hand-off candidates
+# including the one the scene alone accepts (diag_handoff.py). The bowl is a thin shell, so the
+# surface fit is the honest representation of it.
+PAYLOAD_FIT = os.environ.get("PLANNER_PAYLOAD_FIT", "SAMPLE_SURFACE")
+PAYLOAD_SPHERE_R = float(os.environ.get("PLANNER_PAYLOAD_SPHERE_R", "0.005"))
 # The planner hands the route back to dgcore's primitives ABOVE the place pose instead of planning
 # all the way into it. Measured reason: on an eval-rule oa1 scene the pre_place pose sits 2.35 cm
 # from the displaced bottle -- the obstacle is in the bowl's descent to the plate, which is the
@@ -63,8 +70,16 @@ MESH_CACHE = int(os.environ.get("PLANNER_MESH_CACHE", "64"))
 # "in collision" and every plan fails with IK_FAIL. The terminal approach is dgcore's to own
 # (grasp and place poses come from the existing primitives) and the certifier judges it, so the
 # planner aims at a hand-off point this far above pre_place and stops there.
+# The hand-off sweep. Measured reason (diag_goal_ik.py): the pre_place pose is REACHABLE but in
+# collision in cuRobo's sphere model at every activation distance including 0.0, because the
+# displaced bottle sits 2.35 cm from it and cuRobo's spheres are 0.7-3.8 cm more conservative than
+# GJK (step 2). IK_FAIL was correct behaviour, not a bug. So the planner aims at a pose above and
+# away from the bottle, takes the LOWEST one collision-aware IK accepts, and hands the descent
+# back to dgcore's place primitive and the 2 cm GJK certification, exactly as before.
 HANDOFF_UP_M = [float(x) for x in
-                os.environ.get("PLANNER_HANDOFF_UP_M", "0.06,0.10,0.14,0.0").split(",")]
+                os.environ.get("PLANNER_HANDOFF_UP_M", "0.08,0.12,0.16").split(",")]
+HANDOFF_OUT_M = [float(x) for x in
+                 os.environ.get("PLANNER_HANDOFF_OUT_M", "0.0,0.03,0.06").split(",")]
 # Below the certification floor there is no route for anyone: that is a scene rejection, not a
 # planner failure, and dgcore already has a name for it.
 CERTIFY_FLOOR_M = 0.02
@@ -135,6 +150,14 @@ class CuroboRouter:
         self.ik_solver = IKSolver(IKSolverConfig.load_from_robot_config(
             self.robot_cfg, None, rotation_threshold=0.05, position_threshold=IK_POS_TOL_M,
             num_seeds=32, self_collision_check=True, tensor_args=self.tdt))
+        # A SECOND IK solver, this one collision-aware, for testing hand-off candidates. Built
+        # once and its world swapped per scene, the same pattern as MotionGen (update_world was
+        # measured reliable in diag_update_world.py).
+        self.ik_world = IKSolver(IKSolverConfig.load_from_robot_config(
+            self.robot_cfg, WorldConfig(), rotation_threshold=0.05,
+            position_threshold=IK_POS_TOL_M, num_seeds=32, self_collision_check=True,
+            tensor_args=self.tdt, collision_activation_distance=ACTIVATION_M,
+            collision_cache={"obb": 8, "mesh": MESH_CACHE}))
         self.warmup_s = time.perf_counter() - t0
         self.tool_offset = None
 
@@ -144,6 +167,48 @@ class CuroboRouter:
                                     vertices=d["vertices"].tolist(),
                                     faces=d["faces"].tolist()) for d in meshes])
         self.mg.update_world(wc)
+        self.ik_world.update_world(wc)
+
+    def ik_collision_free(self, pos_base, quat_wxyz):
+        """Collision-aware IK against the scene world. Returns (q, ok)."""
+        from curobo.types.math import Pose
+        t = self.torch
+        p = t.as_tensor(np.asarray(pos_base, dtype=np.float32).reshape(1, 3),
+                        device=self.tdt.device)
+        q = t.as_tensor(np.asarray(quat_wxyz, dtype=np.float32).reshape(1, 4),
+                        device=self.tdt.device)
+        res = self.ik_world.solve_single(Pose(p, q))
+        ok = bool(res.success.item())
+        return (res.solution.detach().cpu().numpy().reshape(-1)[:7] if ok else None), ok
+
+    def attach_payload(self, q_at_grasp, mesh, fit=None, radius=None):
+        """Attach the carried object's hull to the gripper at the grasping configuration.
+
+        The transport phase has to carry the bowl: without this the planner routes the arm clear
+        of the obstacle while the payload sweeps straight through it. The hull is handed over in
+        absolute base-frame coordinates and cuRobo computes the gripper-relative transform from
+        `q_at_grasp`, so no hand-rolled tool offset is involved.
+        """
+        from curobo.geom.types import Mesh
+        from curobo.types.state import JointState
+        t = self.torch
+        js = JointState.from_position(
+            t.as_tensor(np.asarray(q_at_grasp, dtype=np.float32).reshape(1, -1),
+                        device=self.tdt.device),
+            joint_names=self.joint_names)
+        obj = Mesh(name=mesh["name"], pose=[0, 0, 0, 1, 0, 0, 0],
+                   vertices=mesh["vertices"].tolist(), faces=mesh["faces"].tolist())
+        from curobo.geom.sphere_fit import SphereFitType
+        ft = fit if fit is not None else getattr(SphereFitType, PAYLOAD_FIT)
+        return bool(self.mg.attach_external_objects_to_robot(
+            js, [obj], sphere_fit_type=ft,
+            surface_sphere_radius=(radius if radius is not None else PAYLOAD_SPHERE_R)))
+
+    def detach_payload(self):
+        try:
+            self.mg.detach_object_from_robot()
+        except Exception:
+            pass
 
     def ik(self, pos_base, quat):
         """One IK solve; returns (q, ok). Seeded from the retract config by cuRobo itself."""
@@ -335,27 +400,48 @@ def plan_detours_curobo(sg, obstacle, wp, shift=None, ceiling=None):
                             reason=f"planner_failure:ik_roundtrip_{1000 * rt_pos:.0f}mm_"
                                    f"{rt_rot:.0f}deg")
 
-    # Aim above pre_place and let the primitives do the descent. The offsets are tried in order
-    # and the first that both IKs and plans wins; 0.0 is last so the direct goal is still
-    # attempted when there is room for it.
-    path, dt, why, used_up = None, 0.0, "no_attempt", None
+    # Attach the carried object before planning the transport. Without this the planner routes
+    # the arm clear while the bowl sweeps straight through the bottle.
+    payload = W.carried_mesh_abs(dom, mon, carried) if carried else None
+    attached = False
+    if payload is not None:
+        attached = router.attach_payload(q0, payload)
+
+    # Sweep the hand-off pose: heights ascending, then horizontal offset away from the bottle
+    # ascending, so the FIRST acceptance is the lowest and least displaced pose that works.
+    i_place = next((i for i, w in enumerate(wp) if str(w[2]).startswith("place:")), i_pre)
+    p_place = np.asarray(wp[i_place][0], float)
+    centroid = hull_w.mean(axis=0)
+    away = p_place[:2] - centroid[:2]
+    n = float(np.linalg.norm(away))
+    away = (away / n) if n > 1e-9 else np.array([1.0, 0.0])
+
+    path, dt, why, chosen = None, 0.0, "no_candidate_accepted", None
     for up in HANDOFF_UP_M:
-        goal_b = b1 + np.array([0.0, 0.0, float(up)])
-        q_goal, ik_ok = router.ik(goal_b, quat)
-        if not ik_ok:
-            why = f"ik_goal_up{100 * up:.0f}cm"
-            continue
-        path, dti, why = router.plan(q0, q_goal)
-        dt += dti
+        for out in HANDOFF_OUT_M:
+            cand_w = p_place + np.array([away[0] * out, away[1] * out, up])
+            cand_b = router.site_to_hand(
+                W.to_base(cand_w.reshape(1, 3), base_p, base_R)[0], quat)
+            q_goal, ik_ok = router.ik_collision_free(cand_b, quat)
+            if not ik_ok:
+                why = f"ik_handoff_up{100 * up:.0f}_out{100 * out:.0f}"
+                continue
+            path, dti, why = router.plan(q0, q_goal)
+            dt += dti
+            if path is not None:
+                chosen = dict(up_m=up, out_m=out,
+                              world=[round(float(x), 4) for x in cand_w])
+                break
         if path is not None:
-            used_up = up
             break
     _STATS.append(dict(stage="plan", seconds=round(dt, 4), ok=path is not None, reason=why,
-                       handoff_up_m=used_up))
+                       handoff=chosen, payload_attached=attached))
     if path is None:
+        router.detach_payload()
         return wp, [], dict(plan_clears=False, blocked_at_terminal=None,
                             reason=f"planner_failure:curobo:{why}")
 
+    router.detach_payload()
     pos_b, quats = router.fk(path)
     # back to eef-site positions, which is what the executor drives
     pos_b = np.asarray([router.hand_to_site(pos_b[k], quats[k]) for k in range(len(pos_b))])
@@ -365,6 +451,11 @@ def plan_detours_curobo(sg, obstacle, wp, shift=None, ceiling=None):
     # grasp orientation beyond the limit rather than executing it and failing certification later.
     tilt = max(_quat_angle_deg(quat, qv) for qv in quats)
     if tilt > TILT_LIMIT_DEG:
+        # Record it: dgcore reads only plan_clears and blocked_at_terminal from `shape` and
+        # overwrites the reason with its own "no_clear_route", so a post-plan rejection is
+        # otherwise invisible in the generator's output.
+        _STATS.append(dict(stage="tilt_reject", seconds=0.0, ok=False,
+                           tilt_deg=round(tilt, 2), limit_deg=TILT_LIMIT_DEG))
         return wp, [], dict(plan_clears=False, blocked_at_terminal=None,
                             reason=f"planner_failure:tilt_{tilt:.1f}deg")
 
@@ -378,10 +469,12 @@ def plan_detours_curobo(sg, obstacle, wp, shift=None, ceiling=None):
     out = list(wp[:i_lift + 1]) + via + list(wp[i_pre:])
     detours = [dict(kind="curobo_joint_path", n_via=len(via), seconds=round(dt, 4),
                     tilt_deg=round(tilt, 2), waypoints=int(len(pos_w)),
-                    handoff_up_m=used_up, terminal_gap_m=round(term_gap, 4))]
+                    handoff=chosen, payload_attached=attached,
+                    terminal_gap_m=round(term_gap, 4))]
     shape = dict(plan_clears=True, blocked_at_terminal=None, planner="curobo",
                  plan_seconds=round(dt, 4), n_via=len(via), tilt_deg=round(tilt, 2),
-                 handoff_up_m=used_up, terminal_gap_m=round(term_gap, 4))
+                 handoff=chosen, payload_attached=attached,
+                 terminal_gap_m=round(term_gap, 4))
     return out, detours, shape
 
 

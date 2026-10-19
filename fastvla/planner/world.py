@@ -151,6 +151,29 @@ def MOVES_FOR(tag):
     return D.MOVES[tag]
 
 
+def carried_mesh_abs(dom, mon, obj):
+    """The carried object's hull in the robot BASE frame, absolute -- not re-centred.
+
+    cuRobo's `attach_external_objects_to_robot` takes the object where it actually is, together
+    with the joint state at which it is being grasped, and computes the gripper-relative transform
+    itself. That is strictly better than re-centring the hull on the grasp point by hand, which is
+    what `carried_mesh` below does: the grasp point is an eef-SITE position, so hand-rolling the
+    offset would inherit the same 9.65 cm tool-offset error that made every planner goal 10 cm too
+    far out. Letting cuRobo do it removes the question.
+    """
+    base_p, base_R = robot_base_offset(dom)
+    pts = []
+    for g in entity_geom_ids(dom, obj):
+        Wv, _pad = geom_hull_world(mon, g)
+        if len(Wv):
+            pts.append(Wv)
+    if not pts:
+        return None
+    v, f = _hull_mesh(to_base(np.vstack(pts), base_p, base_R))
+    return dict(name=f"carried__{obj}", vertices=v, faces=f, pad=0.0,
+                source="DistanceEngine._w, base frame, absolute")
+
+
 def carried_mesh(dom, mon, obj, grasp_point):
     """The carried object's hull, expressed relative to the grasp point.
 
