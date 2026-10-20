@@ -53,9 +53,7 @@ TAG, INIT = "oa1", int(os.environ.get("INIT", "25"))
 N_SAMPLES = int(os.environ.get("N_SAMPLES", "1000"))
 BASELINE = os.path.join(DISP, "out_baseline_oa1_50", "baseline_17500.npz")
 CARRIED = "akita_black_bowl_1"
-SWEEP = [("SAMPLE_SURFACE", 0.015), ("SAMPLE_SURFACE", 0.020), ("SAMPLE_SURFACE", 0.022),
-         ("SAMPLE_SURFACE", 0.025), ("SAMPLE_SURFACE", 0.030),
-         ("VOXEL_SURFACE", 0.020), ("VOXEL_SURFACE", 0.025)]
+SWEEP = [("SAMPLE_SURFACE", 0.012), ("VOXEL_SURFACE", 0.012)]
 
 
 def sample_hull_surface(vertices, faces, n, rng):

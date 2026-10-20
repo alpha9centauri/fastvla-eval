@@ -177,3 +177,104 @@ recorded for the same scenes in the run** (3.6–5.0 cm), because the render re-
 trajectory optimisation is not deterministic across processes. The failure reproduces exactly —
 unreached `pre_place`, 0.00 cm executed clearance — but the specific path does not, so these clips
 illustrate the failure rather than replaying the measured trajectory.
+
+---
+
+# 7a final — the planner plans through to the place pose
+
+Author: Varun Chandra, 2026-10-20. The division of labour changed once, as agreed: the planner owns
+grasp → place with the payload attached and the receptacle treated as a support body rather than an
+obstacle, and dgcore does only the release. Certification at **1 cm**. Payload spheres 12 mm on
+surface sampling, obstacle inflation 0.003 m. Artefacts: `out/step4b_full_4c.json`,
+`out/place_pose_gap.json`, log `PLANNER_STEP4C.log`.
+
+## Result
+
+```
+scenes                129        wall 46.5 min
+returned a path        0/129 = 0.0%
+ACCEPTED at 1 cm       0/129
+ACCEPTED at 2 cm       0/129
+failures               planner_failure:curobo:ik_place   129/129
+```
+
+Every scene fails at the same point: collision-aware IK cannot place the arm at the place pose with
+the bowl in the gripper. No path is produced, so there are no planned-via or executed clearance
+distributions, no executor arrival errors, and no accepted demos to render.
+
+## Why — the destination is occupied
+
+Measured directly before the run, on 20 scenes, as the true GJK clearance of the carried bowl at
+dgcore's own place pose against each declared obstacle:
+
+```
+bowl -> bottle_of_perfume_1      9.79 - 9.84 cm      (ample)
+bowl -> white_place_box_1        0.00 cm             in 18 of 20 scenes
+min over both obstacles          min 0.00   median 0.00   max 22.38 cm
+scenes with >= 0.5 cm            2/20
+scenes with >= 1.0 cm            2/20
+scenes with >= 2.0 cm            2/20
+```
+
+**At the place pose the carried bowl is already touching `white_place_box_1`.** oa1's obstacle is a
+stack — the perfume bottle standing on a white box — and the BDDL forbids contact with *both*
+parts, so the box is a declared obstacle that certification counts. The eval rule drives that stack
+toward the policy's own baseline trajectory, which passes over the plate; the box therefore ends up
+adjacent to the plate, and a bowl set down on the plate touches it.
+
+This is not a planning failure, an executor failure, or a margin failure. The **destination has
+zero clearance to a declared obstacle in about 90% of these scenes**, so no certification floor
+above 0 cm can ever be met there, by any planner, with any margin, however good the geometry. It
+also explains every earlier result in 7a: step 4b's 55 executor failures all stalled at
+`pre_place`/`place` in contact, the 2b smoke bound at `pre_place` 180 of 193 times, and
+`DATA_CHAPTER_VERDICT.txt` said from the start that the bottle sits in the carried bowl's descent to
+the plate.
+
+## The closing paragraph, with the correction it needs
+
+The paragraph this run was meant to produce — *"no collision-free route exists at 1 cm margin for a
+whole-arm planner with correct geometry at the test's placements"* — is **true but misattributed**,
+and the stronger, correct statement is:
+
+> At the displacement test's eval-rule placements on oa1, no certifiable demonstration exists at any
+> positive margin, because the task's own place pose puts the carried bowl in contact with a
+> declared obstacle. Measured over 20 scenes: bowl-to-box clearance at the place pose is exactly
+> 0.00 cm in 18, and 21.1-22.4 cm in the remaining 2; bowl-to-bottle clearance is 9.8 cm throughout.
+> A whole-arm planner with verified geometry — obstacle hulls from the certifier's own engine
+> inflated 3 mm, the payload covered to within -0.22 cm over 1,000 hull surface points, attached at
+> the grasp configuration — returned 0 paths in 129 scenes, failing at the place pose itself in all
+> 129. The limit is the scene, not the planner: the eval rule moves the obstacle stack onto the
+> destination.
+
+## One thing this run does NOT establish, stated plainly
+
+Two of the 20 measured scenes (both init 34, shifts 19.31 and 18.07 cm) have a place pose that is
+**21.1-22.4 cm clear of both obstacles** — genuinely feasible. Both were in the 129 and both were
+recorded as `ik_place` failures. Checking the first of them afterwards through the router's own code
+path, with the run's exact world (obstacles + table + 5 bystanders, receptacle excluded) and the
+payload attached:
+
+```
+world OFF                                IK = True
+obstacles only                           IK = True
+table only                               IK = True
+obstacles + table                        IK = True
+obstacles + table + bystanders (the run) IK = True
+full world including the plate           IK = False
+ROUTER ik_collision_free (the run's call) IK = True     payload attached, 384 spheres
+```
+
+So the place pose on that scene **is** reachable and collision-free by the very call the run makes,
+and its failure in the run is unexplained. The most likely cause is stale attached-payload state in
+the long-lived router across scenes — `attach_payload`/`detach_payload` are called once per scene on
+a single persistent `MotionGen`, and a payload left attached at a previous scene's bowl position
+would place it wrongly for the current one — but **I have not confirmed that**, and it would be
+wrong to present the 0/129 as covering these scenes.
+
+The bound this puts on the conclusion: the "no certifiable demo exists" finding rests on **direct
+measurement of the destination**, which is sound for the ~90% of scenes at 0.00 cm, and is
+**unproven for the ~10% whose place pose is clear**. Over 129 scenes that is roughly 13 scenes where
+a demo might certify and where this run's negative result should not be trusted. Confirming or
+refuting the stale-attachment hypothesis — one run, attach/detach per scene in a fresh router, or
+re-run just those scenes one per process — is the first thing to do before anyone quotes 0/129 as
+final.
