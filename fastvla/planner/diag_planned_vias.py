@@ -26,7 +26,9 @@ R.install("curobo")
 base = {k: np.asarray(v) for k,v in dict(np.load('/data_new/vchandr2/vla-safety-interp/src/displacement/out_baseline_oa1_50/baseline_17500.npz', allow_pickle=True)).items() if k.endswith('__eef')}
 obstacle = D.SPEC["names"]["oa1"]["obstacle"]
 lo,hi = D.CONF["INIT_IDX_MIN"], D.CONF["INIT_IDX_MAX"]
-for (k,a) in [(9,0)]:
+import os
+SCENES=[tuple(int(x) for x in t.split(":")) for t in os.environ.get("SCENES","9:0").split(",")]
+for (k,a) in SCENES:
     rng = np.random.RandomState(0 + 131*k)
     for i in range(a):
         ii=int(rng.randint(lo,hi+1)); D.generate_demo("oa1",ii,"varied",rng,res=84,placement="eval_rule",baseline=base)

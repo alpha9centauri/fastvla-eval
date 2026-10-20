@@ -48,6 +48,59 @@ for _p in (os.path.join(_VSI, "physics"), "/data_new/vchandr2"):
 
 TABLE_GEOM = "table_collision"
 
+# Step 4b: every obstacle mesh handed to the planner is inflated by the certification floor, so a
+# plan cuRobo calls collision-free is GJK-clear by construction. Step 4 measured the alternative:
+# nothing asked the planner for 2 cm, only for "not in collision", and all 129 planned routes came
+# out at 0.000-0.072 cm of GJK clearance.
+INFLATE_M = float(os.environ.get("PLANNER_INFLATE_M", "0.02"))
+# The certifier measures clearance to the DECLARED OBSTACLES only (SafetyMonitor.obstacle_geoms),
+# not to the table, the plate or bystanders -- a demo that rests the bowl on the plate is correct,
+# and requiring 2 cm of air around the plate would forbid the task itself. So support geometry
+# gets its own inflation, defaulting to 0: it must still not be driven through, but it does not
+# owe the certification margin.
+INFLATE_SUPPORT_M = float(os.environ.get("PLANNER_INFLATE_SUPPORT_M", "0.0"))
+
+
+def inflate_hull(points, d):
+    """Convex hull of `points` grown outward by `d`, as (vertices, faces).
+
+    Offsetting every face plane outward by d and intersecting the half-spaces. For a convex
+    P = {x : a_i.x <= b_i} with unit normals, the true rounded offset
+    P (+) ball(d) = {x : dist(x, P) <= d} is CONTAINED in {x : a_i.x <= b_i + d}, so the
+    polyhedron this returns over-approximates the offset. Over-approximating is the safe
+    direction: the planner is then stricter than the certifier, never looser.
+
+    Scaling about the centroid would be wrong -- it grows far faces more than near ones and does
+    not correspond to a fixed clearance anywhere.
+    """
+    from scipy.spatial import ConvexHull, HalfspaceIntersection
+    P = np.asarray(points, dtype=np.float64)
+    if len(P) < 4 or d <= 0.0:
+        return _hull_mesh(P)
+    h = ConvexHull(P)
+    # scipy's equations are [normal | offset] with normal.x + offset <= 0, normals unit length
+    A = h.equations[:, :-1]
+    b = -h.equations[:, -1]
+    interior = P[h.vertices].mean(axis=0)
+    try:
+        hs = HalfspaceIntersection(np.hstack([A, -(b + d)[:, None]]), interior)
+        Q = np.asarray(hs.intersections, dtype=np.float64)
+        if len(Q) < 4 or not np.all(np.isfinite(Q)):
+            raise ValueError("degenerate half-space intersection")
+    except Exception:
+        # Fall back to pushing each hull vertex along its area-weighted vertex normal. Still
+        # outward, still conservative in the directions that matter, and it cannot fail.
+        V = P[h.vertices]
+        nrm = np.zeros_like(V)
+        for i, vi in enumerate(h.vertices):
+            faces = np.any(h.simplices == vi, axis=1)
+            if faces.any():
+                n = A[faces].sum(axis=0)
+                ln = np.linalg.norm(n)
+                nrm[i] = n / ln if ln > 1e-12 else 0.0
+        Q = V + d * nrm
+    return _hull_mesh(Q)
+
 
 def robot_base_offset(dom):
     """World position and rotation of the arm's base link, read from the model."""
@@ -102,7 +155,8 @@ def _hull_mesh(points):
     return np.ascontiguousarray(P[keep]), np.ascontiguousarray(faces.astype(np.int32))
 
 
-def scene_meshes(dom, mon, sg, tag, carried=None, include_receptacle=True):
+def scene_meshes(dom, mon, sg, tag, carried=None, include_receptacle=True,
+                 inflate_m=None):
     """Every piece of static world geometry the planner must avoid, in the robot base frame.
 
     Returns a list of dicts: name, vertices (Nx3, base frame), faces (Mx3), pad (m), source.
@@ -112,6 +166,8 @@ def scene_meshes(dom, mon, sg, tag, carried=None, include_receptacle=True):
     """
     base_p, base_R = robot_base_offset(dom)
     m = dom.sim.model
+    d = INFLATE_M if inflate_m is None else float(inflate_m)
+    ds = INFLATE_SUPPORT_M if inflate_m is None else float(inflate_m)
     out = []
 
     # 1. the declared obstacles, as union hulls
@@ -121,16 +177,17 @@ def scene_meshes(dom, mon, sg, tag, carried=None, include_receptacle=True):
         W = mon._obstacle_hull_world(mon.sim.data, name)
         if W is None or len(W) < 4:
             continue
-        v, f = _hull_mesh(to_base(W, base_p, base_R))
+        v, f = inflate_hull(to_base(W, base_p, base_R), d)
         out.append(dict(name=f"obstacle__{name}", vertices=v, faces=f, pad=0.0,
-                        source="SafetyMonitor._obstacle_hull_world (union hull)"))
+                        inflated_m=d,
+                        source="SafetyMonitor._obstacle_hull_world (union hull), inflated"))
 
     # 2. the table
     for g in entity_geom_ids(dom, TABLE_GEOM):
         W, pad = geom_hull_world(mon, g)
-        v, f = _hull_mesh(to_base(W, base_p, base_R))
+        v, f = inflate_hull(to_base(W, base_p, base_R), ds)
         out.append(dict(name=f"table__{m.geom_id2name(g)}", vertices=v, faces=f, pad=pad,
-                        source="DistanceEngine._w"))
+                        inflated_m=ds, source="DistanceEngine._w, inflated"))
 
     # 3. the receptacle the object is placed into, piece by piece (it is small)
     if include_receptacle:
@@ -139,9 +196,32 @@ def scene_meshes(dom, mon, sg, tag, carried=None, include_receptacle=True):
                 W, pad = geom_hull_world(mon, g)
                 if len(W) < 4:
                     continue
-                v, f = _hull_mesh(to_base(W, base_p, base_R))
+                v, f = inflate_hull(to_base(W, base_p, base_R), ds)
                 out.append(dict(name=f"receptacle__{m.geom_id2name(g)}", vertices=v, faces=f,
-                                pad=pad, source="DistanceEngine._w"))
+                                pad=pad, inflated_m=ds,
+                                source="DistanceEngine._w, inflated"))
+
+    # 4. bystanders: every other declared entity with collision geoms, also inflated. The eval
+    # rule can push the obstacle toward anything on the table, and a route that clears the bottle
+    # by driving through a bystander is not a demo.
+    skip = {carried, TABLE_GEOM} | set(mon._obs_hull)
+    for _obj, _kind, dest in MOVES_FOR(tag):
+        skip.add(dest)
+        skip.add(_obj)
+    for name, gs in mon.idx.entity_geoms.items():
+        if name in skip or name.startswith(("robot0", "gripper0")):
+            continue
+        pts = []
+        for g in gs:
+            Wv, _pad = geom_hull_world(mon, g)
+            if len(Wv):
+                pts.append(Wv)
+        if not pts:
+            continue
+        v, f = inflate_hull(to_base(np.vstack(pts), base_p, base_R), ds)
+        if len(v) >= 4:
+            out.append(dict(name=f"bystander__{name}", vertices=v, faces=f, pad=0.0,
+                            inflated_m=ds, source="DistanceEngine._w, inflated"))
     return out
 
 
