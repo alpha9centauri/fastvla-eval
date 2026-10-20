@@ -62,44 +62,37 @@ INFLATE_SUPPORT_M = float(os.environ.get("PLANNER_INFLATE_SUPPORT_M", "0.0"))
 
 
 def inflate_hull(points, d):
-    """Convex hull of `points` grown outward by `d`, as (vertices, faces).
+    """Convex hull of `points` grown outward by at least `d`, as (vertices, faces).
 
-    Offsetting every face plane outward by d and intersecting the half-spaces. For a convex
-    P = {x : a_i.x <= b_i} with unit normals, the true rounded offset
-    P (+) ball(d) = {x : dist(x, P) <= d} is CONTAINED in {x : a_i.x <= b_i + d}, so the
-    polyhedron this returns over-approximates the offset. Over-approximating is the safe
-    direction: the planner is then stricter than the certifier, never looser.
+    Each facet's own vertices are displaced along that facet's outward normal by d, and the hull
+    of all displaced points is taken. Every original face plane a.x = b then has points at
+    a.x = b + d inside the result, so each face moves outward by at least d: the polyhedron
+    contains the true rounded offset P (+) ball(d). Over-approximating is the safe direction --
+    the planner ends up stricter than the certifier, never looser.
 
-    Scaling about the centroid would be wrong -- it grows far faces more than near ones and does
-    not correspond to a fixed clearance anywhere.
+    One ConvexHull call and no half-space intersection. The first version offset the face planes
+    and intersected the half-spaces, which is tighter but fails on nearly-degenerate input: on the
+    bottle's 824-vertex hull at d = 0.005 qhull reported "a wide merge error has occurred ... the
+    input is nearly degenerate" and the sweep died there. Scaling about the centroid would be
+    wrong in a different way -- it grows far faces more than near ones and fixes no distance.
     """
-    from scipy.spatial import ConvexHull, HalfspaceIntersection
+    from scipy.spatial import ConvexHull
     P = np.asarray(points, dtype=np.float64)
     if len(P) < 4 or d <= 0.0:
         return _hull_mesh(P)
-    h = ConvexHull(P)
-    # scipy's equations are [normal | offset] with normal.x + offset <= 0, normals unit length
-    A = h.equations[:, :-1]
-    b = -h.equations[:, -1]
-    interior = P[h.vertices].mean(axis=0)
     try:
-        hs = HalfspaceIntersection(np.hstack([A, -(b + d)[:, None]]), interior)
-        Q = np.asarray(hs.intersections, dtype=np.float64)
-        if len(Q) < 4 or not np.all(np.isfinite(Q)):
-            raise ValueError("degenerate half-space intersection")
+        h = ConvexHull(P)
+        A = h.equations[:, :-1]                      # unit outward normals, one per facet
+        tri = P[h.simplices]                         # (nfacet, 3, 3)
+        pushed = (tri + d * A[:, None, :]).reshape(-1, 3)
+        return _hull_mesh(np.vstack([P[h.vertices], pushed]))
     except Exception:
-        # Fall back to pushing each hull vertex along its area-weighted vertex normal. Still
-        # outward, still conservative in the directions that matter, and it cannot fail.
-        V = P[h.vertices]
-        nrm = np.zeros_like(V)
-        for i, vi in enumerate(h.vertices):
-            faces = np.any(h.simplices == vi, axis=1)
-            if faces.any():
-                n = A[faces].sum(axis=0)
-                ln = np.linalg.norm(n)
-                nrm[i] = n / ln if ln > 1e-12 else 0.0
-        Q = V + d * nrm
-    return _hull_mesh(Q)
+        # Last resort: an axis-aligned box grown by d. Crude, but it still contains the offset and
+        # it cannot fail, so a degenerate hull downgrades that one obstacle rather than the run.
+        lo, hi = P.min(axis=0) - d, P.max(axis=0) + d
+        box = np.array([[x, y, z] for x in (lo[0], hi[0]) for y in (lo[1], hi[1])
+                        for z in (lo[2], hi[2])], dtype=np.float64)
+        return _hull_mesh(box)
 
 
 def robot_base_offset(dom):

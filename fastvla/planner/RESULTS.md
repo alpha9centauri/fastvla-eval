@@ -84,6 +84,17 @@ reasoning holds — no plan comes close to inverting the payload.
 | no clear hand-off | 0 | 0% |
 | tilt above the limit | 0 | 0% |
 
+## SUPERSEDED IN PART BY STEP 4B -- read RESULTS_4B.md
+
+The section below attributes the planner's optimism to the payload being UNDER-COVERED by
+cuRobo's surface-sphere fit. Step 4b found the larger cause: the attachment was **mislocated by
+12.44 cm**, almost entirely in -z, because `attach_external_objects_to_robot` was called at the
+LIFT configuration while the hull was sampled with the bowl still on the stove. cuRobo was
+therefore reasoning about a bowl in the wrong place, not merely an under-sized one. Under-coverage
+was real -- franka.yml caps the attached object at FOUR spheres, which cannot cover an 11 cm bowl
+at any radius -- and was also fixed, but it is the second-order error. Both are in RESULTS_4B.md's
+bug list.
+
 ## The finding that matters, and a correction to my own status update
 
 Mid-run I told you the bottleneck had "moved out of the planner and into the executor", on the
