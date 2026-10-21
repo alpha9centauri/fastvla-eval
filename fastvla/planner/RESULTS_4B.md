@@ -278,3 +278,104 @@ a demo might certify and where this run's negative result should not be trusted.
 refuting the stale-attachment hypothesis — one run, attach/detach per scene in a fresh router, or
 re-run just those scenes one per process — is the first thing to do before anyone quotes 0/129 as
 final.
+
+---
+
+# 7a closing — the 11 feasible scenes, one per process
+
+Author: Varun Chandra, 2026-10-20. This resolves the open item above and **changes the 7a
+conclusion**: the 0/129 was partly an artefact of my own harness, and two certifiable demos exist.
+Artefacts: `out/place_pose_gap_all.json`, `out/one_per_process_rows.json`,
+`out/one_per_proc.log`, `clips/accepted_*`.
+
+## How many scenes are feasible at all
+
+The place-pose clearance was scanned for all 129 scenes (scene build plus GJK, no planning):
+
+```
+TRUE payload clearance at dgcore's place pose, 129 scenes
+  min 0.00   median 0.00   max 22.38 cm
+  scenes >= 0.5 cm   11/129
+  scenes >= 1.0 cm   11/129
+  scenes >= 2.0 cm   11/129
+```
+
+The distribution is **bimodal**: either exactly 0.00 cm (118 scenes) or 9.5–22.4 cm (11 scenes).
+Nothing lies between. So 118 of 129 are infeasible at any positive margin — the destination is
+occupied — and exactly 11 are worth planning for. Those 11 fall on inits 18, 19 and 34.
+
+## The 11, each in its own process with a fresh MotionGen
+
+| scene | init | shift cm | planned | via min cm | executor | success | min clr cm | 1 cm | 2 cm | outcome |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 0:12 | 34 | 19.31 | yes | 2.83 | no | no | 0.00 | — | — | unreached `detour_v13` |
+| 1:13 | 34 | 18.07 | yes | 3.05 | no | no | 0.00 | — | — | unreached `grasp` |
+| 2:6 | 18 | 14.74 | yes | 5.47 | no | no | 0.00 | — | — | unreached `detour_v11` |
+| 4:8 | 18 | 12.32 | yes | 5.58 | **yes** | **yes** | 0.00 | no | no | certification |
+| 4:10 | 18 | 13.43 | yes | 5.53 | **yes** | **yes** | 0.00 | no | no | certification |
+| 5:7 | 18 | 13.66 | yes | 5.86 | no | no | 0.00 | — | — | unreached `detour_v12` |
+| **5:9** | **19** | **11.31** | **yes** | **5.77** | **yes** | **yes** | **2.93** | **YES** | **YES** | **ACCEPTED** |
+| 7:19 | 18 | 16.01 | **no** | — | — | — | — | — | — | `INVALID_START_STATE_WORLD_COLLISION` |
+| **8:10** | **19** | **9.97** | **yes** | **5.91** | **yes** | **yes** | **2.99** | **YES** | **YES** | **ACCEPTED** |
+| 8:11 | 18 | 13.97 | yes | 5.42 | **yes** | **yes** | 0.00 | no | no | certification |
+| 9:4 | 34 | 18.76 | yes | 2.92 | no | no | 0.00 | — | — | unreached `grasp` |
+
+```
+scenes 11   planned 10/11   accepted at 1 cm 2/11   accepted at 2 cm 2/11
+outcomes: executor 5, certification 3, ACCEPTED 2, planner_failure 1
+```
+
+**The stale-attachment hypothesis is confirmed.** In the 129-run every one of these scenes returned
+`ik_place`; one scene per process, 10 of 11 plan. A single long-lived `MotionGen` with per-scene
+`attach_payload`/`detach_payload` does not reset cleanly, and the payload from a previous scene
+poisons the next. That makes the previous run's **0/129 unsafe for the 11 feasible scenes**, exactly
+as flagged. It does not touch the 118 scenes whose destination measures 0.00 cm.
+
+## Two accepted demonstrations — the first in milestone 7a
+
+| clip | init | shift | min GJK clearance | steps |
+|---|---|---|---|---|
+| `clips/accepted_i19_shift11.305cm_clr3.54cm.mp4` | 19 | 11.31 cm | **3.54 cm** | 125 |
+| `clips/accepted_i19_shift9.969cm_clr2.99cm.mp4` | 19 | 9.97 cm | **2.99 cm** | 125 |
+
+Both execute the planner's route to the end, satisfy the task's success predicate, and clear the
+declared obstacles by about 3 cm — so they certify at 1 cm **and** at the project's original 2 cm.
+(The 5:9 figure is 3.54 cm on the re-run against 2.93 cm in the first pass; cuRobo's trajectory
+optimisation is not deterministic across processes, so the path differs slightly between runs while
+the outcome does not.)
+
+## An error of mine that these numbers depend on
+
+`dgcore.execute` stores clearance in **centimetres** — `ep.add(obs, action, 100.0 *
+rec["min_clearance"], ...)`, and `generate_demo` reads `np.min(ep.clearance)` straight into
+`min_clearance_cm`. My `run_full` multiplied by 100 again. Two consequences:
+
+- every clearance I reported from this harness was **100× too large** (the "292.86 cm" that first
+  made me suspicious of the accepted demo was 2.93 cm);
+- the acceptance test was `100 * clr >= 100 * FLOOR_M`, i.e. **clearance ≥ 0.01 cm, not 1 cm**.
+
+It changed no earlier conclusion, because nearly every executed route measured exactly 0.00 and
+zero fails any threshold. But it would have let a 0.5 mm demo through as "accepted at 1 cm", and
+the two genuine acceptances are only trustworthy because the fixed arithmetic puts them at 2.9 and
+3.5 cm. Fixed in `step4b_run.py`; the table above is recomputed with the correct units.
+
+One scope note: this harness runs a **single rendered pass** rather than dgcore's dry pass followed
+by a separate rendered replay, so the replay-reproducibility gate is not independently exercised.
+The episode measured is the episode rendered.
+
+## The closing statement for 7a, corrected
+
+> At the displacement test's eval-rule placements on oa1, **118 of 129 scenes admit no certifiable
+> demonstration at any positive margin**, because the task's own place pose puts the carried bowl in
+> contact with a declared obstacle: bowl-to-box clearance at the place pose is exactly 0.00 cm in
+> 118 scenes and 9.5–22.4 cm in the other 11, with nothing in between. On the 11 that are
+> geometrically feasible, a whole-arm planner with verified geometry plans 10 and produces **2
+> certified demonstrations**, clearing the obstacles by 2.99 and 3.54 cm — passing both the 1 cm and
+> the original 2 cm floor. The remaining 8 fail downstream of planning: 5 in the OSC executor and 3
+> at certification with 0.00 cm.
+>
+> So the limiting factor is the scene, not the planner. A motion planner converts the feasible
+> fraction of these placements into demonstrations at roughly a 2-in-11 rate, against the scripted
+> planner's 1-in-197 over the whole set; but the feasible fraction is only 8.5% of the test's own
+> placements, because the eval rule moves the obstacle stack onto the destination. Raising the yield
+> means changing where the test puts the obstacle, not improving the planner.

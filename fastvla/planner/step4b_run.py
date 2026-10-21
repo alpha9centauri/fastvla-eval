@@ -58,7 +58,15 @@ CARRIED = "akita_black_bowl_1"
 
 
 def targets():
-    """The step-4 scenes that returned a path, in run order, first N of them."""
+    """Which scenes to measure.
+
+    TARGETS="shard:attempt,..." names them explicitly -- used to re-run a chosen subset one scene
+    per process, so each gets a fresh MotionGen and no state can carry between scenes. Otherwise:
+    the step-4 scenes that returned a path, in run order, first N (N<=0 means all).
+    """
+    env_t = os.environ.get("TARGETS", "").strip()
+    if env_t:
+        return [tuple(int(x) for x in t.split(":")) for t in env_t.split(",") if t]
     rows = json.load(open(os.path.join(OUT, "step4_rows.json")))
     ok = [(r["shard"], r["attempt"]) for r in rows if r["plan_ok"]]
     ok.sort()
@@ -255,9 +263,15 @@ def run_full(init_idx, shift, base, obstacle, rng):
         mon.attach()
         t, ok, why = D.execute(env, dom, mon, wp, ep, t0=0, ref_quat=hq)
         mon.detach()
-        clr = float(np.min(ep.clearance)) if len(ep.clearance) else float("nan")
+        # dgcore stores clearance in CENTIMETRES already -- execute() does
+        # ep.add(obs, action, 100.0 * rec["min_clearance"], ...) and generate_demo reads
+        # np.min(ep.clearance) straight into min_clearance_cm. Multiplying by 100 here, as the
+        # first version did, inflated every reported clearance 100-fold and silently loosened the
+        # acceptance test to 0.01 cm. It changed no earlier conclusion only because nearly every
+        # executed route measured exactly 0.00.
+        clr_cm = float(np.min(ep.clearance)) if len(ep.clearance) else float("nan")
         out.update(executor_ok=bool(ok), executor_reason=why, steps=int(t),
-                   dry_min_clearance_cm=round(100 * clr, 3),
+                   dry_min_clearance_cm=round(clr_cm, 3),
                    success=bool(env.check_success()))
         if not ok:
             out.update(accepted=False, reason=f"executor:{why}",
@@ -266,9 +280,12 @@ def run_full(init_idx, shift, base, obstacle, rng):
         if not out["success"]:
             out.update(accepted=False, reason="success_predicate_false")
             return out
-        out.update(accepted=bool(100 * clr >= 100 * FLOOR_M),
-                   reason=None if 100 * clr >= 100 * FLOOR_M else "certification")
-        np.savez_compressed(os.path.join(OUT, f"step4b_ep_i{init_idx:02d}.npz"),
+        ok_floor = clr_cm >= 100.0 * FLOOR_M            # FLOOR_M is metres, clr_cm is cm
+        out.update(accepted=bool(ok_floor),
+                   reason=None if ok_floor else "certification")
+        # keyed by TAGOUT too: two accepted scenes shared init 19 and the second silently
+        # overwrote the first, costing a clip
+        np.savez_compressed(os.path.join(OUT, f"step4b_ep_i{init_idx:02d}{TAGOUT}.npz"),
                             base=np.asarray(ep.base, np.uint8), clearance=np.asarray(ep.clearance),
                             eef=np.asarray(ep.eef), meta=json.dumps(out, default=str))
         return out
