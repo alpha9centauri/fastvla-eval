@@ -1,0 +1,19 @@
+{
+ "shard": 5,
+ "attempt": 7,
+ "init_idx": 18,
+ "shift_cm": 13.664,
+ "intrusion_cm": 3.54,
+ "cause_in_measurement": "certification",
+ "executor_ok": true,
+ "executor_reason": "ok",
+ "steps": 234,
+ "min_gjk_clearance_cm": 0.0,
+ "handoff_up_cm": 16.0,
+ "handoff_out_cm": 9.0,
+ "tilt_deg": 23.5,
+ "n_via": 22,
+ "payload_attached": true,
+ "frames": 234,
+ "rebuild_seconds": 550.6
+}

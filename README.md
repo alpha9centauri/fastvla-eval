@@ -104,6 +104,31 @@ Recipe, numbers and logs: [docs/POSTTRAIN.md](docs/POSTTRAIN.md).
 
 ---
 
+# Part 4: Motion planner integration, and what it found
+
+### What I built
+
+- Replaced the demonstration generator's scripted route stage with a real whole-arm motion planner (cuRobo v0.7.6, CUDA 12.1, torch 2.2.0), bound over `dgcore.plan_detours` at runtime so the research code is imported and never edited. `PLANNER=script|curobo` selects it; everything downstream — the OSC executor, the 2 cm GJK certification, the rendered-replay gate, the LeRobot writer — runs unchanged.
+- Built the planner's world from the certifier's own hulls, by import, so a plan the planner calls clear is clear to the thing that certifies it. Verified the two collision checkers agree: the straight-line route collides in every scene tested, and they locate the contact to within 3 mm.
+- Measured the whole eval-rule scene set the research could not solve (the 197 scenes where its scripted planner managed 1), with per-scene clearance distributions, failure attribution, and timing.
+
+### What it found
+
+The scripted planner's 1-in-197 was not a planner limitation. On these placements **118 of 129 scenes admit no certifiable demonstration at any positive margin**: the task's own place pose puts the carried bowl in contact with a declared obstacle, measured at exactly 0.00 cm, because the test's placement rule moves the obstacle stack onto the destination. The clearance distribution is bimodal — 0.00 cm in 118 scenes, 9.5–22.4 cm in 11, nothing between.
+
+On the 11 geometrically feasible scenes the planner plans 10 and yields **2 certified demonstrations**, clearing the obstacles by 2.99 and 3.54 cm, which pass both the 1 cm and the original 2 cm floor.
+
+| eval-rule oa1 placements | scripted planner | motion planner |
+|---|---|---|
+| certifiable demonstrations | 1 of 197 | 2 of the 11 feasible scenes |
+| scenes with a usable destination | — | 11 of 129 (8.5%) |
+
+Honest reading: the limiting factor is the scene, not the planner. Raising the yield means changing where the test puts the obstacle, not improving the search. The reusable parts are the integration seam, the world builder that shares geometry with the certifier, and five cuRobo pitfalls that each produced plausible wrong numbers before being caught — a four-sphere cap on attached objects, an attachment mislocated 12.4 cm by being made at the wrong joint configuration, a volume fit that degenerates to a cuboid, `solve_ik` failing after CUDA-graph capture, and a long-lived planner whose per-scene attach/detach does not reset.
+
+Feasibility, world model, results and the bug list: [fastvla/planner/FEASIBILITY.md](fastvla/planner/FEASIBILITY.md), [fastvla/planner/WORLD_MODEL.md](fastvla/planner/WORLD_MODEL.md), [fastvla/planner/RESULTS.md](fastvla/planner/RESULTS.md), [fastvla/planner/RESULTS_4B.md](fastvla/planner/RESULTS_4B.md).
+
+---
+
 ## Try it
 
 ```bash
@@ -121,6 +146,7 @@ Running trials needs a GPU, the simulator and a model checkpoint. None of those 
 - The monitor is fitted to this one model and benchmark. On scenes it never saw, its accuracy drops by about half.
 - The automatic stop is a brake, not avoidance. It halts the arm and costs finished tasks.
 - The Kubernetes manifests in `deploy/` have not been run against a cluster.
+- The motion planner's yield rests on 11 feasible scenes out of 129; two certified demonstrations is a small number and both come from the same LIBERO init.
 
 ## Acknowledgements
 

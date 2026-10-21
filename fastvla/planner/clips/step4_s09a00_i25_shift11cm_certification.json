@@ -1,0 +1,19 @@
+{
+ "shard": 9,
+ "attempt": 0,
+ "init_idx": 25,
+ "shift_cm": 11.469,
+ "intrusion_cm": 2.84,
+ "cause_in_measurement": "certification",
+ "executor_ok": false,
+ "executor_reason": "unreached:pre_place:akita_black_bowl_1",
+ "steps": 192,
+ "min_gjk_clearance_cm": 0.0,
+ "handoff_up_cm": 16.0,
+ "handoff_out_cm": 9.0,
+ "tilt_deg": 22.29,
+ "n_via": 25,
+ "payload_attached": true,
+ "frames": 192,
+ "rebuild_seconds": 125.1
+}

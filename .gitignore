@@ -94,3 +94,9 @@ audit/logs/
 bench/runs/
 bench/triton_libs/
 .ruff_cache/
+
+# Milestone 7a planner: the vendored cuRobo checkout (189 MB, a git clone of NVlabs/curobo at
+# tag v0.7.6) is a third-party dependency, not our code -- FEASIBILITY.md records the tag and
+# the build flags so it can be re-cloned. Saved joint paths and plan arrays are artefacts.
+fastvla/planner/third_party/
+fastvla/planner/out/
