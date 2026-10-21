@@ -168,9 +168,12 @@ dgcore's own executor and monitor. Nothing accepted, so these are closest-to-acc
 
 | clip | init | shift | planned-via min | executed min | outcome |
 |---|---|---|---|---|---|
-| `step4b_s08a03_i28_shift14cm_executor.mp4` | 28 | 14.4 cm | 21.52 cm | 0.00 cm | unreached `pre_place` |
+| `step4b_s08a03_i28_shift14cm_executor.mp4` *(deleted)* | 28 | 14.4 cm | 21.52 cm | 0.00 cm | unreached `pre_place` |
 | `step4b_s06a03_i28_shift16cm_executor.mp4` | 28 | 16.0 cm | 25.35 cm | 0.00 cm | unreached `pre_place` |
 | `step4b_s02a09_i10_shift12cm_executor.mp4` | 10 | 12.2 cm | 18.98 cm | 0.00 cm | unreached `pre_place` |
+
+The `s08a03` clip was **deleted on 20 Oct**: its frames were an uninitialised EGL camera buffer
+(static noise), not the scene; the row's numbers come from the monitor and are unaffected.
 
 One caveat on these three: the planned-via minima above (19–25 cm) are **better than the values
 recorded for the same scenes in the run** (3.6–5.0 cm), because the render re-plans and cuRobo's
@@ -335,8 +338,14 @@ as flagged. It does not touch the 118 scenes whose destination measures 0.00 cm.
 
 | clip | init | shift | min GJK clearance | steps |
 |---|---|---|---|---|
-| `clips/accepted_i19_shift11.305cm_clr3.54cm.mp4` | 19 | 11.31 cm | **3.54 cm** | 125 |
-| `clips/accepted_i19_shift9.969cm_clr2.99cm.mp4` | 19 | 9.97 cm | **2.99 cm** | 125 |
+| `clips/accepted_s05a09_i19_shift11.3cm_clr2.97cm.mp4` | 19 | 11.31 cm | **3.54 cm** | 125 |
+| `clips/accepted_s08a10_i19_shift10.0cm_clr2.32cm.mp4` | 19 | 9.97 cm | **2.99 cm** | 125 |
+
+The filenames were corrected on 20 Oct to carry the scene (`shard:attempt`) as well as the init:
+the first naming keyed only on the init, so the second init-19 acceptance overwrote the first and
+cost a clip. The clearance in each filename (2.97 and 2.32 cm) is what the **re-render** measured;
+the table's 3.54 and 2.99 cm are what the **run** measured, and they differ for the same
+non-determinism noted above.
 
 Both execute the planner's route to the end, satisfy the task's success predicate, and clear the
 declared obstacles by about 3 cm — so they certify at 1 cm **and** at the project's original 2 cm.
@@ -362,6 +371,30 @@ the two genuine acceptances are only trustworthy because the fixed arithmetic pu
 One scope note: this harness runs a **single rendered pass** rather than dgcore's dry pass followed
 by a separate rendered replay, so the replay-reproducibility gate is not independently exercised.
 The episode measured is the episode rendered.
+
+## Place-pose renders (21 Oct)
+
+The 0.00 cm in those 118 scenes is a claim about geometry, so it is worth seeing rather than only
+tabulating. Three of them — different inits, picked from `out/place_pose_gap_all.json` — were
+rebuilt on CPU with the eval-rule shift applied, the bowl moved by free-joint `qpos` to dgcore's
+own nominal place pose on `plate_1` and held there with `sim.forward()` (no stepping, no planner,
+no GPU), then rendered from `agentview` and from a free camera directly overhead.
+
+| scene | init | shift | bowl → `white_place_box_1` | bowl → `bottle_of_perfume_1` | bowl x,y | `plate_1` x,y | `white_place_box_1` x,y |
+|---|---|---|---|---|---|---|---|
+| 0:0 | 10 | 13.30 cm | **0.000 cm** | 9.796 cm | `0.0544, 0.1531` | `0.0544, 0.1917` | `0.0272, 0.1259` |
+| 5:0 | 49 | 12.33 cm | **0.000 cm** | 9.812 cm | `0.0651, 0.1738` | `0.0651, 0.2124` | `0.0110, 0.1427` |
+| 4:0 | 30 | 17.18 cm | **0.000 cm** | 9.798 cm | `0.0581, 0.1669` | `0.0581, 0.2055` | `0.0303, 0.1864` |
+
+Distances are from the same scan path as the 129-scene measurement (`DistanceEngine` hulls into
+`fastgjk.gjk_distance`, padding subtracted), computed two ways — the rigid grasp→place translation
+of the bowl hull, and a direct re-query of the moved state — identical to 3 dp in all three.
+
+Six PNGs in `review/planner/placepose/`, numbers in `placepose_scan.json`. What they show: after
+the eval-rule shift, `white_place_box_1` stands **on the plate**, with `bottle_of_perfume_1` on top
+of it, and the bowl's place pose falls inside the box's footprint — its rim is visible emerging
+from the box's lower-right face in the agent view. The bowl-to-bottle distance stays at ~9.80 cm
+across all three while the shift varies 12.3–17.2 cm, because the bottle sits above the contact.
 
 ## The closing statement for 7a, corrected
 

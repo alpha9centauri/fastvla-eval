@@ -1,0 +1,21 @@
+{
+ "shard": 5,
+ "attempt": 9,
+ "init_idx": 19,
+ "shift_cm": 11.305,
+ "min_clearance_cm": 2.974,
+ "steps": 124,
+ "executor_ok": true,
+ "executor_reason": "ok",
+ "success": true,
+ "planned_via_min_cm": 18.161,
+ "tilt_deg": 12.58,
+ "warm_frame_score": 2.56,
+ "frames": 124,
+ "frame_scores": [
+  2.56,
+  2.95,
+  3.97
+ ],
+ "verified_real_frames": true
+}

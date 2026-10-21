@@ -1,8 +1,0 @@
-{
- "init": 19,
- "shift_cm": 11.305,
- "min_clearance_cm": 3.541,
- "steps": 125,
- "frames": 125,
- "note": "accepted at 1 cm and at 2 cm"
-}

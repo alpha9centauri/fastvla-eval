@@ -161,9 +161,13 @@ rendering.
 
 | clip | init | shift | hand-off | tilt | executor | min GJK clearance |
 |---|---|---|---|---|---|---|
-| `step4_s09a00_i25_shift11cm_certification.mp4` | 25 | 11.47 cm | 16/9 cm | 22.3° | **failed** at `pre_place` after 192 steps | 0.00 cm |
+| `step4_s09a00_i25_shift11cm_certification.mp4` *(deleted)* | 25 | 11.47 cm | 16/9 cm | 22.3° | **failed** at `pre_place` after 192 steps | 0.00 cm |
 | `step4_s02a06_i18_shift15cm_certification.mp4` | 18 | 14.74 cm | 16/9 cm | 25.3° | **ok**, 229 steps | 0.00 cm |
 | `step4_s05a07_i18_shift14cm_certification.mp4` | 18 | 13.66 cm | 16/9 cm | 23.5° | **ok**, 234 steps | 0.00 cm |
+
+The `s09a00` clip was **deleted on 20 Oct**: its frames were an uninitialised EGL camera buffer
+(static noise), not the scene; the row's numbers come from the monitor and are unaffected. The
+other two clips are on disk.
 
 Two of the three executed the planned route to the end and still touched the bottle — which is the
 same conclusion the planned-via measurement reached, visible rather than tabulated.

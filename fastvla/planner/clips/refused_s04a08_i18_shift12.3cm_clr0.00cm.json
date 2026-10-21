@@ -1,0 +1,41 @@
+{
+ "shard": 4,
+ "attempt": 8,
+ "init_idx": 18,
+ "shift_cm": 12.321,
+ "min_clearance_cm": 0.0,
+ "steps": 154,
+ "executor_ok": true,
+ "executor_reason": "ok",
+ "success": true,
+ "planned_via_min_cm": 24.87,
+ "tilt_deg": 9.86,
+ "n_agentview": 154,
+ "n_birdview": 154,
+ "n_recs": 154,
+ "birdview": "written",
+ "min_at_step": 25,
+ "min_clearance_at_step_cm": 0.0,
+ "contact": true,
+ "actor": "robot",
+ "closest_obstacle": "white_place_box_1",
+ "actor_geom": "gripper0_hand_collision",
+ "obstacle_geom": "white_place_box_1_g4",
+ "obstacles_hit": [
+  "white_place_box_1"
+ ],
+ "first_pair": {
+  "substep": 9,
+  "actor": "robot",
+  "actor_geom": "gripper0_hand_collision",
+  "obstacle": "white_place_box_1",
+  "obstacle_geom": "white_place_box_1_g4",
+  "dist": -3.3e-05,
+  "force": 1029.2748
+ },
+ "agentview_frame_scores": [
+  2.59,
+  2.73,
+  3.87
+ ]
+}
