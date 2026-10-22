@@ -154,6 +154,86 @@ PY=${PY:-/data_new/vchandr2/miniconda3/envs/libero-vla/bin/python}
 so `make bench` needs the **`libero-vla`** environment rebuilt from `libero-vla.yml`, not
 `learn-gpu`. Override with `PY=<interpreter> make bench` if it lives elsewhere.
 
+## 5b. Installing from these files — two things that bite, both measured
+
+The `learn-gpu` environment was rebuilt from `libero-vla.yml` + `libero-vla.requirements.txt` on
+22 Oct 2026 to check these specs actually work. They do, but not with the obvious commands.
+
+**`conda env create -f libero-vla.yml` fails at its embedded pip stage.** The conda layer
+installs fine (python 3.10.20 appears); the pip stage dies with `CondaEnvException: Pip failed`.
+The real error is three screens up:
+
+```
+ERROR: Could not find a version that satisfies the requirement torch==2.2.0+cu121
+ERROR: No matching distribution found for torch==2.2.0+cu121
+```
+
+`pip freeze` writes the local version suffix `+cu121` but not the index that wheel came from, and
+`torch==2.2.0+cu121` is not on PyPI. Every environment here except `learn-gpu`'s original has a
+`+cu121` torch, so every one of them hits this. Add the index:
+
+```bash
+pip install --extra-index-url https://download.pytorch.org/whl/cu121 -r <name>.requirements.txt
+```
+
+**That still fails, with `ResolutionImpossible`.** pip's resolver rejects the set:
+
+```
+Cannot install ... requests==2.28.1, sentry-sdk==2.66.1, tritonclient==2.73.0
+and urllib3==1.26.13 because these package versions have conflicting dependencies.
+```
+
+These environments were built incrementally over months, and the resulting closure is not one pip
+can re-derive in a single resolve. A `pip freeze` *is* already the complete closure, so replay it
+as one rather than asking pip to solve it again:
+
+```bash
+pip install --no-deps --extra-index-url https://download.pytorch.org/whl/cu121 \
+    -r <name>.requirements.txt
+```
+
+That installed all 163 non-VCS packages in one pass, with numpy 1.26.4 and torch 2.2.0+cu121
+intact.
+
+**The four VCS entries are pinned git URLs, not local paths** — `pip freeze` recorded them
+properly, so they are installable from a clean box:
+
+```
+dlimp        git+https://github.com/moojink/dlimp_openvla@040105d256bd28866cc6620621a3d5f7b6b91b46
+libero       git+https://github.com/LIBERO-SAFETY/LIBERO-Safety.git@ef0f79b70fc50c5fb612a1bbc1cf8b6c033a702a
+robosuite    the same repo and commit, subdirectory=third_party/robosuite-1.4
+openvla_oft  git+https://github.com/moojink/openvla-oft.git@e4287e94541f459edc4feabc4e181f537cd569a8
+transformers git+https://github.com/moojink/transformers-openvla-oft.git@bc339d9ad707454c0c115970db43c260067c61ab
+```
+
+This is how `openvla-oft` is recovered after the cleanup deleted the local checkout — at a pinned
+commit, which is better than what was on disk. **But note:** installing `libero` through that URL
+gives you *upstream*, without the patch in section 4. For anything that creates environments, do
+section 4 by hand and skip these two lines; `pip install --no-deps` leaves them out anyway.
+
+They were skipped for `learn-gpu`: `tests/` imports only `fastvla`, `numpy`, `pytest` and stdlib,
+and the `libero` line would clone an 18 G repository this cleanup had just removed.
+
+**Dev tools added on top** (none were in the original `learn-gpu`; it had never run lint or tests):
+
+```bash
+pip install pytest ruff pybind11 line_profiler jupyter
+#            9.1.1  0.17.0  3.1.0    5.1.0         1.1.1
+```
+
+Result in the rebuilt environment, CPU only:
+
+```
+make test   55 passed in 4.19s                                exit 0
+make lint   141 errors, ALL in fastvla/planner/, 0 elsewhere  exit 2
+```
+
+The lint failure is **not** an environment problem — `libero-vla` carries the same ruff 0.17.0.
+It is pre-existing: the planner module was merged to main in `6adaa8b` without `make lint` having
+been run against it. Breakdown: E702 x27, I001 x25, SIM115 x23, E701 x14, E402 x13, SIM105 x9,
+E401 x8, F401 x7, B023 x5, B007 x4, and 6 others. 43 are auto-fixable. Nothing outside
+`fastvla/planner/` reports a single error, so the rest of the repo is clean.
+
 ## 6. The order that works
 
 ```
