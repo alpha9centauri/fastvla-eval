@@ -1,0 +1,44 @@
+# displacement test, started 2026-10-22 09:34:55
+# cmd: /data_new/vchandr2/miniconda3/envs/learn-gpu/bin/python -u /data_new/vchandr2/fastvla-eval/fastvla/server/roofline.py
+[card] NVIDIA RTX A5000  23.7 GiB  64 SMs  sm_86  torch 2.2.0+cu121 cu12.1
+[peak] bf16 8192^3 matmul: 11.674 ms/call -> 94.19 TFLOP/s
+[peak] d2d copy 8.0 GiB moved: 12.523 ms -> 685.9 GB/s
+/data_new/vchandr2/miniconda3/envs/learn-gpu/lib/python3.10/site-packages/wandb/sdk/internal/internal_api.py:30: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1792686899.512574 2491311 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Using LIBERO constants:
+  NUM_ACTIONS_CHUNK = 8
+  ACTION_DIM = 7
+  PROPRIO_DIM = 8
+  ACTION_PROPRIO_NORMALIZATION_TYPE = bounds_q99
+If needed, manually set the correct constants in `prismatic/vla/constants.py`!
+Instantiating pretrained VLA policy...
+Created backup of original config at: /data_new/vchandr2/runs/openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt/config.json.back.20261022_093503
+Updated config.json at: /data_new/vchandr2/runs/openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt/config.json
+Changes made:
+  - Set AutoConfig to "configuration_prismatic.OpenVLAConfig"
+  - Set AutoModelForVision2Seq to "modeling_prismatic.OpenVLAForActionPrediction"
+WARNING: `modeling_prismatic.py` is not found anywhere in the current directory.
+WARNING: `configuration_prismatic.py` is not found anywhere in the current directory.
+
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:00,  3.70it/s]
+Loading checkpoint shards:  50%|█████     | 2/4 [00:00<00:00,  4.15it/s]
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:00<00:00,  4.32it/s]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  4.38it/s]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  4.28it/s]
+Loaded model: <class 'transformers_modules.openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt.modeling_prismatic.OpenVLAForActionPrediction'>
+[load] merged-direct from /data_new/vchandr2/runs/openvla-7b-oft-libero-combined+libero_safety+b32+lr-0.0005+lora-r32+dropout-0.0--image_aug--libero_safety--warmstart-combined--headinit--17500_chkpt  (5.8 s)
+[load] resident weights 14.39 GiB, 7.71 B params
+[input] pixel_values [1, 12, 224, 224]  prompt 34 tok  action positions 56
+[fwd] 166.52 ms/call (batch 1, 10 warm-up + 30 timed)
+[flops] 9029.54 GFLOP per forward
+STAGE:2026-10-22 09:35:16 2491311:2491311 ActivityProfilerController.cpp:314] Completed Stage: Warm Up
+STAGE:2026-10-22 09:35:17 2491311:2491311 ActivityProfilerController.cpp:320] Completed Stage: Collection
+STAGE:2026-10-22 09:35:17 2491311:2491311 ActivityProfilerController.cpp:324] Completed Stage: Post Processing
+[prof] GPU 150.13 ms/fwd of 166.52 ms wall (90.2% busy) | GEMM 79.7%  attn 3.2%  other 17.0%  | 2948 kernel launches/fwd
+[roof] achieved 54.22 TFLOP/s = 57.6% of measured matmul peak
+[roof] AI 584.36 FLOP/byte vs ridge 137.31 -> compute-bound; roof here 94.19 TFLOP/s, at 57.6% of it
+ROOFLINE_DONE
