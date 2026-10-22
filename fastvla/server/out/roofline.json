@@ -1,0 +1,155 @@
+{
+ "card": {
+  "name": "NVIDIA RTX A5000",
+  "total_memory_bytes": 25425608704,
+  "sm_count": 64,
+  "capability": "8.6",
+  "torch": "2.2.0+cu121",
+  "cuda": "12.1"
+ },
+ "matmul": {
+  "n": 8192,
+  "dtype": "bfloat16",
+  "warmup": 10,
+  "iters": 50,
+  "seconds_per_call": 0.011673763427734376,
+  "tflops": 94.18656070790286
+ },
+ "bandwidth": {
+  "bytes_per_copy": 8589934592,
+  "warmup": 10,
+  "iters": 50,
+  "seconds_per_copy": 0.01252317138671875,
+  "gb_per_s": 685.9232639034165
+ },
+ "weights": {
+  "bytes": 15451909006,
+  "gib": 14.39071167819202,
+  "params": 7709173191
+ },
+ "input": {
+  "images": 2,
+  "image_hw": [
+   224,
+   224
+  ],
+  "pixel_values_shape": [
+   1,
+   12,
+   224,
+   224
+  ],
+  "prompt_tokens": 34,
+  "proprio_dim": 8,
+  "action_positions": 56,
+  "task_label": "pick up the black bowl between the plate and the ramekin and place it on the plate"
+ },
+ "forward": {
+  "batch": 1,
+  "warmup": 10,
+  "iters": 30,
+  "seconds": 0.1665208984375,
+  "ms": 166.52089843750002
+ },
+ "flops": {
+  "total": 9029541744640,
+  "gflops": 9029.54174464,
+  "counted_via": "unwrapped forward under no_grad"
+ },
+ "profile": {
+  "forwards": 3,
+  "gpu_ms_per_forward": 150.12699999999998,
+  "gemm_frac": 0.7973382536119419,
+  "attention_frac": 0.0324947100343931,
+  "other_frac": 0.170167036353665,
+  "kernel_launches_per_forward": 2948.0,
+  "top": [
+   {
+    "kernel": "void cutlass::Kernel<cutlass_80_tensorop_bf16_s16816gemm_bf16_256x128_",
+    "bucket": "gemm",
+    "ms": 108.988,
+    "calls": 330.0
+   },
+   {
+    "kernel": "ampere_bf16_s16816gemm_bf16_128x64_ldg8_relu_f2f_stages_64x4_tn",
+    "bucket": "gemm",
+    "ms": 8.149,
+    "calls": 204.0
+   },
+   {
+    "kernel": "void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_imp",
+    "bucket": "other",
+    "ms": 4.167,
+    "calls": 289.0
+   },
+   {
+    "kernel": "void pytorch_flash::flash_fwd_kernel<pytorch_flash::Flash_fwd_kernel_t",
+    "bucket": "attention",
+    "ms": 3.319,
+    "calls": 32.0
+   },
+   {
+    "kernel": "void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_imp",
+    "bucket": "other",
+    "ms": 2.269,
+    "calls": 180.0
+   },
+   {
+    "kernel": "void at::native::vectorized_elementwise_kernel<4, at::native::(anonymo",
+    "bucket": "other",
+    "ms": 1.979,
+    "calls": 65.0
+   },
+   {
+    "kernel": "void at::native::unrolled_elementwise_kernel<at::native::direct_copy_k",
+    "bucket": "other",
+    "ms": 1.964,
+    "calls": 99.0
+   },
+   {
+    "kernel": "void at::native::(anonymous namespace)::CatArrayBatchedCopy<c10::BFloa",
+    "bucket": "other",
+    "ms": 1.921,
+    "calls": 64.0
+   },
+   {
+    "kernel": "void at::native::elementwise_kernel<128, 2, at::native::gpu_kernel_imp",
+    "bucket": "other",
+    "ms": 1.842,
+    "calls": 65.0
+   },
+   {
+    "kernel": "void at::native::vectorized_elementwise_kernel<4, at::native::BinaryFu",
+    "bucket": "other",
+    "ms": 1.838,
+    "calls": 32.0
+   },
+   {
+    "kernel": "void at::native::unrolled_elementwise_kernel<at::native::direct_copy_k",
+    "bucket": "other",
+    "ms": 1.835,
+    "calls": 129.0
+   },
+   {
+    "kernel": "ampere_bf16_s16816gemm_bf16_128x64_ldg8_relu_f2f_stages_32x6_tn",
+    "bucket": "gemm",
+    "ms": 1.564,
+    "calls": 102.0
+   }
+  ],
+  "gpu_busy_frac_of_wall": 0.9015505045232918
+ },
+ "roofline": {
+  "achieved_tflops": 54.22467587771899,
+  "frac_of_measured_peak": 0.5757156378804815,
+  "bytes_per_forward": 15451909006,
+  "bytes_note": "resident weights read once; profiler gives no DRAM counter",
+  "arithmetic_intensity_flops_per_byte": 584.3641546901302,
+  "ridge_point_flops_per_byte": 137.31355337317308,
+  "bound": "compute",
+  "roof_tflops": 94.18656070790286,
+  "frac_of_roof": 0.5757156378804815,
+  "achieved_tflops_gpu_busy": 60.146021332871506,
+  "frac_of_peak_gpu_busy": 0.6385839007265595
+ }
+}
