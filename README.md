@@ -141,6 +141,76 @@ make bench-quick               # the end-to-end timings, about 8 minutes on a GP
 
 Running trials needs a GPU, the simulator and a model checkpoint. None of those are included here. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains what talks to what.
 
+### What `make bench` needs, in full
+
+`make test` and `make lint` run from a plain clone with nothing else. `make bench` does not: it
+drives a real policy against a real simulator. Four things have to exist first, and none of them
+ships with this repository.
+
+**1. The `libero-vla` environment.** `bench/bench_all.sh:23` hardcodes
+`PY=${PY:-/data_new/vchandr2/miniconda3/envs/libero-vla/bin/python}`, so this is the interpreter
+unless you override `PY`. Build it from [`envs/libero-vla.yml`](envs/libero-vla.yml) and
+[`envs/libero-vla.requirements.txt`](envs/libero-vla.requirements.txt) -- but read
+[`envs/BUILD.md`](envs/BUILD.md) first, because neither obvious command works:
+
+```bash
+conda env create -f envs/libero-vla.yml          # dies at its pip stage. torch==2.2.0+cu121
+                                                 # is not on PyPI: a pip freeze records the
+                                                 # +cu121 suffix but not the index it came from
+pip install --no-deps \
+    --extra-index-url https://download.pytorch.org/whl/cu121 \
+    -r envs/libero-vla.requirements.txt          # --no-deps is required. With the resolver on,
+                                                 # it fails ResolutionImpossible on urllib3
+                                                 # against requests / sentry-sdk / tritonclient.
+                                                 # A freeze is already a closure; replay it.
+```
+
+**2. LIBERO-Safety, cloned at the recorded commit with the import patch.** `libero` and
+`robosuite` are editable installs pointing into the checkout, so neither imports until it exists:
+
+```bash
+git clone https://github.com/LIBERO-SAFETY/LIBERO-Safety.git
+cd LIBERO-Safety && git checkout ef0f79b70fc50c5fb612a1bbc1cf8b6c033a702a
+git apply <research-repo>/src/displacement/patches/libero_safety_env_import_fix.patch
+cp <research-repo>/src/displacement/patches/libero_safety__libero__init__.py libero/__init__.py
+(cd libero/libero/bddl_files/libero_spatial && ln -s . L0)
+(cd libero/libero/init_files/libero_spatial  && ln -s . L0)
+pip install -e . && pip install -e third_party/robosuite-1.4
+```
+
+Without the patch, upstream's eager `wand`/ImageMagick import in `envs/env_wrapper.py` raises at
+module load and breaks all environment creation, not just the corruption path it is there for.
+
+**3. cuRobo, for `fastvla/planner/` only.** Not needed by `make bench`; needed to re-run
+milestone 7a. It was an *editable* install from a vendored clone, never a wheel, so
+`pip install nvidia-curobo` is not what was measured:
+
+```bash
+mkdir -p fastvla/planner/third_party && cd fastvla/planner/third_party
+git clone https://github.com/NVlabs/curobo.git
+cd curobo && git checkout v0.7.6              # commit 2fbffc35225398cf9d5f382804faa9de2608753b
+pip install numpy==1.26.4 && pip install warp-lang==1.4.2   # in this order, before cuRobo
+pip install -e . --no-build-isolation
+```
+
+The `numpy<2` pin is load-bearing: torch 2.2.0+cu121 and warp 1.4.2 are built against the numpy
+1.x ABI, and under numpy 2.x the warp kernels fail at load.
+
+**4. The checkpoint, where `bench/triton_serve.sh` looks for it.** Line 17 reads:
+
+```
+CKPT=${CKPT:-/data_new/vchandr2/runs/$BASE--17500_chkpt}
+```
+
+`runs` is a symlink to `checkpoints`, so that resolves to
+`/data_new/vchandr2/checkpoints/...--headinit--17500_chkpt`. Either put the checkpoint there and
+keep the symlink, or set `CKPT` explicitly -- nothing else needs changing. It is a LoRA fine-tune
+of `openvla/openvla-7b` (HF revision `47a0ec7fc4ec123775a391911046cf33cf9ed83f`) and is not
+public; `make bench` cannot be reproduced without it.
+
+Also required: GPU 1 free, and `MUJOCO_GL=egl` with `MUJOCO_EGL_DEVICE_ID` matching
+`CUDA_VISIBLE_DEVICES`, or the renderer and the policy land on different devices.
+
 ## Limits
 
 - The monitor is fitted to this one model and benchmark. On scenes it never saw, its accuracy drops by about half.
