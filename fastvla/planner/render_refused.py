@@ -21,6 +21,8 @@ first 8 clips in this milestone were silently noise.
 
 Author: Varun Chandra.  Env: planner, GPU 1 only.  SCENE=4:8  RES=256
 """
+
+import contextlib
 import json
 import os
 import re
@@ -33,15 +35,20 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT, CLIPS = os.path.join(HERE, "out"), os.path.join(HERE, "clips")
 os.makedirs(CLIPS, exist_ok=True)
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
-for _p in (DISP, os.path.join(DISP, "datagen"), "/data_new/vchandr2",
-           "/data_new/vchandr2/fastvla-eval"):
+for _p in (
+    DISP,
+    os.path.join(DISP, "datagen"),
+    "/data_new/vchandr2",
+    "/data_new/vchandr2/fastvla-eval",
+):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import dgcore as D                                   # noqa: E402
-import geom_shift                                    # noqa: E402
-from fastvla.planner import route as R, world as W    # noqa: E402
-from fastvla.planner.step4b_run import draw_scene, via_clearances   # noqa: E402
+import dgcore as D  # noqa: E402
+import geom_shift  # noqa: E402
+
+from fastvla.planner import route as R  # noqa: E402
+from fastvla.planner.step4b_run import draw_scene, via_clearances  # noqa: E402
 
 SCENE = os.environ.get("SCENE", "4:8")
 RES = int(os.environ.get("RES", "256"))
@@ -57,8 +64,10 @@ def frame_score(fr):
 
 def write_video(path, frames, fps=20):
     import imageio.v2 as iio
-    w = iio.get_writer(path, fps=fps, codec="libx264", quality=8, macro_block_size=1,
-                       ffmpeg_log_level="error")
+
+    w = iio.get_writer(
+        path, fps=fps, codec="libx264", quality=8, macro_block_size=1, ffmpeg_log_level="error"
+    )
     for fr in frames:
         w.append_data(np.ascontiguousarray(np.asarray(fr, np.uint8)))
     w.close()
@@ -69,8 +78,11 @@ def safe(s):
 
 
 def run(k, a):
-    base = {kk: np.asarray(v) for kk, v in
-            dict(np.load(BASE, allow_pickle=True)).items() if kk.endswith("__eef")}
+    base = {
+        kk: np.asarray(v)
+        for kk, v in dict(np.load(BASE, allow_pickle=True)).items()
+        if kk.endswith("__eef")
+    }
     obstacle = D.SPEC["names"]["oa1"]["obstacle"]
     lo, hi = D.CONF["INIT_IDX_MIN"], D.CONF["INIT_IDX_MAX"]
     rng = np.random.RandomState(131 * k)
@@ -93,15 +105,16 @@ def run(k, a):
             hq = np.asarray(obs["robot0_eef_quat"], float)
             wp0 = D.nominal_plan(sg, dom, "oa1", home, hq)
             R.reset_stats()
-            wp, det, shape = D.plan_detours(sg, obstacle, wp0,
-                                            ceiling=D.measure_ceiling("oa1")["usable_m"])
+            wp, det, shape = D.plan_detours(
+                sg, obstacle, wp0, ceiling=D.measure_ceiling("oa1")["usable_m"]
+            )
             if not shape.get("plan_clears"):
                 return None, dict(reason=f"no plan: {shape.get('reason')}")
 
             recs, birds = [], []
             orig_end = mon.end_step
 
-            def end_step_capture():
+            def end_step_capture(orig_end=orig_end, recs=recs, birds=birds, dom=dom):
                 rec = orig_end()
                 # The colliding pair is NOT at the top level of the record: SafetyMonitor keeps it
                 # per obstacle, in rec["per_obstacle"][name], and names it from the contact pair
@@ -110,13 +123,18 @@ def run(k, a):
                 closest = rec.get("closest_obstacle")
                 po = (rec.get("per_obstacle") or {}).get(closest, {}) if closest else {}
                 pairs = rec.get("pairs") or []
-                recs.append(dict(min_clearance=rec.get("min_clearance"),
-                                 contact=rec.get("contact"),
-                                 closest_obstacle=closest,
-                                 actor=po.get("actor"), actor_geom=po.get("actor_geom"),
-                                 obstacle_geom=po.get("obstacle_geom"),
-                                 obstacles_hit=rec.get("obstacles_hit"),
-                                 first_pair=(dict(pairs[0]) if pairs else None)))
+                recs.append(
+                    dict(
+                        min_clearance=rec.get("min_clearance"),
+                        contact=rec.get("contact"),
+                        closest_obstacle=closest,
+                        actor=po.get("actor"),
+                        actor_geom=po.get("actor_geom"),
+                        obstacle_geom=po.get("obstacle_geom"),
+                        obstacles_hit=rec.get("obstacles_hit"),
+                        first_pair=(dict(pairs[0]) if pairs else None),
+                    )
+                )
                 try:
                     img = dom.sim.render(width=RES, height=RES, camera_name="birdview")
                     birds.append(np.asarray(img, np.uint8)[::-1].copy())
@@ -133,23 +151,29 @@ def run(k, a):
             mon.detach()
             mon.end_step = orig_end
 
-            clr = np.asarray(ep.clearance, float)         # already centimetres
+            clr = np.asarray(ep.clearance, float)  # already centimetres
             c = via_clearances(dom, mon, wp, obstacle)
-            meta = dict(shard=k, attempt=a, init_idx=init_idx,
-                        shift_cm=round(100 * float(np.linalg.norm(shift)), 3),
-                        min_clearance_cm=round(float(clr.min()), 3),
-                        steps=int(t), executor_ok=bool(ok), executor_reason=why,
-                        success=bool(env.check_success()),
-                        planned_via_min_cm=round(100 * float(c.min()), 3) if len(c) else None,
-                        tilt_deg=(det or [{}])[0].get("tilt_deg"),
-                        n_agentview=len(ep.base), n_birdview=len(birds), n_recs=len(recs))
+            meta = dict(
+                shard=k,
+                attempt=a,
+                init_idx=init_idx,
+                shift_cm=round(100 * float(np.linalg.norm(shift)), 3),
+                min_clearance_cm=round(float(clr.min()), 3),
+                steps=int(t),
+                executor_ok=bool(ok),
+                executor_reason=why,
+                success=bool(env.check_success()),
+                planned_via_min_cm=round(100 * float(c.min()), 3) if len(c) else None,
+                tilt_deg=(det or [{}])[0].get("tilt_deg"),
+                n_agentview=len(ep.base),
+                n_birdview=len(birds),
+                n_recs=len(recs),
+            )
             return (np.asarray(ep.base, np.uint8), np.asarray(birds, np.uint8), clr, recs), meta
         finally:
             if env is not None:
-                try:
+                with contextlib.suppress(Exception):
                     env.close()
-                except Exception:
-                    pass
     return None, dict(reason="scene not reached")
 
 
@@ -168,8 +192,10 @@ def main():
             print(f"  try {attempt}: agentview is NOISE ({max(scores):.1f}), retrying", flush=True)
             continue
 
-        nm = (f"refused_s{k:02d}a{a:02d}_i{meta['init_idx']:02d}_"
-              f"shift{meta['shift_cm']:.1f}cm_clr{meta['min_clearance_cm']:.2f}cm")
+        nm = (
+            f"refused_s{k:02d}a{a:02d}_i{meta['init_idx']:02d}_"
+            f"shift{meta['shift_cm']:.1f}cm_clr{meta['min_clearance_cm']:.2f}cm"
+        )
         write_video(os.path.join(CLIPS, nm + "_agentview.mp4"), agent)
         bscore = max(frame_score(bird[i]) for i in (0, len(bird) // 2, len(bird) - 1))
         if bscore <= NOISE_THRESHOLD and bird.any():
@@ -184,27 +210,40 @@ def main():
         pair = rec.get("first_pair") or {}
         actor_geom = rec.get("actor_geom") or pair.get("actor_geom")
         obs_geom = rec.get("obstacle_geom") or pair.get("obstacle_geom") or pair.get("obstacle")
-        meta.update(min_at_step=j, min_clearance_at_step_cm=round(float(clr[j]), 3),
-                    contact=bool(rec.get("contact")), actor=rec.get("actor"),
-                    closest_obstacle=rec.get("closest_obstacle"),
-                    actor_geom=actor_geom, obstacle_geom=obs_geom,
-                    obstacles_hit=rec.get("obstacles_hit"), first_pair=pair,
-                    agentview_frame_scores=[round(s, 2) for s in scores])
+        meta.update(
+            min_at_step=j,
+            min_clearance_at_step_cm=round(float(clr[j]), 3),
+            contact=bool(rec.get("contact")),
+            actor=rec.get("actor"),
+            closest_obstacle=rec.get("closest_obstacle"),
+            actor_geom=actor_geom,
+            obstacle_geom=obs_geom,
+            obstacles_hit=rec.get("obstacles_hit"),
+            first_pair=pair,
+            agentview_frame_scores=[round(s, 2) for s in scores],
+        )
         import imageio.v2 as iio
+
         panel = agent[j]
         if j < len(bird) and bird[j].any():
             panel = np.concatenate([agent[j], bird[j]], axis=1)
-        png = (f"mincontact_i{meta['init_idx']:02d}_"
-               f"{safe(actor_geom)}__vs__{safe(obs_geom)}_"
-               f"step{j}_clr{clr[j]:.2f}cm.png")
+        png = (
+            f"mincontact_i{meta['init_idx']:02d}_"
+            f"{safe(actor_geom)}__vs__{safe(obs_geom)}_"
+            f"step{j}_clr{clr[j]:.2f}cm.png"
+        )
         iio.imwrite(os.path.join(CLIPS, png), np.ascontiguousarray(panel))
-        json.dump(meta, open(os.path.join(CLIPS, nm + ".json"), "w"), indent=1, default=str)
+        with open(os.path.join(CLIPS, nm + ".json"), "w") as fh:
+            json.dump(meta, fh, indent=1, default=str)
         print(f"  {nm}_agentview.mp4  {len(agent)} frames  (score {max(scores):.1f})", flush=True)
         print(f"  birdview: {meta['birdview']}", flush=True)
-        print(f"  min clearance {meta['min_clearance_cm']} cm at step {j}: "
-              f"{actor_geom}  vs  {obs_geom}   closest obstacle "
-              f"{rec.get('closest_obstacle')}  hit {rec.get('obstacles_hit')}  "
-              f"(contact={rec.get('contact')})", flush=True)
+        print(
+            f"  min clearance {meta['min_clearance_cm']} cm at step {j}: "
+            f"{actor_geom}  vs  {obs_geom}   closest obstacle "
+            f"{rec.get('closest_obstacle')}  hit {rec.get('obstacles_hit')}  "
+            f"(contact={rec.get('contact')})",
+            flush=True,
+        )
         print(f"  {png}  ({time.perf_counter() - t0:.0f}s)", flush=True)
         return
     print("  all tries produced noise")

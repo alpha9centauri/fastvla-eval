@@ -18,8 +18,10 @@ ones or the render is refused.
 Author: Varun Chandra
 Env: planner. GPU 1 only.
 """
+
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import sys
@@ -32,19 +34,24 @@ OUT = os.path.join(HERE, "out")
 CLIPS = os.path.join(HERE, "clips")
 os.makedirs(CLIPS, exist_ok=True)
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
-for _p in (DISP, os.path.join(DISP, "datagen"), "/data_new/vchandr2",
-           "/data_new/vchandr2/fastvla-eval"):
+for _p in (
+    DISP,
+    os.path.join(DISP, "datagen"),
+    "/data_new/vchandr2",
+    "/data_new/vchandr2/fastvla-eval",
+):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import dgcore as D                                  # noqa: E402
-import geom_shift                                   # noqa: E402
-from fastvla.planner import route as R               # noqa: E402
+import dgcore as D  # noqa: E402
+import geom_shift  # noqa: E402
+
+from fastvla.planner import route as R  # noqa: E402
 
 TAG = "oa1"
 SEED = int(os.environ.get("SEED", "0"))
 RES = int(os.environ.get("RES", "256"))
-PICKS = os.environ.get("PICKS", "9:0,2:6,5:7")      # shard:attempt, chosen from the report
+PICKS = os.environ.get("PICKS", "9:0,2:6,5:7")  # shard:attempt, chosen from the report
 BASELINE = os.path.join(DISP, "out_baseline_oa1_50", "baseline_17500.npz")
 
 
@@ -57,8 +64,10 @@ def write_video(path, frames, fps=20):
     written here with imageio, which is present. Same codec, same frame data.
     """
     import imageio.v2 as iio
-    w = iio.get_writer(path, fps=fps, codec="libx264", quality=8,
-                       macro_block_size=1, ffmpeg_log_level="error")
+
+    w = iio.get_writer(
+        path, fps=fps, codec="libx264", quality=8, macro_block_size=1, ffmpeg_log_level="error"
+    )
     for fr in frames:
         w.append_data(np.ascontiguousarray(np.asarray(fr, np.uint8)))
     w.close()
@@ -75,19 +84,25 @@ def draw_shift(sg, obstacle, traj, rng):
 
 
 def main():
-    rows = {(r["shard"], r["attempt"]): r for r in
-            json.load(open(os.path.join(OUT, "step4_rows.json")))}
+    with open(os.path.join(OUT, "step4_rows.json")) as fh:
+        rows = {(r["shard"], r["attempt"]): r for r in json.load(fh)}
     picks = []
     for tok in PICKS.split(","):
         k, a = (int(x) for x in tok.split(":"))
         if (k, a) in rows:
             picks.append(rows[(k, a)])
-    print(f"rendering {len(picks)} scenes (0 accepted in 200, so these are closest-to-accepted: "
-          f"{', '.join(p['cause'] for p in picks)})", flush=True)
+    print(
+        f"rendering {len(picks)} scenes (0 accepted in 200, so these are closest-to-accepted: "
+        f"{', '.join(p['cause'] for p in picks)})",
+        flush=True,
+    )
 
     R.install("curobo")
-    base = {kk: np.asarray(v) for kk, v in
-            dict(np.load(BASELINE, allow_pickle=True)).items() if kk.endswith("__eef")}
+    base = {
+        kk: np.asarray(v)
+        for kk, v in dict(np.load(BASELINE, allow_pickle=True)).items()
+        if kk.endswith("__eef")
+    }
     lo, hi = D.CONF["INIT_IDX_MIN"], D.CONF["INIT_IDX_MAX"]
     obstacle = D.SPEC["names"][TAG]["obstacle"]
 
@@ -96,13 +111,15 @@ def main():
         t0 = time.perf_counter()
         rng = np.random.RandomState(SEED + 7919 * 0 + 131 * k)
         # replay the rng through the prior attempts of this shard
-        for i in range(a):
+        for _i in range(a):
             ii = int(rng.randint(lo, hi + 1))
             D.generate_demo(TAG, ii, "varied", rng, res=84, placement="eval_rule", baseline=base)
         init_idx = int(rng.randint(lo, hi + 1))
         if init_idx != r["init_idx"]:
-            print(f"  s{k:02d}a{a:02d}: init {init_idx} != recorded {r['init_idx']}, refusing",
-                  flush=True)
+            print(
+                f"  s{k:02d}a{a:02d}: init {init_idx} != recorded {r['init_idx']}, refusing",
+                flush=True,
+            )
             continue
 
         env = None
@@ -118,8 +135,10 @@ def main():
             shift = np.asarray(cand["shift"], float)
             shift_cm = round(100 * float(np.linalg.norm(shift)), 3)
             if r["shift_cm"] is not None and abs(shift_cm - r["shift_cm"]) > 0.02:
-                print(f"  s{k:02d}a{a:02d}: shift {shift_cm} != recorded {r['shift_cm']}, "
-                      f"refusing", flush=True)
+                print(
+                    f"  s{k:02d}a{a:02d}: shift {shift_cm} != recorded {r['shift_cm']}, refusing",
+                    flush=True,
+                )
                 continue
             _, _, anch = geom_shift.obstacle_anchors(dom)
             st = geom_shift.apply_shift(dom, anch, init[init_idx], shift)
@@ -130,11 +149,15 @@ def main():
             wp0 = D.nominal_plan(sg, dom, TAG, home, hq)
             R.reset_stats()
             wp, detours, shape = D.plan_detours(
-                sg, obstacle, wp0, ceiling=D.measure_ceiling(TAG)["usable_m"])
+                sg, obstacle, wp0, ceiling=D.measure_ceiling(TAG)["usable_m"]
+            )
             det = (detours or [{}])[0] if detours else {}
             if not shape.get("plan_clears"):
-                print(f"  s{k:02d}a{a:02d}: route stage gave no path on rebuild "
-                      f"({shape.get('reason')}), refusing", flush=True)
+                print(
+                    f"  s{k:02d}a{a:02d}: route stage gave no path on rebuild "
+                    f"({shape.get('reason')}), refusing",
+                    flush=True,
+                )
                 continue
 
             ep = D.Episode()
@@ -145,29 +168,40 @@ def main():
             mon.detach()
             clr = float(np.min(ep.clearance)) if len(ep.clearance) else float("nan")
             frames = np.asarray(ep.base, np.uint8)
-            nm = (f"step4_s{k:02d}a{a:02d}_i{init_idx:02d}_shift{shift_cm:.0f}cm_"
-                  f"{r['cause']}")
+            nm = f"step4_s{k:02d}a{a:02d}_i{init_idx:02d}_shift{shift_cm:.0f}cm_{r['cause']}"
             if len(frames):
                 write_video(os.path.join(CLIPS, nm + ".mp4"), frames)
-            meta = dict(shard=k, attempt=a, init_idx=init_idx, shift_cm=shift_cm,
-                        intrusion_cm=round(100 * intr, 2),
-                        cause_in_measurement=r["cause"],
-                        executor_ok=bool(ok), executor_reason=why, steps=int(t),
-                        min_gjk_clearance_cm=round(100 * clr, 3),
-                        handoff_up_cm=r["handoff_up_cm"], handoff_out_cm=r["handoff_out_cm"],
-                        tilt_deg=det.get("tilt_deg"), n_via=det.get("n_via"),
-                        payload_attached=det.get("payload_attached"),
-                        frames=int(len(frames)), rebuild_seconds=round(time.perf_counter() - t0, 1))
-            json.dump(meta, open(os.path.join(CLIPS, nm + ".json"), "w"), indent=1, default=str)
-            print(f"  {nm}.mp4  {len(frames)} frames  executor_ok={ok} ({why})  "
-                  f"steps {t}  min GJK clearance {100 * clr:.2f} cm  "
-                  f"tilt {det.get('tilt_deg')}  ({time.perf_counter() - t0:.0f}s)", flush=True)
+            meta = dict(
+                shard=k,
+                attempt=a,
+                init_idx=init_idx,
+                shift_cm=shift_cm,
+                intrusion_cm=round(100 * intr, 2),
+                cause_in_measurement=r["cause"],
+                executor_ok=bool(ok),
+                executor_reason=why,
+                steps=int(t),
+                min_gjk_clearance_cm=round(100 * clr, 3),
+                handoff_up_cm=r["handoff_up_cm"],
+                handoff_out_cm=r["handoff_out_cm"],
+                tilt_deg=det.get("tilt_deg"),
+                n_via=det.get("n_via"),
+                payload_attached=det.get("payload_attached"),
+                frames=int(len(frames)),
+                rebuild_seconds=round(time.perf_counter() - t0, 1),
+            )
+            with open(os.path.join(CLIPS, nm + ".json"), "w") as fh:
+                json.dump(meta, fh, indent=1, default=str)
+            print(
+                f"  {nm}.mp4  {len(frames)} frames  executor_ok={ok} ({why})  "
+                f"steps {t}  min GJK clearance {100 * clr:.2f} cm  "
+                f"tilt {det.get('tilt_deg')}  ({time.perf_counter() - t0:.0f}s)",
+                flush=True,
+            )
         finally:
             if env is not None:
-                try:
+                with contextlib.suppress(Exception):
                     env.close()
-                except Exception:
-                    pass
     print("RENDER_STEP4_DONE")
 
 

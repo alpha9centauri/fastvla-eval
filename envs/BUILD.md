@@ -120,7 +120,7 @@ changes are one patch file in the research repo.
 git clone https://github.com/LIBERO-SAFETY/LIBERO-Safety.git
 cd LIBERO-Safety
 git checkout ef0f79b70fc50c5fb612a1bbc1cf8b6c033a702a      # upstream, 2026-06-23
-git apply ../vla-safety-interp/src/displacement/patches/libero_safety_scoring_fixes.patch
+git apply ../vla-safety-interp/src/displacement/patches/libero_safety_env_import_fix.patch
 cp ../vla-safety-interp/src/displacement/patches/libero_safety__libero__init__.py libero/__init__.py
 (cd libero/libero/bddl_files/libero_spatial && ln -s . L0)
 (cd libero/libero/init_files/libero_spatial  && ln -s . L0)

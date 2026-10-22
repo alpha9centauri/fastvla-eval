@@ -11,6 +11,8 @@ rejected and the scene is rebuilt.
 
 Author: Varun Chandra.  Env: planner, GPU 1 only.  PICKS=shard:attempt,...
 """
+
+import contextlib
 import json
 import os
 import sys
@@ -22,18 +24,24 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT, CLIPS = os.path.join(HERE, "out"), os.path.join(HERE, "clips")
 os.makedirs(CLIPS, exist_ok=True)
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
-for _p in (DISP, os.path.join(DISP, "datagen"), "/data_new/vchandr2",
-           "/data_new/vchandr2/fastvla-eval"):
+for _p in (
+    DISP,
+    os.path.join(DISP, "datagen"),
+    "/data_new/vchandr2",
+    "/data_new/vchandr2/fastvla-eval",
+):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import dgcore as D                                   # noqa: E402
-import geom_shift                                    # noqa: E402
-from fastvla.planner import route as R, world as W    # noqa: E402
-from fastvla.planner.step4b_run import draw_scene, via_clearances   # noqa: E402
+import dgcore as D  # noqa: E402
+import geom_shift  # noqa: E402
 
-PICKS = [tuple(int(x) for x in t.split(":")) for t in
-         os.environ.get("PICKS", "5:9,8:10").split(",")]
+from fastvla.planner import route as R  # noqa: E402
+from fastvla.planner.step4b_run import draw_scene, via_clearances  # noqa: E402
+
+PICKS = [
+    tuple(int(x) for x in t.split(":")) for t in os.environ.get("PICKS", "5:9,8:10").split(",")
+]
 RES = int(os.environ.get("RES", "256"))
 NOISE_THRESHOLD = float(os.environ.get("NOISE_THRESHOLD", "40"))
 MAX_TRIES = int(os.environ.get("MAX_TRIES", "3"))
@@ -48,8 +56,10 @@ def frame_score(fr):
 
 def write_video(path, frames, fps=20):
     import imageio.v2 as iio
-    w = iio.get_writer(path, fps=fps, codec="libx264", quality=8, macro_block_size=1,
-                       ffmpeg_log_level="error")
+
+    w = iio.get_writer(
+        path, fps=fps, codec="libx264", quality=8, macro_block_size=1, ffmpeg_log_level="error"
+    )
     for fr in frames:
         w.append_data(np.ascontiguousarray(np.asarray(fr, np.uint8)))
     w.close()
@@ -81,8 +91,9 @@ def run_scene(k, a, base, obstacle, lo, hi):
             hq = np.asarray(obs["robot0_eef_quat"], float)
             wp0 = D.nominal_plan(sg, dom, "oa1", home, hq)
             R.reset_stats()
-            wp, det, shape = D.plan_detours(sg, obstacle, wp0,
-                                            ceiling=D.measure_ceiling("oa1")["usable_m"])
+            wp, det, shape = D.plan_detours(
+                sg, obstacle, wp0, ceiling=D.measure_ceiling("oa1")["usable_m"]
+            )
             if not shape.get("plan_clears"):
                 return None, dict(reason=f"no plan: {shape.get('reason')}")
             ep = D.Episode()
@@ -95,27 +106,34 @@ def run_scene(k, a, base, obstacle, lo, hi):
             c = via_clearances(dom, mon, wp, obstacle)
             frames = np.asarray(ep.base, np.uint8)
             return frames, dict(
-                shard=k, attempt=a, init_idx=init_idx,
+                shard=k,
+                attempt=a,
+                init_idx=init_idx,
                 shift_cm=round(100 * float(np.linalg.norm(shift)), 3),
-                min_clearance_cm=round(clr_cm, 3), steps=int(t),
-                executor_ok=bool(ok), executor_reason=why,
+                min_clearance_cm=round(clr_cm, 3),
+                steps=int(t),
+                executor_ok=bool(ok),
+                executor_reason=why,
                 success=bool(env.check_success()),
                 planned_via_min_cm=round(100 * float(c.min()), 3) if len(c) else None,
                 tilt_deg=(det or [{}])[0].get("tilt_deg"),
-                warm_frame_score=round(warm, 2), frames=int(len(frames)))
+                warm_frame_score=round(warm, 2),
+                frames=int(len(frames)),
+            )
         finally:
             if env is not None:
-                try:
+                with contextlib.suppress(Exception):
                     env.close()
-                except Exception:
-                    pass
     return None, dict(reason="scene not reached")
 
 
 def main():
     R.install("curobo")
-    base = {k: np.asarray(v) for k, v in
-            dict(np.load(BASE, allow_pickle=True)).items() if k.endswith("__eef")}
+    base = {
+        k: np.asarray(v)
+        for k, v in dict(np.load(BASE, allow_pickle=True)).items()
+        if k.endswith("__eef")
+    }
     obstacle = D.SPEC["names"]["oa1"]["obstacle"]
     lo, hi = D.CONF["INIT_IDX_MIN"], D.CONF["INIT_IDX_MAX"]
     for k, a in PICKS:
@@ -125,22 +143,30 @@ def main():
             if frames is None or not len(frames):
                 print(f"  s{k:02d}a{a:02d}: {meta.get('reason')}", flush=True)
                 break
-            scores = [frame_score(frames[i]) for i in
-                      (0, len(frames) // 2, len(frames) - 1)]
+            scores = [frame_score(frames[i]) for i in (0, len(frames) // 2, len(frames) - 1)]
             worst = max(scores)
             if worst > NOISE_THRESHOLD:
-                print(f"  s{k:02d}a{a:02d}: try {attempt} produced NOISE "
-                      f"(neighbour-diff {worst:.1f} > {NOISE_THRESHOLD}), retrying", flush=True)
+                print(
+                    f"  s{k:02d}a{a:02d}: try {attempt} produced NOISE "
+                    f"(neighbour-diff {worst:.1f} > {NOISE_THRESHOLD}), retrying",
+                    flush=True,
+                )
                 continue
-            nm = (f"accepted_s{k:02d}a{a:02d}_i{meta['init_idx']:02d}_"
-                  f"shift{meta['shift_cm']:.1f}cm_clr{meta['min_clearance_cm']:.2f}cm")
+            nm = (
+                f"accepted_s{k:02d}a{a:02d}_i{meta['init_idx']:02d}_"
+                f"shift{meta['shift_cm']:.1f}cm_clr{meta['min_clearance_cm']:.2f}cm"
+            )
             write_video(os.path.join(CLIPS, nm + ".mp4"), frames)
             meta["frame_scores"] = [round(s, 2) for s in scores]
             meta["verified_real_frames"] = True
-            json.dump(meta, open(os.path.join(CLIPS, nm + ".json"), "w"), indent=1, default=str)
-            print(f"  {nm}.mp4  {len(frames)} frames  neighbour-diff {worst:.1f} (real)  "
-                  f"clearance {meta['min_clearance_cm']} cm  success={meta['success']}  "
-                  f"({time.perf_counter() - t0:.0f}s)", flush=True)
+            with open(os.path.join(CLIPS, nm + ".json"), "w") as fh:
+                json.dump(meta, fh, indent=1, default=str)
+            print(
+                f"  {nm}.mp4  {len(frames)} frames  neighbour-diff {worst:.1f} (real)  "
+                f"clearance {meta['min_clearance_cm']} cm  success={meta['success']}  "
+                f"({time.perf_counter() - t0:.0f}s)",
+                flush=True,
+            )
             break
     print("RENDER_ACCEPTED_DONE")
 

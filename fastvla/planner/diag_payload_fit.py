@@ -24,6 +24,7 @@ rather than on whether candidates happen to pass.
 Author: Varun Chandra
 Env: planner. GPU 1 only.
 """
+
 from __future__ import annotations
 
 import json
@@ -36,18 +37,22 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
 os.makedirs(OUT, exist_ok=True)
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
-for _p in (DISP, os.path.join(DISP, "datagen"), "/data_new/vchandr2",
-           "/data_new/vchandr2/fastvla-eval"):
+for _p in (
+    DISP,
+    os.path.join(DISP, "datagen"),
+    "/data_new/vchandr2",
+    "/data_new/vchandr2/fastvla-eval",
+):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import dgcore as D                                  # noqa: E402
-import geom_shift                                   # noqa: E402
-from fastvla.planner import world as W               # noqa: E402
-from fastvla.planner import route as R               # noqa: E402
+import dgcore as D  # noqa: E402
+import geom_shift  # noqa: E402
+import torch  # noqa: E402
+from curobo.geom.sphere_fit import SphereFitType  # noqa: E402
 
-import torch                                        # noqa: E402
-from curobo.geom.sphere_fit import SphereFitType     # noqa: E402
+from fastvla.planner import route as R  # noqa: E402
+from fastvla.planner import world as W  # noqa: E402
 
 TAG, INIT = "oa1", int(os.environ.get("INIT", "25"))
 N_SAMPLES = int(os.environ.get("N_SAMPLES", "1000"))
@@ -85,8 +90,11 @@ def attached_spheres(router, q, kc):
 
 
 def main():
-    base = {k: np.asarray(v) for k, v in
-            dict(np.load(BASELINE, allow_pickle=True)).items() if k.endswith("__eef")}
+    base = {
+        k: np.asarray(v)
+        for k, v in dict(np.load(BASELINE, allow_pickle=True)).items()
+        if k.endswith("__eef")
+    }
     env, dom, mon, sg, task, init, obs = D.make_env(TAG, INIT, res=84)
     D.set_render(dom, False)
     for _ in range(D.CONF["SETTLE_STEPS"]):
@@ -108,12 +116,14 @@ def main():
     router = R.CuroboRouter.get()
     kc = router.robot_cfg.kinematics.kinematics_config
     eef_now = np.asarray(
-        dom.sim.data.site_xpos[dom.sim.model.site_name2id("gripper0_grip_site")], float)
+        dom.sim.data.site_xpos[dom.sim.model.site_name2id("gripper0_grip_site")], float
+    )
     router.calibrate(dom, eef_now, base_p, base_R)
     router.update_for_scene(meshes)
     quat = R.xyzw_to_wxyz(np.asarray(lift[4], float))
-    b0 = router.site_to_hand(W.to_base(np.asarray(lift[0], float).reshape(1, 3),
-                                       base_p, base_R)[0], quat)
+    b0 = router.site_to_hand(
+        W.to_base(np.asarray(lift[0], float).reshape(1, 3), base_p, base_R)[0], quat
+    )
     q0, ok0 = router.ik(b0, quat)
     payload = W.carried_mesh_abs(dom, mon, CARRIED)
     pv, pf = payload["vertices"], payload["faces"]
@@ -123,18 +133,23 @@ def main():
     print("=" * 96)
     print(f"PAYLOAD COVERAGE -- {CARRIED}, {N_SAMPLES} points on the true hull surface")
     print("=" * 96)
-    print(f"  true hull: {len(pv)} vertices, {len(pf)} faces, extent "
-          f"{np.round(pv.max(axis=0) - pv.min(axis=0), 4)} m")
+    print(
+        f"  true hull: {len(pv)} vertices, {len(pf)} faces, extent "
+        f"{np.round(pv.max(axis=0) - pv.min(axis=0), 4)} m"
+    )
     print(f"  start IK at the lift: {ok0}")
     print()
-    print(f"  {'fit':>30} {'radius m':>9} {'spheres':>8} {'max gap cm':>11} "
-          f"{'p99 gap':>9} {'median':>8} {'covered %':>10}")
+    print(
+        f"  {'fit':>30} {'radius m':>9} {'spheres':>8} {'max gap cm':>11} "
+        f"{'p99 gap':>9} {'median':>8} {'covered %':>10}"
+    )
     rows = []
     for fit_name, radius in SWEEP:
         router.detach_payload()
         try:
-            att = router.attach_payload(q0, payload,
-                                        fit=getattr(SphereFitType, fit_name), radius=radius)
+            att = router.attach_payload(
+                q0, payload, fit=getattr(SphereFitType, fit_name), radius=radius
+            )
         except Exception as e:
             print(f"  {fit_name:>30} {radius:>9.3f}  attach raised {type(e).__name__}")
             continue
@@ -145,16 +160,24 @@ def main():
         d = np.linalg.norm(pts[:, None, :] - s[None, :, :3], axis=2) - s[None, :, 3]
         gap = d.min(axis=1)
         covered = float((gap <= 0).mean()) * 100.0
-        print(f"  {fit_name:>30} {radius:>9.3f} {len(s):>8} {100 * gap.max():>11.3f} "
-              f"{100 * np.percentile(gap, 99):>9.3f} {100 * np.median(gap):>8.3f} "
-              f"{covered:>10.1f}")
-        rows.append(dict(fit=fit_name, radius_m=radius, n_spheres=int(len(s)),
-                         max_gap_cm=round(float(100 * gap.max()), 4),
-                         p99_gap_cm=round(float(100 * np.percentile(gap, 99)), 4),
-                         median_gap_cm=round(float(100 * np.median(gap)), 4),
-                         covered_pct=round(covered, 2),
-                         sphere_r_min_cm=round(float(100 * s[:, 3].min()), 3),
-                         sphere_r_max_cm=round(float(100 * s[:, 3].max()), 3)))
+        print(
+            f"  {fit_name:>30} {radius:>9.3f} {len(s):>8} {100 * gap.max():>11.3f} "
+            f"{100 * np.percentile(gap, 99):>9.3f} {100 * np.median(gap):>8.3f} "
+            f"{covered:>10.1f}"
+        )
+        rows.append(
+            dict(
+                fit=fit_name,
+                radius_m=radius,
+                n_spheres=int(len(s)),
+                max_gap_cm=round(float(100 * gap.max()), 4),
+                p99_gap_cm=round(float(100 * np.percentile(gap, 99)), 4),
+                median_gap_cm=round(float(100 * np.median(gap)), 4),
+                covered_pct=round(covered, 2),
+                sphere_r_min_cm=round(float(100 * s[:, 3].min()), 3),
+                sphere_r_max_cm=round(float(100 * s[:, 3].max()), 3),
+            )
+        )
     router.detach_payload()
     env.close()
 
@@ -165,13 +188,18 @@ def main():
         best = min(good, key=lambda r: (r["n_spheres"], r["radius_m"]))
         names = ", ".join("{}@{}".format(r["fit"], r["radius_m"]) for r in good)
         print(f"  fits with no under-coverage (max gap <= 0): {names}")
-        print(f"  cheapest adequate fit: {best['fit']} radius {best['radius_m']} m, "
-              f"{best['n_spheres']} spheres, max gap {best['max_gap_cm']:.3f} cm")
+        print(
+            f"  cheapest adequate fit: {best['fit']} radius {best['radius_m']} m, "
+            f"{best['n_spheres']} spheres, max gap {best['max_gap_cm']:.3f} cm"
+        )
     else:
         worst = min(rows, key=lambda r: r["max_gap_cm"])
-        print(f"  NO fit in the sweep covers the hull. Closest: {worst['fit']} "
-              f"radius {worst['radius_m']} m, max gap {worst['max_gap_cm']:.3f} cm")
-    json.dump(rows, open(os.path.join(OUT, "diag_payload_fit.json"), "w"), indent=1)
+        print(
+            f"  NO fit in the sweep covers the hull. Closest: {worst['fit']} "
+            f"radius {worst['radius_m']} m, max gap {worst['max_gap_cm']:.3f} cm"
+        )
+    with open(os.path.join(OUT, "diag_payload_fit.json"), "w") as fh:
+        json.dump(rows, fh, indent=1)
     print("DIAG_PAYLOAD_FIT_DONE")
 
 

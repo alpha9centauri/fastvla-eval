@@ -19,9 +19,11 @@ Author: Varun Chandra
 Env: planner. GPU 1 only.
 Env vars: MODE=plan|full  TARGETS=auto|<n>  N=24  PLANNER_INFLATE_M=...  RES=256
 """
+
 from __future__ import annotations
 
 import collections
+import contextlib
 import json
 import os
 import sys
@@ -33,18 +35,23 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
 os.makedirs(OUT, exist_ok=True)
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
-for _p in (DISP, os.path.join(DISP, "datagen"), "/data_new/vchandr2",
-           "/data_new/vchandr2/fastvla-eval",
-           "/data_new/vchandr2/vla-safety-interp/src/physics",
-           "/data_new/vchandr2/fastvla-eval/fastvla/labeler"):
+for _p in (
+    DISP,
+    os.path.join(DISP, "datagen"),
+    "/data_new/vchandr2",
+    "/data_new/vchandr2/fastvla-eval",
+    "/data_new/vchandr2/vla-safety-interp/src/physics",
+    "/data_new/vchandr2/fastvla-eval/fastvla/labeler",
+):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import dgcore as D                                  # noqa: E402
-import fastgjk                                      # noqa: E402
-import geom_shift                                   # noqa: E402
-from fastvla.planner import route as R               # noqa: E402
-from fastvla.planner import world as W               # noqa: E402
+import dgcore as D  # noqa: E402
+import fastgjk  # noqa: E402
+import geom_shift  # noqa: E402
+
+from fastvla.planner import route as R  # noqa: E402
+from fastvla.planner import world as W  # noqa: E402
 
 TAG = "oa1"
 SEED = int(os.environ.get("SEED", "0"))
@@ -67,7 +74,8 @@ def targets():
     env_t = os.environ.get("TARGETS", "").strip()
     if env_t:
         return [tuple(int(x) for x in t.split(":")) for t in env_t.split(",") if t]
-    rows = json.load(open(os.path.join(OUT, "step4_rows.json")))
+    with open(os.path.join(OUT, "step4_rows.json")) as fh:
+        rows = json.load(fh)
     ok = [(r["shard"], r["attempt"]) for r in rows if r["plan_ok"]]
     ok.sort()
     return ok[:N] if N > 0 else ok
@@ -136,11 +144,16 @@ def main():
     by_shard = collections.defaultdict(list)
     for k, a in tg:
         by_shard[k].append(a)
-    print(f"MODE={MODE}  targets={len(tg)}  inflation={W.INFLATE_M} support={W.INFLATE_SUPPORT_M} "
-          f"payload r={R.PAYLOAD_SPHERE_R} budget={R.PAYLOAD_SPHERE_BUDGET}  res={RES}",
-          flush=True)
-    base = {k: np.asarray(v) for k, v in
-            dict(np.load(BASELINE, allow_pickle=True)).items() if k.endswith("__eef")}
+    print(
+        f"MODE={MODE}  targets={len(tg)}  inflation={W.INFLATE_M} support={W.INFLATE_SUPPORT_M} "
+        f"payload r={R.PAYLOAD_SPHERE_R} budget={R.PAYLOAD_SPHERE_BUDGET}  res={RES}",
+        flush=True,
+    )
+    base = {
+        k: np.asarray(v)
+        for k, v in dict(np.load(BASELINE, allow_pickle=True)).items()
+        if k.endswith("__eef")
+    }
     obstacle = D.SPEC["names"][TAG]["obstacle"]
     lo, hi = D.CONF["INIT_IDX_MIN"], D.CONF["INIT_IDX_MAX"]
     if MODE == "full":
@@ -160,37 +173,49 @@ def main():
                     obs, *_ = env.step([0.0] * 6 + [-1.0])
                 cand, intr = draw_scene(sg, obstacle, base[f"{TAG}__i{init_idx:02d}__eef"], rng)
                 if a not in want:
-                    continue            # rng is now where the real run left it; nothing else
+                    continue  # rng is now where the real run left it; nothing else
                 if cand is None:
-                    rows.append(dict(shard=k, attempt=a, init_idx=init_idx, planned=False,
-                                     reason="scene_reject:no_feasible_placement"))
+                    rows.append(
+                        dict(
+                            shard=k,
+                            attempt=a,
+                            init_idx=init_idx,
+                            planned=False,
+                            reason="scene_reject:no_feasible_placement",
+                        )
+                    )
                     continue
                 shift = np.asarray(cand["shift"], float)
                 if MODE == "full":
                     env.close()
                     env = None
-                    rng2 = np.random.RandomState(0)      # unused by eval_rule after the draw
+                    rng2 = np.random.RandomState(0)  # unused by eval_rule after the draw
                     rr = run_full(init_idx, shift, base, obstacle, rng2)
                     rr.update(shard=k, attempt=a)
                     rows.append(rr)
                 else:
                     rr = run_plan(env, dom, mon, sg, init, init_idx, shift, obstacle)
-                    rr.update(shard=k, attempt=a, init_idx=init_idx,
-                              shift_cm=round(100 * float(np.linalg.norm(shift)), 3))
+                    rr.update(
+                        shard=k,
+                        attempt=a,
+                        init_idx=init_idx,
+                        shift_cm=round(100 * float(np.linalg.norm(shift)), 3),
+                    )
                     rows.append(rr)
                 r = rows[-1]
-                print(f"  s{k:02d}a{a:02d} i{init_idx:02d} shift {r.get('shift_cm')}cm "
-                      f"planned={r.get('planned')} "
-                      f"via_min={r.get('via_min_cm')} {r.get('reason') or ''} "
-                      f"({time.perf_counter() - t0:.0f}s)", flush=True)
-                json.dump(rows, open(os.path.join(
-                    OUT, f"step4b_{MODE}{TAGOUT}.json"), "w"), indent=1, default=str)
+                print(
+                    f"  s{k:02d}a{a:02d} i{init_idx:02d} shift {r.get('shift_cm')}cm "
+                    f"planned={r.get('planned')} "
+                    f"via_min={r.get('via_min_cm')} {r.get('reason') or ''} "
+                    f"({time.perf_counter() - t0:.0f}s)",
+                    flush=True,
+                )
+                with open(os.path.join(OUT, f"step4b_{MODE}{TAGOUT}.json"), "w") as fh:
+                    json.dump(rows, fh, indent=1, default=str)
             finally:
                 if env is not None:
-                    try:
+                    with contextlib.suppress(Exception):
                         env.close()
-                    except Exception:
-                        pass
     report(rows, time.perf_counter() - t0)
 
 
@@ -202,24 +227,28 @@ def run_plan(env, dom, mon, sg, init, init_idx, shift, obstacle):
     hq = np.asarray(obs["robot0_eef_quat"], float)
     wp0 = D.nominal_plan(sg, dom, TAG, home, hq)
     R.reset_stats()
-    wp, det, shape = D.plan_detours(sg, obstacle, wp0,
-                                    ceiling=D.measure_ceiling(TAG)["usable_m"])
+    wp, det, shape = D.plan_detours(sg, obstacle, wp0, ceiling=D.measure_ceiling(TAG)["usable_m"])
     plan = next((s for s in R.stats() if s.get("stage") == "plan"), {}) or {}
     if not shape.get("plan_clears"):
-        return dict(planned=False, reason=shape.get("reason"),
-                    plan_seconds_total=plan.get("seconds"))
+        return dict(
+            planned=False, reason=shape.get("reason"), plan_seconds_total=plan.get("seconds")
+        )
     c = via_clearances(dom, mon, wp, obstacle)
     d0 = (det or [{}])[0] if det else {}
     h = d0.get("handoff") or {}
-    return dict(planned=True, reason=None, n_via=int(len(c)),
-                via_min_cm=round(100 * float(c.min()), 3) if len(c) else None,
-                via_median_cm=round(100 * float(np.median(c)), 3) if len(c) else None,
-                via_all_cm=[round(100 * float(x), 3) for x in c],
-                plan_seconds_total=plan.get("seconds"),
-                plan_seconds_single=plan.get("seconds_single"),
-                handoff_up_cm=(round(100 * h["up_m"], 1) if h.get("up_m") is not None else None),
-                handoff_out_cm=(round(100 * h["out_m"], 1) if h.get("out_m") is not None else None),
-                tilt_deg=d0.get("tilt_deg"))
+    return dict(
+        planned=True,
+        reason=None,
+        n_via=int(len(c)),
+        via_min_cm=round(100 * float(c.min()), 3) if len(c) else None,
+        via_median_cm=round(100 * float(np.median(c)), 3) if len(c) else None,
+        via_all_cm=[round(100 * float(x), 3) for x in c],
+        plan_seconds_total=plan.get("seconds"),
+        plan_seconds_single=plan.get("seconds_single"),
+        handoff_up_cm=(round(100 * h["up_m"], 1) if h.get("up_m") is not None else None),
+        handoff_out_cm=(round(100 * h["out_m"], 1) if h.get("out_m") is not None else None),
+        tilt_deg=d0.get("tilt_deg"),
+    )
 
 
 def run_full(init_idx, shift, base, obstacle, rng):
@@ -237,25 +266,32 @@ def run_full(init_idx, shift, base, obstacle, rng):
         hq = np.asarray(obs["robot0_eef_quat"], float)
         wp0 = D.nominal_plan(sg, dom, TAG, home, hq)
         R.reset_stats()
-        wp, det, shape = D.plan_detours(sg, obstacle, wp0,
-                                        ceiling=D.measure_ceiling(TAG)["usable_m"])
+        wp, det, shape = D.plan_detours(
+            sg, obstacle, wp0, ceiling=D.measure_ceiling(TAG)["usable_m"]
+        )
         plan = next((s for s in R.stats() if s.get("stage") == "plan"), {}) or {}
-        out = dict(init_idx=init_idx, shift_cm=round(100 * float(np.linalg.norm(shift)), 3),
-                   plan_seconds_total=plan.get("seconds"),
-                   plan_seconds_single=plan.get("seconds_single"))
+        out = dict(
+            init_idx=init_idx,
+            shift_cm=round(100 * float(np.linalg.norm(shift)), 3),
+            plan_seconds_total=plan.get("seconds"),
+            plan_seconds_single=plan.get("seconds_single"),
+        )
         if not shape.get("plan_clears"):
             out.update(planned=False, reason=shape.get("reason"), accepted=False)
             return out
         c = via_clearances(dom, mon, wp, obstacle)
         d0 = (det or [{}])[0] if det else {}
         h = d0.get("handoff") or {}
-        out.update(planned=True, n_via=int(len(c)),
-                   via_min_cm=round(100 * float(c.min()), 3) if len(c) else None,
-                   via_median_cm=round(100 * float(np.median(c)), 3) if len(c) else None,
-                   via_all_cm=[round(100 * float(x), 3) for x in c],
-                   handoff_up_cm=(round(100 * h["up_m"], 1) if h.get("up_m") is not None else None),
-                   handoff_out_cm=(round(100 * h["out_m"], 1) if h.get("out_m") is not None else None),
-                   tilt_deg=d0.get("tilt_deg"))
+        out.update(
+            planned=True,
+            n_via=int(len(c)),
+            via_min_cm=round(100 * float(c.min()), 3) if len(c) else None,
+            via_median_cm=round(100 * float(np.median(c)), 3) if len(c) else None,
+            via_all_cm=[round(100 * float(x), 3) for x in c],
+            handoff_up_cm=(round(100 * h["up_m"], 1) if h.get("up_m") is not None else None),
+            handoff_out_cm=(round(100 * h["out_m"], 1) if h.get("out_m") is not None else None),
+            tilt_deg=d0.get("tilt_deg"),
+        )
         # the real thing: execute, certify, replay-gate
         ep = D.Episode()
         ep.render = True
@@ -270,31 +306,35 @@ def run_full(init_idx, shift, base, obstacle, rng):
         # acceptance test to 0.01 cm. It changed no earlier conclusion only because nearly every
         # executed route measured exactly 0.00.
         clr_cm = float(np.min(ep.clearance)) if len(ep.clearance) else float("nan")
-        out.update(executor_ok=bool(ok), executor_reason=why, steps=int(t),
-                   dry_min_clearance_cm=round(clr_cm, 3),
-                   success=bool(env.check_success()))
+        out.update(
+            executor_ok=bool(ok),
+            executor_reason=why,
+            steps=int(t),
+            dry_min_clearance_cm=round(clr_cm, 3),
+            success=bool(env.check_success()),
+        )
         if not ok:
-            out.update(accepted=False, reason=f"executor:{why}",
-                       arrival=arrival_errors(wp, ep))
+            out.update(accepted=False, reason=f"executor:{why}", arrival=arrival_errors(wp, ep))
             return out
         if not out["success"]:
             out.update(accepted=False, reason="success_predicate_false")
             return out
-        ok_floor = clr_cm >= 100.0 * FLOOR_M            # FLOOR_M is metres, clr_cm is cm
-        out.update(accepted=bool(ok_floor),
-                   reason=None if ok_floor else "certification")
+        ok_floor = clr_cm >= 100.0 * FLOOR_M  # FLOOR_M is metres, clr_cm is cm
+        out.update(accepted=bool(ok_floor), reason=None if ok_floor else "certification")
         # keyed by TAGOUT too: two accepted scenes shared init 19 and the second silently
         # overwrote the first, costing a clip
-        np.savez_compressed(os.path.join(OUT, f"step4b_ep_i{init_idx:02d}{TAGOUT}.npz"),
-                            base=np.asarray(ep.base, np.uint8), clearance=np.asarray(ep.clearance),
-                            eef=np.asarray(ep.eef), meta=json.dumps(out, default=str))
+        np.savez_compressed(
+            os.path.join(OUT, f"step4b_ep_i{init_idx:02d}{TAGOUT}.npz"),
+            base=np.asarray(ep.base, np.uint8),
+            clearance=np.asarray(ep.clearance),
+            eef=np.asarray(ep.eef),
+            meta=json.dumps(out, default=str),
+        )
         return out
     finally:
         if env is not None:
-            try:
+            with contextlib.suppress(Exception):
                 env.close()
-            except Exception:
-                pass
 
 
 def report(rows, wall):
@@ -304,21 +344,31 @@ def report(rows, wall):
     L = []
     A = L.append
     A("=" * 92)
-    A(f"STEP 4B {MODE.upper()} -- inflation {W.INFLATE_M} m, payload r={R.PAYLOAD_SPHERE_R} "
-      f"budget={R.PAYLOAD_SPHERE_BUDGET}")
+    A(
+        f"STEP 4B {MODE.upper()} -- inflation {W.INFLATE_M} m, payload r={R.PAYLOAD_SPHERE_R} "
+        f"budget={R.PAYLOAD_SPHERE_BUDGET}"
+    )
     A("=" * 92)
     A(f"  scenes                {len(rows)}      wall {wall / 60:.1f} min")
     A(f"  returned a path       {len(pl)}/{len(rows)} = {100.0 * len(pl) / max(1, len(rows)):.1f}%")
     if len(allv):
-        A(f"  planned-via clearance, ALL vias ({len(allv)}): min {allv.min():.2f} "
-          f"median {np.median(allv):.2f} max {allv.max():.2f} cm")
+        A(
+            f"  planned-via clearance, ALL vias ({len(allv)}): min {allv.min():.2f} "
+            f"median {np.median(allv):.2f} max {allv.max():.2f} cm"
+        )
     if len(mins):
-        A(f"  per-scene min via clearance: min {mins.min():.2f} median {np.median(mins):.2f} "
-          f"max {mins.max():.2f} cm")
-        A(f"  planned scenes with min via >= 2 cm: {(mins >= 2.0).sum()}/{len(mins)} = "
-          f"{100.0 * (mins >= 2.0).mean():.1f}%")
-        A(f"  planned scenes with min via >= 1 cm: {(mins >= 1.0).sum()}/{len(mins)} = "
-          f"{100.0 * (mins >= 1.0).mean():.1f}%")
+        A(
+            f"  per-scene min via clearance: min {mins.min():.2f} median {np.median(mins):.2f} "
+            f"max {mins.max():.2f} cm"
+        )
+        A(
+            f"  planned scenes with min via >= 2 cm: {(mins >= 2.0).sum()}/{len(mins)} = "
+            f"{100.0 * (mins >= 2.0).mean():.1f}%"
+        )
+        A(
+            f"  planned scenes with min via >= 1 cm: {(mins >= 1.0).sum()}/{len(mins)} = "
+            f"{100.0 * (mins >= 1.0).mean():.1f}%"
+        )
     if MODE == "full":
         a1 = [r for r in rows if r.get("accepted")]
         a2 = [r for r in a1 if (r.get("dry_min_clearance_cm") or 0) >= 2.0]
@@ -326,7 +376,8 @@ def report(rows, wall):
         A(f"  ACCEPTED at 2 cm      {len(a2)}/{len(rows)}")
         c = collections.Counter(
             ("accepted" if r.get("accepted") else (r.get("reason") or "?").split(":")[0])
-            for r in rows)
+            for r in rows
+        )
         A("  outcome breakdown:")
         for kk, n in c.most_common():
             A(f"    {kk:<40} {n:>4}")
@@ -335,12 +386,15 @@ def report(rows, wall):
             A("  executor failures -- worst per-waypoint arrival error:")
             for r in bad[:12]:
                 w = max(r["arrival"], key=lambda x: x["closest_mm"])
-                A(f"    i{r['init_idx']:02d} {r.get('executor_reason', ''):<34} "
-                  f"worst {w['label'][:28]:<28} {w['closest_mm']:>8.1f} mm")
+                A(
+                    f"    i{r['init_idx']:02d} {r.get('executor_reason', ''):<34} "
+                    f"worst {w['label'][:28]:<28} {w['closest_mm']:>8.1f} mm"
+                )
     txt = "\n".join(L)
     print()
     print(txt)
-    open(os.path.join(OUT, f"step4b_{MODE}{TAGOUT}_report.txt"), "w").write(txt + "\n")
+    with open(os.path.join(OUT, f"step4b_{MODE}{TAGOUT}_report.txt"), "w") as fh:
+        fh.write(txt + "\n")
     print(f"STEP4B_{MODE.upper()}_DONE")
 
 

@@ -27,12 +27,13 @@ Author: Varun Chandra
 Env: planner. GPU 1 only.
 Env vars: INITS=0,1,2  N_SAMPLES=24  INTRUSION_M=0.05
 """
+
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import sys
-import time
 
 import numpy as np
 
@@ -41,25 +42,29 @@ OUT = os.path.join(HERE, "out")
 os.makedirs(OUT, exist_ok=True)
 
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
-for _p in (DISP, os.path.join(DISP, "datagen"), "/data_new/vchandr2",
-           "/data_new/vchandr2/fastvla-eval",
-           "/data_new/vchandr2/vla-safety-interp/src/physics",
-           os.path.join("/data_new/vchandr2/fastvla-eval", "fastvla", "labeler")):
+for _p in (
+    DISP,
+    os.path.join(DISP, "datagen"),
+    "/data_new/vchandr2",
+    "/data_new/vchandr2/fastvla-eval",
+    "/data_new/vchandr2/vla-safety-interp/src/physics",
+    os.path.join("/data_new/vchandr2/fastvla-eval", "fastvla", "labeler"),
+):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import dgcore as D                                    # noqa: E402
-import fastgjk                                        # noqa: E402  the C++ labeler core
-from fastvla.planner import world as W                 # noqa: E402
+import dgcore as D  # noqa: E402
+import fastgjk  # noqa: E402  the C++ labeler core
+import torch  # noqa: E402
+from curobo.geom.types import Mesh, WorldConfig  # noqa: E402
+from curobo.types.base import TensorDeviceType  # noqa: E402
+from curobo.types.math import Pose  # noqa: E402
+from curobo.types.robot import RobotConfig  # noqa: E402
+from curobo.util_file import get_robot_configs_path, join_path, load_yaml  # noqa: E402
+from curobo.wrap.model.robot_world import RobotWorld, RobotWorldConfig  # noqa: E402
+from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig  # noqa: E402
 
-import torch                                          # noqa: E402
-from curobo.geom.types import Mesh, WorldConfig        # noqa: E402
-from curobo.types.base import TensorDeviceType         # noqa: E402
-from curobo.types.math import Pose                     # noqa: E402
-from curobo.types.robot import RobotConfig             # noqa: E402
-from curobo.util_file import get_robot_configs_path, join_path, load_yaml   # noqa: E402
-from curobo.wrap.model.robot_world import RobotWorld, RobotWorldConfig      # noqa: E402
-from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig          # noqa: E402
+from fastvla.planner import world as W  # noqa: E402
 
 TAG = "oa1"
 INITS = [int(x) for x in os.environ.get("INITS", "0,1,2").split(",")]
@@ -71,9 +76,13 @@ BASELINE = os.path.join(DISP, "out", "baseline_17500.npz")
 # naming too; only the arm links matter for the comparison, because the hand is what holds the
 # payload and the payload is handled separately.
 LINK_ALIASES = {f"robot0_link{i}": f"panda_link{i}" for i in range(8)}
-LINK_ALIASES.update({"gripper0_hand": "panda_hand",
-                     "gripper0_finger1": "panda_leftfinger",
-                     "gripper0_finger2": "panda_rightfinger"})
+LINK_ALIASES.update(
+    {
+        "gripper0_hand": "panda_hand",
+        "gripper0_finger1": "panda_leftfinger",
+        "gripper0_finger2": "panda_rightfinger",
+    }
+)
 
 
 def canon_link(name):
@@ -128,12 +137,12 @@ def labeler_distances(mon, dom, obstacle_hull_world, obstacle_geoms):
     best_u, worst_geom = per_geom[0][0], per_geom[0][1]
     link1 = canon_link(worst_geom)
     link2 = "-"
-    for du, nm, _g in per_geom[1:]:
+    for _du, nm, _g in per_geom[1:]:
         if canon_link(nm) != link1:
             link2 = canon_link(nm)
             break
     for du, _nm, g in per_geom:
-        if du > best_e:                       # union hull bounds every piece from below
+        if du > best_e:  # union hull bounds every piece from below
             continue
         Av, Apad = mon.dist_engine._w(dd, g)
         for og in obstacle_geoms:
@@ -149,7 +158,6 @@ def main():
     robot_yml = load_yaml(join_path(get_robot_configs_path(), "franka.yml"))["robot_cfg"]
     robot_cfg = RobotConfig.from_dict(robot_yml, tdt)
     kc = robot_cfg.kinematics.kinematics_config
-    joint_names = list(kc.joint_names)
     sph2link = kc.link_sphere_idx_map.detach().cpu().numpy()
     idx2link = {v: k for k, v in kc.link_name_to_idx_map.items()}
 
@@ -174,6 +182,7 @@ def main():
                 continue
             shift = np.asarray(info["shift"], float)
             import geom_shift
+
             _, _, anch = geom_shift.obstacle_anchors(dom)
             st = geom_shift.apply_shift(dom, anch, init[ii], shift)
             dom, mon, sg, obs, _ = D.setup_scene(env, st, ii, shift=shift, render=False)
@@ -197,22 +206,44 @@ def main():
             # The full world (table, receptacle) is what step 3 plans against; this is a
             # geometry-agreement check on the thing the demos have to avoid.
             obs_meshes = [d for d in meshes if d["name"].startswith("obstacle__")]
-            rw = RobotWorld(RobotWorldConfig.load_from_config(
-                robot_cfg,
-                WorldConfig(mesh=[Mesh(name=d["name"], pose=[0, 0, 0, 1, 0, 0, 0],
-                                       vertices=d["vertices"].tolist(),
-                                       faces=d["faces"].tolist()) for d in obs_meshes]),
-                tensor_args=tdt, collision_activation_distance=0.0,
-                n_meshes=len(obs_meshes) + 4))
-            ik = IKSolver(IKSolverConfig.load_from_robot_config(
-                robot_cfg, None, rotation_threshold=0.08, position_threshold=0.008,
-                num_seeds=24, self_collision_check=False, tensor_args=tdt))
+            rw = RobotWorld(
+                RobotWorldConfig.load_from_config(
+                    robot_cfg,
+                    WorldConfig(
+                        mesh=[
+                            Mesh(
+                                name=d["name"],
+                                pose=[0, 0, 0, 1, 0, 0, 0],
+                                vertices=d["vertices"].tolist(),
+                                faces=d["faces"].tolist(),
+                            )
+                            for d in obs_meshes
+                        ]
+                    ),
+                    tensor_args=tdt,
+                    collision_activation_distance=0.0,
+                    n_meshes=len(obs_meshes) + 4,
+                )
+            )
+            ik = IKSolver(
+                IKSolverConfig.load_from_robot_config(
+                    robot_cfg,
+                    None,
+                    rotation_threshold=0.08,
+                    position_threshold=0.008,
+                    num_seeds=24,
+                    self_collision_check=False,
+                    tensor_args=tdt,
+                )
+            )
 
             ts = np.linspace(0.0, 1.0, N_SAMPLES)
             line = np.asarray([p0 + t * (p1 - p0) for t in ts])
             line_b = W.to_base(line, base_p, base_R)
-            quat_t = torch.tensor([[float(quat[0]), float(quat[1]), float(quat[2]),
-                                    float(quat[3])]] * len(line_b), device=tdt.device)
+            quat_t = torch.tensor(
+                [[float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])]] * len(line_b),
+                device=tdt.device,
+            )
             goal = Pose(torch.as_tensor(line_b, dtype=torch.float32, device=tdt.device), quat_t)
             res = ik.solve_batch(goal)
             qs = res.solution.detach().cpu().numpy().reshape(len(line_b), -1)
@@ -255,34 +286,57 @@ def main():
                         break
                 set_arm_q(dom, mon, q)
                 du, de, llink, lgeom, llink2 = labeler_distances(mon, dom, hull_w, ogeoms)
-                rows.append(dict(init=ii, k=k, t=round(float(ts[k]), 3),
-                                 planner_penetration_m=round(pen, 5),
-                                 planner_collides=bool(pen > 0.0), planner_link=plink,
-                                 planner_link_2nd=plink2, labeler_geom=lgeom,
-                                 labeler_link_2nd=llink2,
-                                 labeler_union_m=round(du, 5), labeler_exact_m=round(de, 5),
-                                 labeler_collides=bool(du <= 0.0), labeler_link=llink,
-                                 agree_decision=bool((pen > 0.0) == (du <= 0.0)),
-                                 agree_link=bool(plink == llink),
-                                 agree_link_adjacent=bool(plink == llink or plink == llink2
-                                                          or plink2 == llink)))
-            print(f"[i{ii:02d}] shift {100*np.linalg.norm(shift):5.2f} cm   IK solved "
-                  f"{n_solved}/{N_SAMPLES}   meshes {len(meshes)}", flush=True)
-            scenes.append(dict(init=ii, shift_cm=round(100 * float(np.linalg.norm(shift)), 3),
-                               n_meshes=len(meshes), n_obstacle_meshes=len(obs_meshes),
-                               ik_solved=n_solved, n_samples=N_SAMPLES,
-                               mesh_table=W.summarise(meshes)))
-            np.savez_compressed(os.path.join(OUT, f"verify_world_i{ii:02d}.npz"),
-                                line=line, line_base=line_b, q=qs, ik_ok=ok, shift=shift,
-                                obstacle_hull_world=hull_w)
+                rows.append(
+                    dict(
+                        init=ii,
+                        k=k,
+                        t=round(float(ts[k]), 3),
+                        planner_penetration_m=round(pen, 5),
+                        planner_collides=bool(pen > 0.0),
+                        planner_link=plink,
+                        planner_link_2nd=plink2,
+                        labeler_geom=lgeom,
+                        labeler_link_2nd=llink2,
+                        labeler_union_m=round(du, 5),
+                        labeler_exact_m=round(de, 5),
+                        labeler_collides=bool(du <= 0.0),
+                        labeler_link=llink,
+                        agree_decision=bool((pen > 0.0) == (du <= 0.0)),
+                        agree_link=bool(plink == llink),
+                        agree_link_adjacent=bool(plink in (llink, llink2) or plink2 == llink),
+                    )
+                )
+            print(
+                f"[i{ii:02d}] shift {100 * np.linalg.norm(shift):5.2f} cm   IK solved "
+                f"{n_solved}/{N_SAMPLES}   meshes {len(meshes)}",
+                flush=True,
+            )
+            scenes.append(
+                dict(
+                    init=ii,
+                    shift_cm=round(100 * float(np.linalg.norm(shift)), 3),
+                    n_meshes=len(meshes),
+                    n_obstacle_meshes=len(obs_meshes),
+                    ik_solved=n_solved,
+                    n_samples=N_SAMPLES,
+                    mesh_table=W.summarise(meshes),
+                )
+            )
+            np.savez_compressed(
+                os.path.join(OUT, f"verify_world_i{ii:02d}.npz"),
+                line=line,
+                line_base=line_b,
+                q=qs,
+                ik_ok=ok,
+                shift=shift,
+                obstacle_hull_world=hull_w,
+            )
             del rw, ik
             torch.cuda.empty_cache()
         finally:
             if env is not None:
-                try:
+                with contextlib.suppress(Exception):
                     env.close()
-                except Exception:
-                    pass
 
     report(rows, scenes)
 
@@ -292,15 +346,19 @@ def report(rows, scenes):
     print("=" * 104)
     print("STEP 2 -- planner world vs the GJK labeler, same joint configurations")
     print("=" * 104)
-    hdr = (f"  {'init':>4} {'t':>5} {'planner pen':>12} {'coll':>5} {'planner link':>14}  "
-           f"{'labeler union':>14} {'exact':>8} {'coll':>5} {'labeler link':>14}  {'agree':>6}")
+    hdr = (
+        f"  {'init':>4} {'t':>5} {'planner pen':>12} {'coll':>5} {'planner link':>14}  "
+        f"{'labeler union':>14} {'exact':>8} {'coll':>5} {'labeler link':>14}  {'agree':>6}"
+    )
     print(hdr)
     for r in rows:
-        print(f"  {r['init']:>4} {r['t']:>5.2f} {r['planner_penetration_m']:>12.5f} "
-              f"{str(r['planner_collides']):>5} {r['planner_link']:>14}  "
-              f"{r['labeler_union_m']:>14.5f} {r['labeler_exact_m']:>8.5f} "
-              f"{str(r['labeler_collides']):>5} {r['labeler_link']:>14}  "
-              f"{('OK' if r['agree_decision'] else 'DIFFER'):>6}")
+        print(
+            f"  {r['init']:>4} {r['t']:>5.2f} {r['planner_penetration_m']:>12.5f} "
+            f"{str(r['planner_collides']):>5} {r['planner_link']:>14}  "
+            f"{r['labeler_union_m']:>14.5f} {r['labeler_exact_m']:>8.5f} "
+            f"{str(r['labeler_collides']):>5} {r['labeler_link']:>14}  "
+            f"{('OK' if r['agree_decision'] else 'DIFFER'):>6}"
+        )
     n = len(rows)
     if n:
         dec = sum(r["agree_decision"] for r in rows)
@@ -322,17 +380,19 @@ def report(rows, scenes):
         print()
         print("  straight-line route, per scene:")
         for ii, d in sorted(per_init.items()):
-            print(f"    init {ii:>2}: planner says collides on {d['pc']}/{d['n']} samples, "
-                  f"labeler on {d['lc']}/{d['n']}")
+            print(
+                f"    init {ii:>2}: planner says collides on {d['pc']}/{d['n']} samples, "
+                f"labeler on {d['lc']}/{d['n']}"
+            )
         links = {}
         for r in coll_rows:
-            links[(r["planner_link"], r["labeler_link"])] = \
+            links[(r["planner_link"], r["labeler_link"])] = (
                 links.get((r["planner_link"], r["labeler_link"]), 0) + 1
+            )
         print()
         print("  culprit link, planner vs labeler:")
         for (a, b), c in sorted(links.items(), key=lambda kv: -kv[1]):
-            print(f"    {a:>16}  vs  {b:<16}  {c:>3} samples  "
-                  f"{'MATCH' if a == b else 'differ'}")
+            print(f"    {a:>16}  vs  {b:<16}  {c:>3} samples  {'MATCH' if a == b else 'differ'}")
         print()
         print("  the labeler's actual MuJoCo geom on colliding samples:")
         gm = {}
@@ -340,8 +400,8 @@ def report(rows, scenes):
             gm[r.get("labeler_geom", "?")] = gm.get(r.get("labeler_geom", "?"), 0) + 1
         for nm, c in sorted(gm.items(), key=lambda kv: -kv[1]):
             print(f"    {nm:<40} {c:>3} samples")
-    json.dump(dict(rows=rows, scenes=scenes),
-              open(os.path.join(OUT, "verify_world.json"), "w"), indent=1, default=str)
+    with open(os.path.join(OUT, "verify_world.json"), "w") as fh:
+        json.dump(dict(rows=rows, scenes=scenes), fh, indent=1, default=str)
     print()
     print("VERIFY_WORLD_DONE")
 

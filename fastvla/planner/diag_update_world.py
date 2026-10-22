@@ -19,6 +19,7 @@ origin, the bug is confirmed. If the two agree, that is written down and the hyp
 Author: Varun Chandra
 Env: planner. GPU 1 only.
 """
+
 from __future__ import annotations
 
 import json
@@ -31,23 +32,27 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
 os.makedirs(OUT, exist_ok=True)
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
-for _p in (DISP, os.path.join(DISP, "datagen"), "/data_new/vchandr2",
-           "/data_new/vchandr2/fastvla-eval",
-           "/data_new/vchandr2/vla-safety-interp/src/physics"):
+for _p in (
+    DISP,
+    os.path.join(DISP, "datagen"),
+    "/data_new/vchandr2",
+    "/data_new/vchandr2/fastvla-eval",
+    "/data_new/vchandr2/vla-safety-interp/src/physics",
+):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import dgcore as D                                      # noqa: E402
-import geom_shift                                       # noqa: E402
-from fastvla.planner import world as W                   # noqa: E402
+import dgcore as D  # noqa: E402
+import geom_shift  # noqa: E402
+import torch  # noqa: E402
+from curobo.geom.sdf.world import CollisionQueryBuffer  # noqa: E402
+from curobo.geom.types import Mesh, WorldConfig  # noqa: E402
+from curobo.types.base import TensorDeviceType  # noqa: E402
+from curobo.types.robot import RobotConfig  # noqa: E402
+from curobo.util_file import get_robot_configs_path, join_path, load_yaml  # noqa: E402
+from curobo.wrap.reacher.motion_gen import MotionGen, MotionGenConfig  # noqa: E402
 
-import torch                                            # noqa: E402
-from curobo.geom.sdf.world import CollisionQueryBuffer   # noqa: E402
-from curobo.geom.types import Mesh, WorldConfig          # noqa: E402
-from curobo.types.base import TensorDeviceType           # noqa: E402
-from curobo.types.robot import RobotConfig               # noqa: E402
-from curobo.util_file import get_robot_configs_path, join_path, load_yaml   # noqa: E402
-from curobo.wrap.reacher.motion_gen import MotionGen, MotionGenConfig       # noqa: E402
+from fastvla.planner import world as W  # noqa: E402
 
 TAG, INIT = "oa1", int(os.environ.get("INIT", "0"))
 ACTIVATION_M = float(os.environ.get("PLANNER_ACTIVATION_M", "0.04"))
@@ -72,23 +77,39 @@ def build_scene():
 
 
 def world_cfg(meshes):
-    return WorldConfig(mesh=[Mesh(name=d["name"], pose=[0, 0, 0, 1, 0, 0, 0],
-                                  vertices=d["vertices"].tolist(),
-                                  faces=d["faces"].tolist()) for d in meshes])
+    return WorldConfig(
+        mesh=[
+            Mesh(
+                name=d["name"],
+                pose=[0, 0, 0, 1, 0, 0, 0],
+                vertices=d["vertices"].tolist(),
+                faces=d["faces"].tolist(),
+            )
+            for d in meshes
+        ]
+    )
 
 
 def make_mg(meshes, mode):
     """mode 'update' = empty then update_world; mode 'direct' = meshes at construction."""
     tdt = TensorDeviceType()
     rc = RobotConfig.from_dict(
-        load_yaml(join_path(get_robot_configs_path(), "franka.yml"))["robot_cfg"], tdt)
+        load_yaml(join_path(get_robot_configs_path(), "franka.yml"))["robot_cfg"], tdt
+    )
     from curobo.geom.sdf.world import CollisionCheckerType
+
     init_world = WorldConfig() if mode == "update" else world_cfg(meshes)
     cfg = MotionGenConfig.load_from_robot_config(
-        rc, init_world, tensor_args=tdt, interpolation_dt=0.02,
-        collision_activation_distance=ACTIVATION_M, num_trajopt_seeds=4, num_graph_seeds=4,
+        rc,
+        init_world,
+        tensor_args=tdt,
+        interpolation_dt=0.02,
+        collision_activation_distance=ACTIVATION_M,
+        num_trajopt_seeds=4,
+        num_graph_seeds=4,
         collision_checker_type=CollisionCheckerType.MESH,
-        collision_cache={"obb": 8, "mesh": MESH_CACHE})
+        collision_cache={"obb": 8, "mesh": MESH_CACHE},
+    )
     mg = MotionGen(cfg)
     mg.warmup(enable_graph=True)
     if mode == "update":
@@ -102,9 +123,11 @@ def probe(mg, rc, tdt, label):
     st = mg.kinematics.get_state(q)
     sph = st.link_spheres_tensor.view(1, 1, -1, 4).contiguous()
     buf = CollisionQueryBuffer.initialize_from_shape(
-        sph.shape, tdt, mg.world_collision.collision_types)
+        sph.shape, tdt, mg.world_collision.collision_types
+    )
     d = mg.world_collision.get_sphere_distance(
-        sph, buf, weight=tdt.to_device([1.0]), activation_distance=tdt.to_device([0.0]))
+        sph, buf, weight=tdt.to_device([1.0]), activation_distance=tdt.to_device([0.0])
+    )
     d = d.detach().cpu().numpy().ravel()
     s = sph.view(-1, 4).detach().cpu().numpy()
     real = s[:, 3] > 0.0
@@ -118,8 +141,10 @@ def probe(mg, rc, tdt, label):
     hits = [(i, d[i]) for i in range(len(d)) if real[i] and d[i] > 0.0]
     print(f"  spheres reporting penetration (>0): {len(hits)}")
     for i, v in sorted(hits, key=lambda kv: -kv[1])[:10]:
-        print(f"    sphere {i:>3} link {i2l.get(int(s2l[i]), '?'):>18}  "
-              f"centre {np.round(s[i, :3], 3)} r {s[i, 3]:.3f}  penetration {v:+.5f}")
+        print(
+            f"    sphere {i:>3} link {i2l.get(int(s2l[i]), '?'):>18}  "
+            f"centre {np.round(s[i, :3], 3)} r {s[i, 3]:.3f}  penetration {v:+.5f}"
+        )
     print(f"  max penetration over all spheres: {float(d[real].max()):+.5f}")
     print(f"  sum over all spheres:             {float(d[real].sum()):+.5f}")
 
@@ -129,30 +154,41 @@ def probe(mg, rc, tdt, label):
     for mm in ms[:6]:
         pz = np.asarray(mm.pose, float)
         v = np.asarray(mm.vertices, float) if mm.vertices is not None else np.zeros((0, 3))
-        bb = (np.round(v.min(axis=0), 3).tolist(), np.round(v.max(axis=0), 3).tolist()) \
-            if len(v) else ("-", "-")
+        bb = (
+            (np.round(v.min(axis=0), 3).tolist(), np.round(v.max(axis=0), 3).tolist())
+            if len(v)
+            else ("-", "-")
+        )
         print(f"    {mm.name:<34} pose {np.round(pz, 3)}  verts {len(v):>5}  bbox {bb[0]}..{bb[1]}")
-    return dict(label=label, n_spheres=int(real.sum()), n_penetrating=len(hits),
-                max_penetration=float(d[real].max()), sum_penetration=float(d[real].sum()),
-                n_meshes=len(ms),
-                mesh_poses=[[round(float(x), 4) for x in np.asarray(mm.pose, float)]
-                            for mm in ms],
-                mesh_names=[mm.name for mm in ms])
+    return dict(
+        label=label,
+        n_spheres=int(real.sum()),
+        n_penetrating=len(hits),
+        max_penetration=float(d[real].max()),
+        sum_penetration=float(d[real].sum()),
+        n_meshes=len(ms),
+        mesh_poses=[[round(float(x), 4) for x in np.asarray(mm.pose, float)] for mm in ms],
+        mesh_names=[mm.name for mm in ms],
+    )
 
 
 def main():
     env, dom, mon, sg, meshes, shift = build_scene()
     print("=" * 100)
-    print(f"DIAG -- update_world vs direct construction, {TAG} init {INIT}, "
-          f"shift {100 * np.linalg.norm(shift):.2f} cm, activation {ACTIVATION_M} m")
+    print(
+        f"DIAG -- update_world vs direct construction, {TAG} init {INIT}, "
+        f"shift {100 * np.linalg.norm(shift):.2f} cm, activation {ACTIVATION_M} m"
+    )
     print("=" * 100)
     print(f"  scene meshes from the labeler's hulls: {len(meshes)}")
     for r in W.summarise(meshes)[:4]:
         print(f"    {r['name']:<34} v{r['n_vertices']:>5}  bbox {r['bbox_min']}..{r['bbox_max']}")
 
     rows = []
-    for mode, label in (("update", "A: MotionGen(empty) then update_world(meshes)"),
-                        ("direct", "B: MotionGen(meshes at construction)")):
+    for mode, label in (
+        ("update", "A: MotionGen(empty) then update_world(meshes)"),
+        ("direct", "B: MotionGen(meshes at construction)"),
+    ):
         mg, rc, tdt = make_mg(meshes, mode)
         rows.append(probe(mg, rc, tdt, label))
         del mg
@@ -162,14 +198,21 @@ def main():
     a, b = rows
     print()
     print("=" * 100)
-    same = (a["n_penetrating"] == b["n_penetrating"]
-            and abs(a["max_penetration"] - b["max_penetration"]) < 1e-6)
-    print(f"  A penetrating spheres {a['n_penetrating']}, max {a['max_penetration']:+.5f}, "
-          f"meshes {a['n_meshes']}")
-    print(f"  B penetrating spheres {b['n_penetrating']}, max {b['max_penetration']:+.5f}, "
-          f"meshes {b['n_meshes']}")
+    same = (
+        a["n_penetrating"] == b["n_penetrating"]
+        and abs(a["max_penetration"] - b["max_penetration"]) < 1e-6
+    )
+    print(
+        f"  A penetrating spheres {a['n_penetrating']}, max {a['max_penetration']:+.5f}, "
+        f"meshes {a['n_meshes']}"
+    )
+    print(
+        f"  B penetrating spheres {b['n_penetrating']}, max {b['max_penetration']:+.5f}, "
+        f"meshes {b['n_meshes']}"
+    )
     print(f"  VERDICT: {'SAME -- hypothesis dead' if same else 'DIFFERENT -- bug confirmed'}")
-    json.dump(rows, open(os.path.join(OUT, "diag_update_world.json"), "w"), indent=1)
+    with open(os.path.join(OUT, "diag_update_world.json"), "w") as fh:
+        json.dump(rows, fh, indent=1)
     print("DIAG_UPDATE_WORLD_DONE")
 
 

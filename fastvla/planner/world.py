@@ -34,6 +34,7 @@ be silently wrong.
 
 Author: Varun Chandra
 """
+
 from __future__ import annotations
 
 import os
@@ -77,21 +78,24 @@ def inflate_hull(points, d):
     wrong in a different way -- it grows far faces more than near ones and fixes no distance.
     """
     from scipy.spatial import ConvexHull
+
     P = np.asarray(points, dtype=np.float64)
     if len(P) < 4 or d <= 0.0:
         return _hull_mesh(P)
     try:
         h = ConvexHull(P)
-        A = h.equations[:, :-1]                      # unit outward normals, one per facet
-        tri = P[h.simplices]                         # (nfacet, 3, 3)
+        A = h.equations[:, :-1]  # unit outward normals, one per facet
+        tri = P[h.simplices]  # (nfacet, 3, 3)
         pushed = (tri + d * A[:, None, :]).reshape(-1, 3)
         return _hull_mesh(np.vstack([P[h.vertices], pushed]))
     except Exception:
         # Last resort: an axis-aligned box grown by d. Crude, but it still contains the offset and
         # it cannot fail, so a degenerate hull downgrades that one obstacle rather than the run.
         lo, hi = P.min(axis=0) - d, P.max(axis=0) + d
-        box = np.array([[x, y, z] for x in (lo[0], hi[0]) for y in (lo[1], hi[1])
-                        for z in (lo[2], hi[2])], dtype=np.float64)
+        box = np.array(
+            [[x, y, z] for x in (lo[0], hi[0]) for y in (lo[1], hi[1]) for z in (lo[2], hi[2])],
+            dtype=np.float64,
+        )
         return _hull_mesh(box)
 
 
@@ -137,6 +141,7 @@ def _hull_mesh(points):
     vertex set is reduced to the hull vertices so the mesh carries no interior points.
     """
     from scipy.spatial import ConvexHull
+
     P = np.asarray(points, dtype=np.float64)
     if len(P) < 4:
         return P, np.zeros((0, 3), dtype=np.int32)
@@ -148,8 +153,7 @@ def _hull_mesh(points):
     return np.ascontiguousarray(P[keep]), np.ascontiguousarray(faces.astype(np.int32))
 
 
-def scene_meshes(dom, mon, sg, tag, carried=None, include_receptacle=True,
-                 inflate_m=None):
+def scene_meshes(dom, mon, sg, tag, carried=None, include_receptacle=True, inflate_m=None):
     """Every piece of static world geometry the planner must avoid, in the robot base frame.
 
     Returns a list of dicts: name, vertices (Nx3, base frame), faces (Mx3), pad (m), source.
@@ -171,16 +175,31 @@ def scene_meshes(dom, mon, sg, tag, carried=None, include_receptacle=True,
         if W is None or len(W) < 4:
             continue
         v, f = inflate_hull(to_base(W, base_p, base_R), d)
-        out.append(dict(name=f"obstacle__{name}", vertices=v, faces=f, pad=0.0,
-                        inflated_m=d,
-                        source="SafetyMonitor._obstacle_hull_world (union hull), inflated"))
+        out.append(
+            dict(
+                name=f"obstacle__{name}",
+                vertices=v,
+                faces=f,
+                pad=0.0,
+                inflated_m=d,
+                source="SafetyMonitor._obstacle_hull_world (union hull), inflated",
+            )
+        )
 
     # 2. the table
     for g in entity_geom_ids(dom, TABLE_GEOM):
         W, pad = geom_hull_world(mon, g)
         v, f = inflate_hull(to_base(W, base_p, base_R), ds)
-        out.append(dict(name=f"table__{m.geom_id2name(g)}", vertices=v, faces=f, pad=pad,
-                        inflated_m=ds, source="DistanceEngine._w, inflated"))
+        out.append(
+            dict(
+                name=f"table__{m.geom_id2name(g)}",
+                vertices=v,
+                faces=f,
+                pad=pad,
+                inflated_m=ds,
+                source="DistanceEngine._w, inflated",
+            )
+        )
 
     # 3. the receptacle the object is placed into, piece by piece (it is small)
     if include_receptacle:
@@ -190,9 +209,16 @@ def scene_meshes(dom, mon, sg, tag, carried=None, include_receptacle=True,
                 if len(W) < 4:
                     continue
                 v, f = inflate_hull(to_base(W, base_p, base_R), ds)
-                out.append(dict(name=f"receptacle__{m.geom_id2name(g)}", vertices=v, faces=f,
-                                pad=pad, inflated_m=ds,
-                                source="DistanceEngine._w, inflated"))
+                out.append(
+                    dict(
+                        name=f"receptacle__{m.geom_id2name(g)}",
+                        vertices=v,
+                        faces=f,
+                        pad=pad,
+                        inflated_m=ds,
+                        source="DistanceEngine._w, inflated",
+                    )
+                )
 
     # 4. bystanders: every other declared entity with collision geoms, also inflated. The eval
     # rule can push the obstacle toward anything on the table, and a route that clears the bottle
@@ -213,14 +239,23 @@ def scene_meshes(dom, mon, sg, tag, carried=None, include_receptacle=True,
             continue
         v, f = inflate_hull(to_base(np.vstack(pts), base_p, base_R), ds)
         if len(v) >= 4:
-            out.append(dict(name=f"bystander__{name}", vertices=v, faces=f, pad=0.0,
-                            inflated_m=ds, source="DistanceEngine._w, inflated"))
+            out.append(
+                dict(
+                    name=f"bystander__{name}",
+                    vertices=v,
+                    faces=f,
+                    pad=0.0,
+                    inflated_m=ds,
+                    source="DistanceEngine._w, inflated",
+                )
+            )
     return out
 
 
 def MOVES_FOR(tag):
     """dgcore's MOVES table, by import -- the destination is part of the task definition."""
     import dgcore as D
+
     return D.MOVES[tag]
 
 
@@ -243,8 +278,13 @@ def carried_mesh_abs(dom, mon, obj):
     if not pts:
         return None
     v, f = _hull_mesh(to_base(np.vstack(pts), base_p, base_R))
-    return dict(name=f"carried__{obj}", vertices=v, faces=f, pad=0.0,
-                source="DistanceEngine._w, base frame, absolute")
+    return dict(
+        name=f"carried__{obj}",
+        vertices=v,
+        faces=f,
+        pad=0.0,
+        source="DistanceEngine._w, base frame, absolute",
+    )
 
 
 def carried_mesh(dom, mon, obj, grasp_point):
@@ -265,8 +305,13 @@ def carried_mesh(dom, mon, obj, grasp_point):
     P = np.vstack(pts)
     rel = P - np.asarray(grasp_point, dtype=np.float64)[None, :]
     v, f = _hull_mesh(rel @ base_R)
-    return dict(name=f"carried__{obj}", vertices=v, faces=f, pad=0.0,
-                source="DistanceEngine._w, re-centred on the grasp point")
+    return dict(
+        name=f"carried__{obj}",
+        vertices=v,
+        faces=f,
+        pad=0.0,
+        source="DistanceEngine._w, re-centred on the grasp point",
+    )
 
 
 def summarise(meshes):
@@ -274,9 +319,15 @@ def summarise(meshes):
     rows = []
     for d in meshes:
         v = d["vertices"]
-        rows.append(dict(name=d["name"], n_vertices=int(len(v)), n_faces=int(len(d["faces"])),
-                         pad_m=round(float(d["pad"]), 5),
-                         bbox_min=[round(float(x), 4) for x in v.min(axis=0)],
-                         bbox_max=[round(float(x), 4) for x in v.max(axis=0)],
-                         source=d["source"]))
+        rows.append(
+            dict(
+                name=d["name"],
+                n_vertices=int(len(v)),
+                n_faces=int(len(d["faces"])),
+                pad_m=round(float(d["pad"]), 5),
+                bbox_min=[round(float(x), 4) for x in v.min(axis=0)],
+                bbox_max=[round(float(x), 4) for x in v.max(axis=0)],
+                source=d["source"],
+            )
+        )
     return rows

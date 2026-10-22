@@ -13,6 +13,7 @@ partition difference; if they are tens of centimetres apart, it is a frame bug.
 Author: Varun Chandra
 Env: planner. GPU 1 only.
 """
+
 from __future__ import annotations
 
 import json
@@ -24,24 +25,28 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
-for _p in (DISP, os.path.join(DISP, "datagen"), "/data_new/vchandr2",
-           "/data_new/vchandr2/fastvla-eval",
-           "/data_new/vchandr2/vla-safety-interp/src/physics",
-           "/data_new/vchandr2/fastvla-eval/fastvla/labeler"):
+for _p in (
+    DISP,
+    os.path.join(DISP, "datagen"),
+    "/data_new/vchandr2",
+    "/data_new/vchandr2/fastvla-eval",
+    "/data_new/vchandr2/vla-safety-interp/src/physics",
+    "/data_new/vchandr2/fastvla-eval/fastvla/labeler",
+):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import dgcore as D                                    # noqa: E402
-import fastgjk                                        # noqa: E402
-import geom_shift                                     # noqa: E402
-from fastvla.planner import world as W                 # noqa: E402
+import dgcore as D  # noqa: E402
+import fastgjk  # noqa: E402
+import geom_shift  # noqa: E402
+import torch  # noqa: E402
+from curobo.geom.types import Mesh, WorldConfig  # noqa: E402
+from curobo.types.base import TensorDeviceType  # noqa: E402
+from curobo.types.robot import RobotConfig  # noqa: E402
+from curobo.util_file import get_robot_configs_path, join_path, load_yaml  # noqa: E402
+from curobo.wrap.model.robot_world import RobotWorld, RobotWorldConfig  # noqa: E402
 
-import torch                                          # noqa: E402
-from curobo.geom.types import Mesh, WorldConfig        # noqa: E402
-from curobo.types.base import TensorDeviceType         # noqa: E402
-from curobo.types.robot import RobotConfig             # noqa: E402
-from curobo.util_file import get_robot_configs_path, join_path, load_yaml   # noqa: E402
-from curobo.wrap.model.robot_world import RobotWorld, RobotWorldConfig      # noqa: E402
+from fastvla.planner import world as W  # noqa: E402
 
 TAG = "oa1"
 INIT = int(os.environ.get("INIT", "0"))
@@ -54,7 +59,8 @@ def main():
     qs, ok = z["q"], z["ik_ok"]
     tdt = TensorDeviceType()
     robot_cfg = RobotConfig.from_dict(
-        load_yaml(join_path(get_robot_configs_path(), "franka.yml"))["robot_cfg"], tdt)
+        load_yaml(join_path(get_robot_configs_path(), "franka.yml"))["robot_cfg"], tdt
+    )
     kc = robot_cfg.kinematics.kinematics_config
     sph2link = kc.link_sphere_idx_map.detach().cpu().numpy()
     idx2link = {v: k for k, v in kc.link_name_to_idx_map.items()}
@@ -71,17 +77,32 @@ def main():
     obstacle = D.SPEC["names"][TAG]["obstacle"]
     meshes = [d for d in W.scene_meshes(dom, mon, sg, TAG) if d["name"].startswith("obstacle__")]
     base_p, base_R = W.robot_base_offset(dom)
-    rw = RobotWorld(RobotWorldConfig.load_from_config(
-        robot_cfg,
-        WorldConfig(mesh=[Mesh(name=d["name"], pose=[0, 0, 0, 1, 0, 0, 0],
-                               vertices=d["vertices"].tolist(), faces=d["faces"].tolist())
-                          for d in meshes]),
-        tensor_args=tdt, collision_activation_distance=0.0, n_meshes=len(meshes) + 4))
+    rw = RobotWorld(
+        RobotWorldConfig.load_from_config(
+            robot_cfg,
+            WorldConfig(
+                mesh=[
+                    Mesh(
+                        name=d["name"],
+                        pose=[0, 0, 0, 1, 0, 0, 0],
+                        vertices=d["vertices"].tolist(),
+                        faces=d["faces"].tolist(),
+                    )
+                    for d in meshes
+                ]
+            ),
+            tensor_args=tdt,
+            collision_activation_distance=0.0,
+            n_meshes=len(meshes) + 4,
+        )
+    )
 
     print(f"init {INIT}, shift {100 * np.linalg.norm(shift):.2f} cm")
-    print(f"  {'k':>3} {'planner link':>14} {'sphere world xyz':>26} "
-          f"{'labeler geom':>26} {'geom closest xyz':>26} {'gap cm':>8} "
-          f"{'radius':>8} {'gap-r cm':>9}")
+    print(
+        f"  {'k':>3} {'planner link':>14} {'sphere world xyz':>26} "
+        f"{'labeler geom':>26} {'geom closest xyz':>26} {'gap cm':>8} "
+        f"{'radius':>8} {'gap-r cm':>9}"
+    )
     rows = []
     for k in range(len(qs)):
         if not bool(ok[k]):
@@ -93,13 +114,18 @@ def main():
         for si in range(sph.shape[0]):
             if float(sph[si, 3]) <= 0.0:
                 continue
-            per[si] = float(rw.get_collision_distance(
-                sph[si].view(1, 1, 1, 4).clone()).detach().cpu().numpy().sum())
+            per[si] = float(
+                rw.get_collision_distance(sph[si].view(1, 1, 1, 4).clone())
+                .detach()
+                .cpu()
+                .numpy()
+                .sum()
+            )
         if per.max() <= 0.0:
             continue
         j = int(np.argmax(per))
         c_base = sph[j, :3].detach().cpu().numpy().astype(np.float64)
-        c_world = c_base @ base_R.T + base_p      # planner sphere centre, back in world
+        c_world = c_base @ base_R.T + base_p  # planner sphere centre, back in world
 
         W.robot_base_offset(dom)
         for i, v in enumerate(q):
@@ -124,30 +150,45 @@ def main():
         radius = float(sph[j, 3])
         gap_surface = gap - radius
         plink = idx2link.get(int(sph2link[j]), "?")
-        print(f"  {k:>3} {plink:>14} [{c_world[0]:+.3f} {c_world[1]:+.3f} {c_world[2]:+.3f}] "
-              f"{gname:>26} [{gclose[0]:+.3f} {gclose[1]:+.3f} {gclose[2]:+.3f}] "
-              f"{100 * gap:>8.2f} {100 * radius:>8.2f} {100 * gap_surface:>9.2f}")
-        rows.append(dict(k=k, planner_link=plink, labeler_geom=gname,
-                         sphere_radius_cm=round(100 * radius, 2),
-                         gap_minus_radius_cm=round(100 * gap_surface, 2),
-                         sphere_world=[round(float(x), 4) for x in c_world],
-                         geom_closest=[round(float(x), 4) for x in gclose],
-                         gap_cm=round(100 * gap, 2)))
+        print(
+            f"  {k:>3} {plink:>14} [{c_world[0]:+.3f} {c_world[1]:+.3f} {c_world[2]:+.3f}] "
+            f"{gname:>26} [{gclose[0]:+.3f} {gclose[1]:+.3f} {gclose[2]:+.3f}] "
+            f"{100 * gap:>8.2f} {100 * radius:>8.2f} {100 * gap_surface:>9.2f}"
+        )
+        rows.append(
+            dict(
+                k=k,
+                planner_link=plink,
+                labeler_geom=gname,
+                sphere_radius_cm=round(100 * radius, 2),
+                gap_minus_radius_cm=round(100 * gap_surface, 2),
+                sphere_world=[round(float(x), 4) for x in c_world],
+                geom_closest=[round(float(x), 4) for x in gclose],
+                gap_cm=round(100 * gap, 2),
+            )
+        )
     env.close()
     if rows:
         g = np.asarray([r["gap_cm"] for r in rows])
         gr = np.asarray([r["gap_minus_radius_cm"] for r in rows])
         rr = np.asarray([r["sphere_radius_cm"] for r in rows])
         print()
-        print(f"  centre-to-surface gap:  median {np.median(g):.2f} cm  "
-              f"range {g.min():.2f}-{g.max():.2f}")
-        print(f"  sphere radius:          median {np.median(rr):.2f} cm  "
-              f"range {rr.min():.2f}-{rr.max():.2f}")
-        print(f"  gap minus radius:       median {np.median(gr):.2f} cm  "
-              f"range {gr.min():.2f}-{gr.max():.2f}")
+        print(
+            f"  centre-to-surface gap:  median {np.median(g):.2f} cm  "
+            f"range {g.min():.2f}-{g.max():.2f}"
+        )
+        print(
+            f"  sphere radius:          median {np.median(rr):.2f} cm  "
+            f"range {rr.min():.2f}-{rr.max():.2f}"
+        )
+        print(
+            f"  gap minus radius:       median {np.median(gr):.2f} cm  "
+            f"range {gr.min():.2f}-{gr.max():.2f}"
+        )
         print("  -> near zero means the two models put the contact in the same place and only")
         print("     attribute it to adjacent links; a large value would be a frame bug.")
-    json.dump(rows, open(os.path.join(OUT, f"link_offset_i{INIT:02d}.json"), "w"), indent=1)
+    with open(os.path.join(OUT, f"link_offset_i{INIT:02d}.json"), "w") as fh:
+        json.dump(rows, fh, indent=1)
     print("CHECK_LINK_OFFSET_DONE")
 
 

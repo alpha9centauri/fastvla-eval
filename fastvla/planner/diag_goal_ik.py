@@ -12,6 +12,7 @@ MotionGenStatus.IK_FAIL is correct behaviour and not a bug to chase.
 Author: Varun Chandra
 Env: planner. GPU 1 only.
 """
+
 from __future__ import annotations
 
 import json
@@ -24,24 +25,28 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
 os.makedirs(OUT, exist_ok=True)
 DISP = "/data_new/vchandr2/vla-safety-interp/src/displacement"
-for _p in (DISP, os.path.join(DISP, "datagen"), "/data_new/vchandr2",
-           "/data_new/vchandr2/fastvla-eval",
-           "/data_new/vchandr2/vla-safety-interp/src/physics"):
+for _p in (
+    DISP,
+    os.path.join(DISP, "datagen"),
+    "/data_new/vchandr2",
+    "/data_new/vchandr2/fastvla-eval",
+    "/data_new/vchandr2/vla-safety-interp/src/physics",
+):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import dgcore as D                                      # noqa: E402
-import geom_shift                                       # noqa: E402
-from fastvla.planner import world as W                   # noqa: E402
-from fastvla.planner import route as R                   # noqa: E402
+import dgcore as D  # noqa: E402
+import geom_shift  # noqa: E402
+import torch  # noqa: E402
+from curobo.geom.types import Mesh, WorldConfig  # noqa: E402
+from curobo.types.base import TensorDeviceType  # noqa: E402
+from curobo.types.math import Pose  # noqa: E402
+from curobo.types.robot import RobotConfig  # noqa: E402
+from curobo.util_file import get_robot_configs_path, join_path, load_yaml  # noqa: E402
+from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig  # noqa: E402
 
-import torch                                            # noqa: E402
-from curobo.geom.types import Mesh, WorldConfig          # noqa: E402
-from curobo.types.base import TensorDeviceType           # noqa: E402
-from curobo.types.math import Pose                       # noqa: E402
-from curobo.types.robot import RobotConfig               # noqa: E402
-from curobo.util_file import get_robot_configs_path, join_path, load_yaml   # noqa: E402
-from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig          # noqa: E402
+from fastvla.planner import route as R  # noqa: E402
+from fastvla.planner import world as W  # noqa: E402
 
 TAG, INIT = "oa1", int(os.environ.get("INIT", "0"))
 BASELINE = os.path.join(DISP, "out", "baseline_17500.npz")
@@ -49,15 +54,24 @@ ACTIVATIONS = [float(x) for x in os.environ.get("ACTIVATIONS", "0.04,0.02,0.01,0
 
 
 def world_cfg(meshes):
-    return WorldConfig(mesh=[Mesh(name=d["name"], pose=[0, 0, 0, 1, 0, 0, 0],
-                                  vertices=d["vertices"].tolist(),
-                                  faces=d["faces"].tolist()) for d in meshes])
+    return WorldConfig(
+        mesh=[
+            Mesh(
+                name=d["name"],
+                pose=[0, 0, 0, 1, 0, 0, 0],
+                vertices=d["vertices"].tolist(),
+                faces=d["faces"].tolist(),
+            )
+            for d in meshes
+        ]
+    )
 
 
 def main():
     tdt = TensorDeviceType()
     rc = RobotConfig.from_dict(
-        load_yaml(join_path(get_robot_configs_path(), "franka.yml"))["robot_cfg"], tdt)
+        load_yaml(join_path(get_robot_configs_path(), "franka.yml"))["robot_cfg"], tdt
+    )
 
     base = dict(np.load(BASELINE, allow_pickle=True))
     env, dom, mon, sg, task, init, obs = D.make_env(TAG, INIT, res=84)
@@ -81,7 +95,8 @@ def main():
     # the goal, through the same tool-offset calibration route.py uses
     router = R.CuroboRouter.get()
     eef_now = np.asarray(
-        dom.sim.data.site_xpos[dom.sim.model.site_name2id("gripper0_grip_site")], float)
+        dom.sim.data.site_xpos[dom.sim.model.site_name2id("gripper0_grip_site")], float
+    )
     router.calibrate(dom, eef_now, base_p, base_R)
     quat = R.xyzw_to_wxyz(np.asarray(prep[4], float))
     site_b = W.to_base(np.asarray(prep[0], float).reshape(1, 3), base_p, base_R)[0]
@@ -91,8 +106,9 @@ def main():
     gap = float(np.min(np.linalg.norm(hull_w - np.asarray(prep[0], float)[None, :], axis=1)))
 
     print("=" * 100)
-    print(f"GOAL IK -- world ON vs OFF, {TAG} init {INIT}, shift "
-          f"{100 * np.linalg.norm(shift):.2f} cm")
+    print(
+        f"GOAL IK -- world ON vs OFF, {TAG} init {INIT}, shift {100 * np.linalg.norm(shift):.2f} cm"
+    )
     print("=" * 100)
     print(f"  pre_place site (base) {np.round(site_b, 4)}   hand (base) {np.round(hand_b, 4)}")
     print(f"  nearest obstacle hull vertex to the pre_place EE point: {100 * gap:.2f} cm")
@@ -104,22 +120,43 @@ def main():
     cases = [("OFF (kinematics only)", None, 0.0)]
     cases += [(f"ON ({len(meshes)} meshes)", meshes, a) for a in ACTIVATIONS]
     for label, ms, act in cases:
-        ik = IKSolver(IKSolverConfig.load_from_robot_config(
-            rc, world_cfg(ms) if ms is not None else None,
-            rotation_threshold=0.05, position_threshold=0.01, num_seeds=32,
-            self_collision_check=True, tensor_args=tdt,
-            collision_activation_distance=act,
-            collision_cache={"obb": 8, "mesh": 64} if ms is not None else None))
+        ik = IKSolver(
+            IKSolverConfig.load_from_robot_config(
+                rc,
+                world_cfg(ms) if ms is not None else None,
+                rotation_threshold=0.05,
+                position_threshold=0.01,
+                num_seeds=32,
+                self_collision_check=True,
+                tensor_args=tdt,
+                collision_activation_distance=act,
+                collision_cache={"obb": 8, "mesh": 64} if ms is not None else None,
+            )
+        )
         p = torch.as_tensor(hand_b.reshape(1, 3).astype(np.float32), device=tdt.device)
         q = torch.as_tensor(quat.reshape(1, 4).astype(np.float32), device=tdt.device)
         res = ik.solve_single(Pose(p, q))
         ok = bool(res.success.item())
-        pe = float(res.position_error.min().item()) if res.position_error is not None else float("nan")
-        re_ = float(res.rotation_error.min().item()) if res.rotation_error is not None else float("nan")
-        print(f"  {label:>22} {act:>13.3f} {str(ok):>6} "
-              f"{1000 * pe:>11.2f} {re_:>9.4f}")
-        rows.append(dict(world=label, activation_m=act, ik_ok=ok,
-                         pos_err_mm=round(1000 * pe, 3), rot_err=round(re_, 5)))
+        pe = (
+            float(res.position_error.min().item())
+            if res.position_error is not None
+            else float("nan")
+        )
+        re_ = (
+            float(res.rotation_error.min().item())
+            if res.rotation_error is not None
+            else float("nan")
+        )
+        print(f"  {label:>22} {act:>13.3f} {str(ok):>6} {1000 * pe:>11.2f} {re_:>9.4f}")
+        rows.append(
+            dict(
+                world=label,
+                activation_m=act,
+                ik_ok=ok,
+                pos_err_mm=round(1000 * pe, 3),
+                rot_err=round(re_, 5),
+            )
+        )
         del ik
         torch.cuda.empty_cache()
 
@@ -128,8 +165,10 @@ def main():
     on_any = any(r["ik_ok"] for r in rows[1:])
     print()
     print(f"  world OFF: IK {'succeeds' if off else 'fails'}")
-    print(f"  world ON : IK succeeds at {sum(r['ik_ok'] for r in rows[1:])} of "
-          f"{len(rows) - 1} activation distances")
+    print(
+        f"  world ON : IK succeeds at {sum(r['ik_ok'] for r in rows[1:])} of "
+        f"{len(rows) - 1} activation distances"
+    )
     if off and not on_any:
         print("  VERDICT: CONFIRMED -- the goal is reachable but in collision in cuRobo's sphere")
         print("           model at every activation distance. IK_FAIL is correct behaviour.")
@@ -138,9 +177,16 @@ def main():
         print("           distances; the lowest that accepts it is usable.")
     else:
         print("  VERDICT: NOT CONFIRMED -- something else is refusing this pose.")
-    json.dump(dict(rows=rows, terminal_gap_cm=round(100 * gap, 3),
-                   hand_base=[round(float(x), 5) for x in hand_b]),
-              open(os.path.join(OUT, "diag_goal_ik.json"), "w"), indent=1)
+    with open(os.path.join(OUT, "diag_goal_ik.json"), "w") as fh:
+        json.dump(
+            dict(
+                rows=rows,
+                terminal_gap_cm=round(100 * gap, 3),
+                hand_base=[round(float(x), 5) for x in hand_b],
+            ),
+            fh,
+            indent=1,
+        )
     print("DIAG_GOAL_IK_DONE")
 
 
