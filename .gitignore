@@ -51,6 +51,14 @@ logs/
 
 # Conda / virtual envs
 envs/
+# Exception: envs/ at the REPO ROOT is the environment specs, not an installed env --
+# conda env export + pip freeze + BUILD.md, which is the only record of how to rebuild
+# planner, libero-vla and learn-gpu. `git add -A` skips ignored files silently, which is
+# how the README GIFs were missed the first time; these must not go the same way.
+!envs/
+!envs/*.yml
+!envs/*.requirements.txt
+!envs/BUILD.md
 env/
 venv/
 .venv/
