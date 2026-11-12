@@ -1,0 +1,148 @@
+{
+ "init_idx": 2,
+ "shift_cm": 14.502,
+ "plan_seconds_total": null,
+ "plan_seconds_single": null,
+ "planned": true,
+ "n_via": 17,
+ "via_min_cm": 10.303,
+ "via_median_cm": 13.181,
+ "via_all_cm": [
+  19.806,
+  19.479,
+  18.666,
+  17.628,
+  16.502,
+  14.92,
+  13.181,
+  11.756,
+  10.745,
+  10.303,
+  10.602,
+  11.436,
+  12.217,
+  12.422,
+  13.041,
+  14.317,
+  15.074
+ ],
+ "handoff_up_cm": null,
+ "handoff_out_cm": null,
+ "tilt_deg": 12.15,
+ "executor_ok": false,
+ "executor_reason": "unreached:detour_curobo_v15",
+ "steps": 167,
+ "dry_min_clearance_cm": 0.0,
+ "success": false,
+ "accepted": false,
+ "reason": "executor:unreached:detour_curobo_v15",
+ "arrival": [
+  {
+   "label": "pre_grasp[flat_edge]:akita_black_bowl_1",
+   "closest_mm": 6.19
+  },
+  {
+   "label": "grasp:akita_black_bowl_1",
+   "closest_mm": 6.62
+  },
+  {
+   "label": "close:akita_black_bowl_1",
+   "closest_mm": 6.62
+  },
+  {
+   "label": "lift:akita_black_bowl_1",
+   "closest_mm": 6.19
+  },
+  {
+   "label": "detour_curobo_v0",
+   "closest_mm": 6.19
+  },
+  {
+   "label": "detour_curobo_v1",
+   "closest_mm": 4.67
+  },
+  {
+   "label": "detour_curobo_v2",
+   "closest_mm": 1.01
+  },
+  {
+   "label": "detour_curobo_v3",
+   "closest_mm": 1.92
+  },
+  {
+   "label": "detour_curobo_v4",
+   "closest_mm": 0.9
+  },
+  {
+   "label": "detour_curobo_v5",
+   "closest_mm": 2.19
+  },
+  {
+   "label": "detour_curobo_v6",
+   "closest_mm": 4.03
+  },
+  {
+   "label": "detour_curobo_v7",
+   "closest_mm": 1.89
+  },
+  {
+   "label": "detour_curobo_v8",
+   "closest_mm": 3.36
+  },
+  {
+   "label": "detour_curobo_v9",
+   "closest_mm": 2.56
+  },
+  {
+   "label": "detour_curobo_v10",
+   "closest_mm": 5.42
+  },
+  {
+   "label": "detour_curobo_v11",
+   "closest_mm": 3.9
+  },
+  {
+   "label": "detour_curobo_v12",
+   "closest_mm": 2.66
+  },
+  {
+   "label": "detour_curobo_v13",
+   "closest_mm": 2.25
+  },
+  {
+   "label": "detour_curobo_v14",
+   "closest_mm": 1.2
+  },
+  {
+   "label": "detour_curobo_v15",
+   "closest_mm": 29.88
+  },
+  {
+   "label": "detour_curobo_v16",
+   "closest_mm": 42.17
+  },
+  {
+   "label": "place:akita_black_bowl_1",
+   "closest_mm": 44.12
+  },
+  {
+   "label": "release:akita_black_bowl_1",
+   "closest_mm": 44.12
+  },
+  {
+   "label": "retreat:akita_black_bowl_1",
+   "closest_mm": 19.19
+  }
+ ],
+ "cid": "oa1__i02__c7",
+ "init": 2,
+ "bin": "3-5",
+ "intrude_cm": 4.829202958145458,
+ "ranked_by": "link5",
+ "x": -0.13541504494285372,
+ "y": 0.12435714797067388,
+ "base_policy_min_clearance_cm": 0.0,
+ "base_policy_pair": "robot0_link5_collision",
+ "seconds": 104.5,
+ "outcome": "planned_not_certified"
+}

@@ -1,0 +1,486 @@
+[
+ {
+  "cid": "oa1__i00__c6",
+  "init": 0,
+  "x": -0.22027246586417948,
+  "y": 0.046634462633607154,
+  "bin": "3-5",
+  "intrude_cm": 4.893922902315533,
+  "ranked_by": "link5",
+  "d_ee_cm": -4.088686295315408,
+  "d_l5_cm": -4.893922902315533,
+  "collision": true,
+  "completion": false,
+  "min_clearance_cm": 0.0,
+  "steps": 300,
+  "collision_step": 2,
+  "obstacle": "bottle_of_perfume_1",
+  "pairs": [
+   {
+    "step": 2,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g73",
+    "substep": 14,
+    "max_force": 34.4886
+   },
+   {
+    "step": 6,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g228",
+    "substep": 1,
+    "max_force": 28.4363
+   },
+   {
+    "step": 9,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g241",
+    "substep": 7,
+    "max_force": 24.3671
+   },
+   {
+    "step": 25,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g10",
+    "substep": 1,
+    "max_force": 17.1071
+   },
+   {
+    "step": 140,
+    "obstacle": "white_place_box_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "white_place_box_1_g2",
+    "substep": 7,
+    "max_force": 612.0289
+   },
+   {
+    "step": 151,
+    "obstacle": "white_place_box_1",
+    "actor": "akita_black_bowl_1",
+    "actor_geom": "akita_black_bowl_1_g29",
+    "obstacle_geom": "white_place_box_1_g2",
+    "substep": 3,
+    "max_force": 567.1533
+   }
+  ],
+  "skipped": false
+ },
+ {
+  "cid": "oa1__i01__c4",
+  "init": 1,
+  "x": -0.19276767484283241,
+  "y": 0.03314505235242582,
+  "bin": "5-7",
+  "intrude_cm": 6.921000201689578,
+  "ranked_by": "link5",
+  "d_ee_cm": -5.274217885363932,
+  "d_l5_cm": -6.921000201689578,
+  "collision": true,
+  "completion": false,
+  "min_clearance_cm": 0.0,
+  "steps": 300,
+  "collision_step": 0,
+  "obstacle": "bottle_of_perfume_1",
+  "pairs": [
+   {
+    "step": 0,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g243",
+    "substep": 1,
+    "max_force": 367.3302
+   },
+   {
+    "step": 2,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g193",
+    "substep": 1,
+    "max_force": 168.2179
+   },
+   {
+    "step": 3,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g73",
+    "substep": 1,
+    "max_force": 74.1085
+   },
+   {
+    "step": 23,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g228",
+    "substep": 1,
+    "max_force": 40.2853
+   },
+   {
+    "step": 24,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_pad_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g128",
+    "substep": 1,
+    "max_force": 26.8629
+   },
+   {
+    "step": 26,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g158",
+    "substep": 3,
+    "max_force": 38.5218
+   },
+   {
+    "step": 30,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g111",
+    "substep": 1,
+    "max_force": 43.292
+   },
+   {
+    "step": 32,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g85",
+    "substep": 1,
+    "max_force": 11.5492
+   }
+  ],
+  "skipped": false
+ },
+ {
+  "cid": "oa1__i02__c7",
+  "init": 2,
+  "x": -0.13541504494285372,
+  "y": 0.12435714797067388,
+  "bin": "3-5",
+  "intrude_cm": 4.829202958145458,
+  "ranked_by": "link5",
+  "d_ee_cm": 5.49713503534261,
+  "d_l5_cm": -4.829202958145458,
+  "collision": true,
+  "completion": false,
+  "min_clearance_cm": 0.0,
+  "steps": 300,
+  "collision_step": 186,
+  "obstacle": "bottle_of_perfume_1",
+  "pairs": [
+   {
+    "step": 186,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "robot0_link5_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g73",
+    "substep": 16,
+    "max_force": 17.5679
+   }
+  ],
+  "skipped": false
+ },
+ {
+  "cid": "oa1__i03__c5",
+  "init": 3,
+  "x": -0.17602158180808813,
+  "y": 0.05710434631395078,
+  "bin": "5-7",
+  "intrude_cm": 6.720853701961305,
+  "ranked_by": "link5",
+  "d_ee_cm": -2.395747640658262,
+  "d_l5_cm": -6.720853701961305,
+  "collision": true,
+  "completion": true,
+  "min_clearance_cm": 0.0,
+  "steps": 201,
+  "collision_step": 0,
+  "obstacle": "bottle_of_perfume_1",
+  "pairs": [
+   {
+    "step": 0,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g101",
+    "substep": 1,
+    "max_force": 5.8701
+   },
+   {
+    "step": 2,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g73",
+    "substep": 1,
+    "max_force": 7.2408
+   },
+   {
+    "step": 3,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g111",
+    "substep": 2,
+    "max_force": 20.8429
+   },
+   {
+    "step": 6,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g85",
+    "substep": 1,
+    "max_force": 51.9897
+   }
+  ],
+  "skipped": false
+ },
+ {
+  "cid": "oa1__i04__c1",
+  "init": 4,
+  "x": -0.18193816653823647,
+  "y": 0.05346705154466369,
+  "bin": "7-9",
+  "intrude_cm": 8.961666240135251,
+  "ranked_by": "link5",
+  "d_ee_cm": -2.971524593193571,
+  "d_l5_cm": -8.961666240135251,
+  "collision": true,
+  "completion": false,
+  "min_clearance_cm": 0.0,
+  "steps": 300,
+  "collision_step": 0,
+  "obstacle": "bottle_of_perfume_1",
+  "pairs": [
+   {
+    "step": 0,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g209",
+    "substep": 1,
+    "max_force": 85.1681
+   },
+   {
+    "step": 1,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g226",
+    "substep": 1,
+    "max_force": 76.9501
+   },
+   {
+    "step": 8,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g91",
+    "substep": 1,
+    "max_force": 71.2126
+   },
+   {
+    "step": 9,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g243",
+    "substep": 1,
+    "max_force": 65.4759
+   },
+   {
+    "step": 14,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g73",
+    "substep": 1,
+    "max_force": 41.1412
+   },
+   {
+    "step": 21,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g73",
+    "substep": 1,
+    "max_force": 37.3334
+   }
+  ],
+  "skipped": false
+ },
+ {
+  "cid": "oa1__i07__c7",
+  "init": 7,
+  "x": -0.176665669599531,
+  "y": 0.06581558422136047,
+  "bin": "3-5",
+  "intrude_cm": 4.910683254337321,
+  "ranked_by": "link5",
+  "d_ee_cm": -1.572346844084818,
+  "d_l5_cm": -4.910683254337321,
+  "collision": true,
+  "completion": true,
+  "min_clearance_cm": 0.0,
+  "steps": 209,
+  "collision_step": 0,
+  "obstacle": "bottle_of_perfume_1",
+  "pairs": [
+   {
+    "step": 0,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g73",
+    "substep": 1,
+    "max_force": 11.3506
+   },
+   {
+    "step": 2,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g111",
+    "substep": 3,
+    "max_force": 33.0146
+   },
+   {
+    "step": 5,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g85",
+    "substep": 1,
+    "max_force": 43.0353
+   }
+  ],
+  "skipped": false
+ },
+ {
+  "cid": "oa1__i09__c5",
+  "init": 9,
+  "x": -0.19335126391982826,
+  "y": 0.049948570290086036,
+  "bin": "5-7",
+  "intrude_cm": 6.613529914740661,
+  "ranked_by": "link5",
+  "d_ee_cm": -3.6974276936305395,
+  "d_l5_cm": -6.613529914740661,
+  "collision": true,
+  "completion": false,
+  "min_clearance_cm": 0.0,
+  "steps": 300,
+  "collision_step": 0,
+  "obstacle": "bottle_of_perfume_1",
+  "pairs": [
+   {
+    "step": 0,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g73",
+    "substep": 1,
+    "max_force": 13.0569
+   },
+   {
+    "step": 8,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g62",
+    "substep": 1,
+    "max_force": 63.838
+   },
+   {
+    "step": 26,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g228",
+    "substep": 1,
+    "max_force": 16.7336
+   },
+   {
+    "step": 33,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_finger2_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g209",
+    "substep": 1,
+    "max_force": 25.8467
+   },
+   {
+    "step": 40,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g73",
+    "substep": 1,
+    "max_force": 53.4218
+   }
+  ],
+  "skipped": false
+ },
+ {
+  "cid": "oa1__i09__c6",
+  "init": 9,
+  "x": -0.17335126391982825,
+  "y": 0.08994857029008607,
+  "bin": "3-5",
+  "intrude_cm": 4.958098958788881,
+  "ranked_by": "link5",
+  "d_ee_cm": 0.7384478894803981,
+  "d_l5_cm": -4.958098958788881,
+  "collision": true,
+  "completion": true,
+  "min_clearance_cm": 0.0,
+  "steps": 201,
+  "collision_step": 0,
+  "obstacle": "bottle_of_perfume_1",
+  "pairs": [
+   {
+    "step": 0,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g193",
+    "substep": 1,
+    "max_force": 8.0173
+   },
+   {
+    "step": 1,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g101",
+    "substep": 3,
+    "max_force": 7.4636
+   },
+   {
+    "step": 3,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "gripper0_hand_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g209",
+    "substep": 6,
+    "max_force": 1.4748
+   }
+  ],
+  "skipped": false
+ }
+]

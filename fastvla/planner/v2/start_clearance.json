@@ -1,0 +1,1122 @@
+[
+ {
+  "cid": "oa1__i00__c0",
+  "init": 0,
+  "bin": "9-1000",
+  "intrude_cm": 9.10393109638395,
+  "start_clearance_cm": 5.288,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i00__c1",
+  "init": 0,
+  "bin": "7-9",
+  "intrude_cm": 8.863093735445089,
+  "start_clearance_cm": -3.788,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i00__c2",
+  "init": 0,
+  "bin": "7-9",
+  "intrude_cm": 8.820377585270094,
+  "start_clearance_cm": 5.319,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i00__c3",
+  "init": 0,
+  "bin": "7-9",
+  "intrude_cm": 8.745926032888272,
+  "start_clearance_cm": 5.303,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i00__c4",
+  "init": 0,
+  "bin": "5-7",
+  "intrude_cm": 6.914657749193568,
+  "start_clearance_cm": 1.189,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i00__c5",
+  "init": 0,
+  "bin": "5-7",
+  "intrude_cm": 6.820337158203213,
+  "start_clearance_cm": 5.326,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i00__c6",
+  "init": 0,
+  "bin": "3-5",
+  "intrude_cm": 4.893922902315533,
+  "start_clearance_cm": -5.871,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g73"
+  ],
+  "scored_collision": true,
+  "collision_step": 2,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i00__c7",
+  "init": 0,
+  "bin": "3-5",
+  "intrude_cm": 4.757178147109444,
+  "start_clearance_cm": 4.023,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i01__c0",
+  "init": 1,
+  "bin": "9-1000",
+  "intrude_cm": 9.118237269279932,
+  "start_clearance_cm": 11.598,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g3"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i01__c1",
+  "init": 1,
+  "bin": "7-9",
+  "intrude_cm": 8.96091778430509,
+  "start_clearance_cm": 6.311,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i01__c2",
+  "init": 1,
+  "bin": "7-9",
+  "intrude_cm": 8.868072918664723,
+  "start_clearance_cm": 8.367,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i01__c3",
+  "init": 1,
+  "bin": "7-9",
+  "intrude_cm": 8.746421483933933,
+  "start_clearance_cm": -0.234,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i01__c4",
+  "init": 1,
+  "bin": "5-7",
+  "intrude_cm": 6.921000201689578,
+  "start_clearance_cm": -6.257,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g73"
+  ],
+  "scored_collision": true,
+  "collision_step": 0,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i01__c5",
+  "init": 1,
+  "bin": "5-7",
+  "intrude_cm": 6.887708003593537,
+  "start_clearance_cm": -0.149,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i01__c6",
+  "init": 1,
+  "bin": "3-5",
+  "intrude_cm": 4.988194951668284,
+  "start_clearance_cm": 4.437,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i01__c7",
+  "init": 1,
+  "bin": "3-5",
+  "intrude_cm": 4.9782865826062945,
+  "start_clearance_cm": 11.668,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g3"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i02__c0",
+  "init": 2,
+  "bin": "9-1000",
+  "intrude_cm": 9.126833746420015,
+  "start_clearance_cm": 5.283,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i02__c1",
+  "init": 2,
+  "bin": "9-1000",
+  "intrude_cm": 9.091100639157752,
+  "start_clearance_cm": 5.296,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i02__c2",
+  "init": 2,
+  "bin": "7-9",
+  "intrude_cm": 8.879965153802912,
+  "start_clearance_cm": -0.792,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i02__c3",
+  "init": 2,
+  "bin": "7-9",
+  "intrude_cm": 8.794393231067115,
+  "start_clearance_cm": -3.318,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i02__c4",
+  "init": 2,
+  "bin": "5-7",
+  "intrude_cm": 6.798770173177022,
+  "start_clearance_cm": 6.381,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i02__c5",
+  "init": 2,
+  "bin": "5-7",
+  "intrude_cm": 6.712597920741404,
+  "start_clearance_cm": 5.372,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i02__c6",
+  "init": 2,
+  "bin": "3-5",
+  "intrude_cm": 4.892842430368289,
+  "start_clearance_cm": 9.01,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i02__c7",
+  "init": 2,
+  "bin": "3-5",
+  "intrude_cm": 4.829202958145458,
+  "start_clearance_cm": 2.897,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": true,
+  "collision_step": 186,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i03__c0",
+  "init": 3,
+  "bin": "7-9",
+  "intrude_cm": 8.88993995201126,
+  "start_clearance_cm": 5.282,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i03__c1",
+  "init": 3,
+  "bin": "7-9",
+  "intrude_cm": 8.860476065094922,
+  "start_clearance_cm": 5.286,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i03__c2",
+  "init": 3,
+  "bin": "7-9",
+  "intrude_cm": 8.777497866484655,
+  "start_clearance_cm": -0.999,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i03__c3",
+  "init": 3,
+  "bin": "7-9",
+  "intrude_cm": 8.74663418096857,
+  "start_clearance_cm": -3.38,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i03__c4",
+  "init": 3,
+  "bin": "5-7",
+  "intrude_cm": 6.941591008598177,
+  "start_clearance_cm": 5.369,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i03__c5",
+  "init": 3,
+  "bin": "5-7",
+  "intrude_cm": 6.720853701961305,
+  "start_clearance_cm": -4.45,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g73"
+  ],
+  "scored_collision": true,
+  "collision_step": 0,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i03__c6",
+  "init": 3,
+  "bin": "3-5",
+  "intrude_cm": 4.961672268122159,
+  "start_clearance_cm": 7.795,
+  "start_pair": [
+   "gripper0_finger2_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i03__c7",
+  "init": 3,
+  "bin": "3-5",
+  "intrude_cm": 4.5268264810019465,
+  "start_clearance_cm": 3.196,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g243"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i04__c0",
+  "init": 4,
+  "bin": "9-1000",
+  "intrude_cm": 9.095522538730316,
+  "start_clearance_cm": -2.616,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i04__c1",
+  "init": 4,
+  "bin": "7-9",
+  "intrude_cm": 8.961666240135251,
+  "start_clearance_cm": -5.054,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g73"
+  ],
+  "scored_collision": true,
+  "collision_step": 0,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i04__c2",
+  "init": 4,
+  "bin": "7-9",
+  "intrude_cm": 8.886870814062545,
+  "start_clearance_cm": 8.458,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g4"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i04__c3",
+  "init": 4,
+  "bin": "7-9",
+  "intrude_cm": 8.833140543892663,
+  "start_clearance_cm": 0.108,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i04__c4",
+  "init": 4,
+  "bin": "5-7",
+  "intrude_cm": 6.8546836165428084,
+  "start_clearance_cm": 3.534,
+  "start_pair": [
+   "robot0_link1_collision",
+   "white_place_box_1_g4"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i04__c5",
+  "init": 4,
+  "bin": "5-7",
+  "intrude_cm": 6.701775998816823,
+  "start_clearance_cm": 7.339,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i04__c6",
+  "init": 4,
+  "bin": "3-5",
+  "intrude_cm": 4.987583473946977,
+  "start_clearance_cm": -1.435,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i04__c7",
+  "init": 4,
+  "bin": "3-5",
+  "intrude_cm": 4.968092559566599,
+  "start_clearance_cm": 5.103,
+  "start_pair": [
+   "gripper0_finger2_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i05__c0",
+  "init": 5,
+  "bin": "7-9",
+  "intrude_cm": 8.89576213965089,
+  "start_clearance_cm": 11.585,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g61"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i05__c1",
+  "init": 5,
+  "bin": "7-9",
+  "intrude_cm": 8.859333551459711,
+  "start_clearance_cm": 9.028,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i05__c2",
+  "init": 5,
+  "bin": "7-9",
+  "intrude_cm": 8.54787763125784,
+  "start_clearance_cm": 2.032,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i05__c3",
+  "init": 5,
+  "bin": "7-9",
+  "intrude_cm": 8.535774747088567,
+  "start_clearance_cm": -3.095,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i05__c4",
+  "init": 5,
+  "bin": "5-7",
+  "intrude_cm": 6.974041478456059,
+  "start_clearance_cm": 8.151,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i05__c5",
+  "init": 5,
+  "bin": "5-7",
+  "intrude_cm": 6.968538243858345,
+  "start_clearance_cm": -1.744,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i05__c6",
+  "init": 5,
+  "bin": "3-5",
+  "intrude_cm": 4.947498300081747,
+  "start_clearance_cm": 8.077,
+  "start_pair": [
+   "gripper0_finger2_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i05__c7",
+  "init": 5,
+  "bin": "3-5",
+  "intrude_cm": 4.4502058878517365,
+  "start_clearance_cm": 5.506,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g62"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i06__c0",
+  "init": 6,
+  "bin": "9-1000",
+  "intrude_cm": 9.145109432773015,
+  "start_clearance_cm": 11.594,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g3"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i06__c1",
+  "init": 6,
+  "bin": "9-1000",
+  "intrude_cm": 9.107540370900916,
+  "start_clearance_cm": 9.722,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i06__c2",
+  "init": 6,
+  "bin": "7-9",
+  "intrude_cm": 8.832214857535545,
+  "start_clearance_cm": -0.095,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i06__c3",
+  "init": 6,
+  "bin": "7-9",
+  "intrude_cm": 8.673094427654638,
+  "start_clearance_cm": 11.602,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g3"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i06__c4",
+  "init": 6,
+  "bin": "5-7",
+  "intrude_cm": 6.849684587716536,
+  "start_clearance_cm": 10.067,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i06__c5",
+  "init": 6,
+  "bin": "5-7",
+  "intrude_cm": 6.641704774566054,
+  "start_clearance_cm": 3.429,
+  "start_pair": [
+   "gripper0_finger2_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i06__c6",
+  "init": 6,
+  "bin": "3-5",
+  "intrude_cm": 4.991501980618453,
+  "start_clearance_cm": 12.429,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i06__c7",
+  "init": 6,
+  "bin": "3-5",
+  "intrude_cm": 4.968401282438902,
+  "start_clearance_cm": 11.361,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i07__c0",
+  "init": 7,
+  "bin": "9-1000",
+  "intrude_cm": 9.147487476926516,
+  "start_clearance_cm": -2.985,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i07__c1",
+  "init": 7,
+  "bin": "9-1000",
+  "intrude_cm": 9.145881414439181,
+  "start_clearance_cm": -1.026,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i07__c2",
+  "init": 7,
+  "bin": "7-9",
+  "intrude_cm": 8.902451875877018,
+  "start_clearance_cm": 5.366,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i07__c3",
+  "init": 7,
+  "bin": "7-9",
+  "intrude_cm": 8.887106668807935,
+  "start_clearance_cm": 7.894,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i07__c4",
+  "init": 7,
+  "bin": "5-7",
+  "intrude_cm": 6.979533456414303,
+  "start_clearance_cm": 11.679,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g3"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i07__c5",
+  "init": 7,
+  "bin": "5-7",
+  "intrude_cm": 6.906265657844646,
+  "start_clearance_cm": 9.056,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i07__c6",
+  "init": 7,
+  "bin": "3-5",
+  "intrude_cm": 4.944994014940707,
+  "start_clearance_cm": 5.058,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g193"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i07__c7",
+  "init": 7,
+  "bin": "3-5",
+  "intrude_cm": 4.910683254337321,
+  "start_clearance_cm": -4.063,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g73"
+  ],
+  "scored_collision": true,
+  "collision_step": 0,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i08__c0",
+  "init": 8,
+  "bin": "9-1000",
+  "intrude_cm": 9.054484647972153,
+  "start_clearance_cm": 11.595,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g3"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i08__c1",
+  "init": 8,
+  "bin": "7-9",
+  "intrude_cm": 8.791075072998298,
+  "start_clearance_cm": 8.467,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i08__c2",
+  "init": 8,
+  "bin": "7-9",
+  "intrude_cm": 8.751496043779131,
+  "start_clearance_cm": 0.133,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i08__c3",
+  "init": 8,
+  "bin": "7-9",
+  "intrude_cm": 8.614546047766845,
+  "start_clearance_cm": 2.23,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i08__c4",
+  "init": 8,
+  "bin": "5-7",
+  "intrude_cm": 6.943040927904931,
+  "start_clearance_cm": 5.309,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i08__c5",
+  "init": 8,
+  "bin": "5-7",
+  "intrude_cm": 6.940701413386573,
+  "start_clearance_cm": 11.618,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g3"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i08__c6",
+  "init": 8,
+  "bin": "3-5",
+  "intrude_cm": 4.79621609861636,
+  "start_clearance_cm": 17.502,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g85"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i08__c7",
+  "init": 8,
+  "bin": "3-5",
+  "intrude_cm": 4.618448076197209,
+  "start_clearance_cm": 10.261,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g61"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i09__c0",
+  "init": 9,
+  "bin": "9-1000",
+  "intrude_cm": 9.109377407786516,
+  "start_clearance_cm": 5.302,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i09__c1",
+  "init": 9,
+  "bin": "9-1000",
+  "intrude_cm": 9.032267844770836,
+  "start_clearance_cm": -3.027,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i09__c2",
+  "init": 9,
+  "bin": "7-9",
+  "intrude_cm": 8.766594052144335,
+  "start_clearance_cm": 5.359,
+  "start_pair": [
+   "gripper0_finger1_pad_collision",
+   "white_place_box_1_g2"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i09__c3",
+  "init": 9,
+  "bin": "7-9",
+  "intrude_cm": 8.393217042813484,
+  "start_clearance_cm": 9.834,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g61"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i09__c4",
+  "init": 9,
+  "bin": "5-7",
+  "intrude_cm": 6.742717901123169,
+  "start_clearance_cm": 7.954,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g61"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i09__c5",
+  "init": 9,
+  "bin": "5-7",
+  "intrude_cm": 6.613529914740661,
+  "start_clearance_cm": -5.857,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g73"
+  ],
+  "scored_collision": true,
+  "collision_step": 0,
+  "completion": false
+ },
+ {
+  "cid": "oa1__i09__c6",
+  "init": 9,
+  "bin": "3-5",
+  "intrude_cm": 4.958098958788881,
+  "start_clearance_cm": -2.142,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g73"
+  ],
+  "scored_collision": true,
+  "collision_step": 0,
+  "completion": true
+ },
+ {
+  "cid": "oa1__i09__c7",
+  "init": 9,
+  "bin": "3-5",
+  "intrude_cm": 4.854571134953814,
+  "start_clearance_cm": 2.695,
+  "start_pair": [
+   "gripper0_hand_collision",
+   "bottle_of_perfume_1_g101"
+  ],
+  "scored_collision": false,
+  "collision_step": null,
+  "completion": true
+ }
+]

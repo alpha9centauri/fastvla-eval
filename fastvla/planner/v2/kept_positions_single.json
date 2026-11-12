@@ -1,0 +1,36 @@
+[
+ {
+  "cid": "oa1__i02__c7",
+  "init": 2,
+  "x": -0.13541504494285372,
+  "y": 0.12435714797067388,
+  "bin": "3-5",
+  "intrude_cm": 4.829202958145458,
+  "ranked_by": "link5",
+  "d_ee_cm": 5.49713503534261,
+  "d_l5_cm": -4.829202958145458,
+  "collision": true,
+  "completion": false,
+  "min_clearance_cm": 0.0,
+  "steps": 300,
+  "collision_step": 186,
+  "obstacle": "bottle_of_perfume_1",
+  "pairs": [
+   {
+    "step": 186,
+    "obstacle": "bottle_of_perfume_1",
+    "actor": "robot",
+    "actor_geom": "robot0_link5_collision",
+    "obstacle_geom": "bottle_of_perfume_1_g73",
+    "substep": 16,
+    "max_force": 17.5679
+   }
+  ],
+  "skipped": false,
+  "shift": [
+   -0.09281850934992959,
+   0.11142885961237806,
+   0.0
+  ]
+ }
+]
