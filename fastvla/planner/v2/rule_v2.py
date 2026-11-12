@@ -47,6 +47,9 @@ CLEAR_START_M = 0.05   # >= 5 cm from the bowl's start footprint
 CLEAR_PLATE_M = 0.05   # >= 5 cm from the plate's edge
 INTRUDE_MIN_M = 0.03   # keep only candidates intruding >= 3 cm
 KEEP_PER_INIT = 8
+PER_BIN = 2
+# intrusion bins in metres: 3-5, 5-7, 7-9, above 9 cm
+BINS = [(0.03, 0.05), (0.05, 0.07), (0.07, 0.09), (0.09, 10.0)]
 SRC = os.path.join(DISP, "out_onp_control")
 
 
@@ -127,21 +130,46 @@ def main():
             dmin = np.minimum(dee, dl5)
             by = np.where(dl5 <= dee, "link5", "ee")
             intr = -dmin                       # positive = the stack intrudes into the path
-            keep = np.where(intr >= INTRUDE_MIN_M)[0]
-            keep = keep[np.argsort(-intr[keep])][:KEEP_PER_INIT]
+            elig = np.where(intr >= INTRUDE_MIN_M)[0]
+            # AMENDMENT 12 Nov 2026: spread across intrusion depth instead of taking the deepest
+            # eight. Two per bin, deepest first within a bin; a bin that cannot fill its quota
+            # passes the shortfall to the bins after it, and any residue is backfilled from the
+            # deepest unused candidates so the per-init count stays at 8.
+            keep, used = [], set()
+            short = 0
+            for lo_b, hi_b in BINS:
+                inb = [i for i in elig if lo_b <= intr[i] < hi_b and i not in used]
+                inb.sort(key=lambda i: -intr[i])
+                take = inb[: PER_BIN + short]
+                short = (PER_BIN + short) - len(take)
+                for i in take:
+                    keep.append(i); used.add(i)
+            if len(keep) < KEEP_PER_INIT:
+                rest = [i for i in elig if i not in used]
+                rest.sort(key=lambda i: -intr[i])
+                for i in rest[: KEEP_PER_INIT - len(keep)]:
+                    keep.append(i); used.add(i)
+            keep = np.array(sorted(keep, key=lambda i: -intr[i]), int)
+            bincount = {}
+            for i in keep:
+                b = next((f"{a}-{b_}" for a, b_ in BINS if a <= intr[i] < b_), "?")
+                bincount[b] = bincount.get(b, 0) + 1
         else:
-            keep = np.array([], int)
-        per_init[ii] = dict(grid=n_grid, survivors=n_surv, kept=int(len(keep)),
+            keep = np.array([], int); bincount = {}
+        per_init[ii] = dict(grid=n_grid, survivors=n_surv, kept=int(len(keep)), bins=bincount,
+                            eligible=int((intr >= INTRUDE_MIN_M).sum()) if n_surv else 0,
                             by=dict(zip(*np.unique(by[keep], return_counts=True))) if len(keep) else {})
         for j in keep:
             rows.append(dict(init=ii, x=float(surv[j, 0]), y=float(surv[j, 1]),
                              intrude_cm=float(100 * intr[j]),
                              d_ee_cm=float(100 * dee[j]), d_l5_cm=float(100 * dl5[j]),
                              ranked_by=str(by[j]),
+                             bin=next((f"{int(100*a)}-{int(100*b_)}" for a, b_ in BINS
+                                       if a <= intr[j] < b_), "?"),
                              shift=[float(surv[j, 0] - nom[lead][0]),
                                     float(surv[j, 1] - nom[lead][1]), 0.0]))
         print(f"  i{ii:02d}: grid {n_grid:>4}  survivors {n_surv:>4}  kept {len(keep)}  "
-              f"ranked_by {per_init[ii]['by']}", flush=True)
+              f"bins {bincount}  ranked_by {per_init[ii]['by']}", flush=True)
         env.close()
 
     json.dump(dict(rows=rows, per_init={str(k): v for k, v in per_init.items()},

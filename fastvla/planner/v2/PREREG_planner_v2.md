@@ -105,3 +105,70 @@ it does not already perform — the error the data chapter made and recorded in 
 
 Candidate list, with per-candidate `x`, `y`, `shift`, `intrude_cm`, `d_ee_cm`, `d_l5_cm` and
 `ranked_by`: `v2/candidates_v2.json`.
+
+
+---
+
+# AMENDMENT — 12 November 2026, before any step-2 rollout
+
+Still nothing has been run. The selection changes; **nothing else in the rule does** — the 2 cm
+grid, the 5 cm clearances from the bowl's start and the plate's edge, the clear-goal requirement,
+the two-path ranking and the 3 cm intrusion minimum all stand exactly as written above.
+
+## What changes
+
+Keep 8 candidates per init, but **spread them across intrusion depth** instead of taking the
+deepest eight:
+
+```
+2 from 3-5 cm, 2 from 5-7 cm, 2 from 7-9 cm, 2 from above 9 cm
+deepest first within each bin
+```
+
+A bin that cannot fill its quota passes the shortfall to the bins after it, and any residue is
+backfilled from the deepest unused candidates, so the per-init count stays at 8.
+
+**Reason.** A set clustered at the deep end cannot show how depth affects collision or
+certification, and the later transfer test needs positions that differ. The original selection ran
+7.79–9.15 cm, a span of 1.4 cm; the amended one runs **4.45–9.15 cm**, median 7.69.
+
+## Amended counts
+
+| bin | n | ranked by `ee` | by `link5` | intrusion cm |
+|---|---|---|---|---|
+| 3–5 cm | 20 | 12 | 8 | 4.45 – 4.99 |
+| 5–7 cm | 20 | 13 | 7 | 6.61 – 6.98 |
+| 7–9 cm | 28 | 15 | 13 | 8.39 – 8.96 |
+| above 9 cm | 12 | 8 | 4 | 9.03 – 9.15 |
+| **total** | **80** | **48** | **32** | **4.45 – 9.15** |
+
+The two low bins take the deepest members of their range, so they sit near 5 and 7 cm rather than
+spread within the bin. The **above-9 bin is underfilled at 12** rather than 20: the stack's
+xy-radius is about 9.1 cm, so intrusion cannot exceed it and only a thin shell of grid points
+qualifies. That shortfall is what lifts the 7–9 bin to 28.
+
+link5 still sets the ranking on **32 of 80**, and its share rises with depth — 8/20 in the
+shallowest bin against 13/28 in the 7–9 bin.
+
+## Predicted collision fraction, per bin, before step 2
+
+Intrusion is `stack_radius − distance`, so with a stack radius near 9.1 cm these bins correspond
+to a plan-view standoff of roughly 4.1–6.1 cm (3–5 bin), 2.1–4.1 cm (5–7), 0.1–2.1 cm (7–9) and
+under 0.1 cm (above 9).
+
+| bin | predicted collide | reasoning |
+|---|---|---|
+| above 9 cm | **90%** | the path passes through the stack centre in plan view; only height can save it |
+| 7–9 cm | **80%** | standoff under 2 cm, less than the carried bowl's own radius |
+| 5–7 cm | **60%** | standoff 2–4 cm; the bowl (about 5.3 cm radius) still sweeps into the stack on many paths |
+| 3–5 cm | **35%** | standoff 4–6 cm; collision needs either the bowl's width or a link5 excursion |
+| **overall** | **65%** | 52 of 80, weighted by the bin counts above |
+
+This supersedes the single 70% figure in the original pre-registration, which was written for the
+deep-clustered set. The direction of the revision is down, because the amended set deliberately
+includes 40 shallower candidates that the old one excluded.
+
+The falsifiable shape of this prediction is **monotonicity**: whatever the absolute rates, I expect
+collision frequency to increase with intrusion depth across the four bins. If it does not — if the
+3–5 bin collides as often as the above-9 bin — then plan-view intrusion is not the variable that
+governs collision here, and height is, which is the limitation already recorded above.
