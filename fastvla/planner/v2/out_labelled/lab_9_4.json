@@ -1,0 +1,16 @@
+{
+ "scene": "9:4",
+ "captured": false,
+ "row": {
+  "init_idx": 34,
+  "shift_cm": 18.759,
+  "plan_seconds_total": 11.1952,
+  "plan_seconds_single": 0.0,
+  "planned": false,
+  "reason": "planner_failure:curobo:MotionGenStatus.DT_EXCEPTION",
+  "accepted": false,
+  "shard": 9,
+  "attempt": 4,
+  "cid": "9:4"
+ }
+}

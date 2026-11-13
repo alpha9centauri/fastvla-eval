@@ -1,0 +1,47 @@
+{
+ "scene": "v2single",
+ "captured": true,
+ "reason": "executor:unreached:detour_curobo_v15",
+ "accepted": false,
+ "executor_ok": false,
+ "via_min_cm": 10.487,
+ "success": false,
+ "dry_min_clearance_cm": 0.0,
+ "steps": 169,
+ "fail_step": 109,
+ "fail_phase": "carry",
+ "fail_label": "detour_curobo_v15",
+ "fail_clearance_cm": 0.0,
+ "fail_actor_geom": "robot0_link5_collision",
+ "fail_obstacle_geom": "bottle_of_perfume_1_g243",
+ "fail_obstacle": "bottle_of_perfume_1",
+ "pair_aligned": true,
+ "phases": [
+  {
+   "phase": "grasp approach",
+   "steps": 26,
+   "min_clearance_cm": 3.9718,
+   "at_label": "pre_grasp[flat_edge]:akita_black_bowl_1"
+  },
+  {
+   "phase": "grasp close",
+   "steps": 12,
+   "min_clearance_cm": 13.4741,
+   "at_label": "close:akita_black_bowl_1"
+  },
+  {
+   "phase": "lift",
+   "steps": 11,
+   "min_clearance_cm": 14.2563,
+   "at_label": "lift:akita_black_bowl_1"
+  },
+  {
+   "phase": "carry",
+   "steps": 120,
+   "min_clearance_cm": 0.0,
+   "at_label": "detour_curobo_v15"
+  }
+ ],
+ "first_zero_step": 109,
+ "first_zero_phase": "carry"
+}

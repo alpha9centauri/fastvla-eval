@@ -1,0 +1,29 @@
+{
+ "scene": "1:13",
+ "captured": true,
+ "reason": "executor:unreached:grasp:akita_black_bowl_1",
+ "accepted": false,
+ "executor_ok": false,
+ "via_min_cm": 3.046,
+ "success": false,
+ "dry_min_clearance_cm": 0.0,
+ "steps": 73,
+ "fail_step": 18,
+ "fail_phase": "grasp approach",
+ "fail_label": "grasp:akita_black_bowl_1",
+ "fail_clearance_cm": 0.0,
+ "fail_actor_geom": "gripper0_hand_collision",
+ "fail_obstacle_geom": "white_place_box_1_g2",
+ "fail_obstacle": "white_place_box_1",
+ "pair_aligned": true,
+ "phases": [
+  {
+   "phase": "grasp approach",
+   "steps": 73,
+   "min_clearance_cm": 0.0,
+   "at_label": "grasp:akita_black_bowl_1"
+  }
+ ],
+ "first_zero_step": 18,
+ "first_zero_phase": "grasp approach"
+}

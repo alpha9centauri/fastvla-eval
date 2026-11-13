@@ -1,0 +1,47 @@
+{
+ "scene": "8:11",
+ "captured": true,
+ "reason": "executor:unreached:detour_curobo_v13",
+ "accepted": false,
+ "executor_ok": false,
+ "via_min_cm": 5.576,
+ "success": false,
+ "dry_min_clearance_cm": 0.0,
+ "steps": 216,
+ "fail_step": 21,
+ "fail_phase": "grasp approach",
+ "fail_label": "grasp:akita_black_bowl_1",
+ "fail_clearance_cm": 0.0,
+ "fail_actor_geom": "gripper0_hand_collision",
+ "fail_obstacle_geom": "white_place_box_1_g4",
+ "fail_obstacle": "white_place_box_1",
+ "pair_aligned": true,
+ "phases": [
+  {
+   "phase": "grasp approach",
+   "steps": 27,
+   "min_clearance_cm": 0.0,
+   "at_label": "grasp:akita_black_bowl_1"
+  },
+  {
+   "phase": "grasp close",
+   "steps": 72,
+   "min_clearance_cm": 0.0,
+   "at_label": "close:akita_black_bowl_1"
+  },
+  {
+   "phase": "lift",
+   "steps": 12,
+   "min_clearance_cm": 0.0,
+   "at_label": "lift:akita_black_bowl_1"
+  },
+  {
+   "phase": "carry",
+   "steps": 105,
+   "min_clearance_cm": 0.0,
+   "at_label": "detour_curobo_v2"
+  }
+ ],
+ "first_zero_step": 21,
+ "first_zero_phase": "grasp approach"
+}
